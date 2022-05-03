@@ -62,14 +62,14 @@ impl Re<!> {
     }
 }
 
-/// A target for a binding: an object which can recieve values from a binding.
+/// An object which can recieve values from a binding.
 pub trait Target<T: Convenient>: DynClone {
     fn execute(&self, state: &mut dyn State, value: T);
 }
 
 clone_trait_object!(<T: Convenient> Target<T>);
 
-/// A holder of a binding: an object controlling binding lifetime.
+/// An object controlling binding lifetime.
 pub trait Holder {
     fn release(&self, state: &mut dyn State);
 }
@@ -156,17 +156,19 @@ impl<T: Convenient> SourceCache<T> for NoCache {
     fn get(&self, current: Option<T>) -> Option<Option<T>> { Some(current) }
 }
 
-/// A target for a binding: an object which can send values to a binding.
+/// An object which can send values to a binding.
 pub trait Source: Debug {
     type Value: Convenient;
     type Cache: SourceCache<Self::Value>;
     fn handle(&self, state: &mut dyn State, handler: Box<dyn Handler<Self::Value>>) -> HandledSource;
 }
 
+/// An id of a [`Source`] handler, which can be used to unsubscribe the handler from source.
 pub trait HandlerId: Debug {
     fn unhandle(&self, state: &mut dyn State, dropping_binding: AnyBindingBase);
 }
 
+/// The [`Source::handle`] method result.
 #[derive(Educe)]
 #[educe(Debug)]
 pub struct HandledSource {
@@ -182,9 +184,8 @@ trait AnyBindingNode: Downcast {
 impl_downcast!(AnyBindingNode);
 
 macro_attr! {
-    #[doc(hidden)]
     #[derive(Component!)]
-    pub struct BoxedBindingNode(Box<dyn AnyBindingNode>);
+    struct BoxedBindingNode(Box<dyn AnyBindingNode>);
 }
 
 /// An arena holding all bindings data.

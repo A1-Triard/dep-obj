@@ -676,7 +676,6 @@ impl<T: DepObjId> DepObjIdBase for T {
 /// }
 ///
 /// fn main() {
-///     use dep_obj::binding::re_immediate;
 ///     let mut bindings = Bindings::new();
 ///     let res = Binding1::new(&mut bindings, (), |(), x| Some(x));
 ///     let app = &mut MyApp {
@@ -687,7 +686,7 @@ impl<T: DepObjId> DepObjIdBase for T {
 ///     let id = MyDepTypeId::new(app);
 ///     res.set_source_1(app, &mut MyDepType::PROP_2.value_source(id.obj()));
 ///     assert_eq!(app.res.get_value(app), Some(10));
-///     re_immediate(MyDepType::PROP_2.set(app, id.obj(), 5));
+///     MyDepType::PROP_2.set(app, id.obj(), 5).immediate();
 ///     assert_eq!(app.res.get_value(app), Some(5));
 ///     id.drop_my_dep_type(app);
 ///     res.drop_binding(app);
@@ -2419,7 +2418,7 @@ macro_rules! dep_type_impl_raw {
                     $vis fn [< $field _ref >] (mut self, value: $field_ty) -> Self {
                         let id = <$BaseBuilder as $crate::DepObjBaseBuilder<$Id>>::id(&self.base);
                         let state = <$BaseBuilder as $crate::DepObjBaseBuilder<$Id>>::state_mut(&mut self.base);
-                        $crate::binding::re_immediate($name:: [< $field:upper >] .set(state, id.$obj(), value));
+                        $name:: [< $field:upper >] .set(state, id.$obj(), value).immediate();
                         self
                     }
                 ]
@@ -2492,7 +2491,7 @@ macro_rules! dep_type_impl_raw {
                     $vis fn [< $field _ref >] (mut self, value: $field_ty) -> Self {
                         let id = <$BaseBuilder as $crate::DepObjBaseBuilder<$Id>>::id(&self.base);
                         let state = <$BaseBuilder as $crate::DepObjBaseBuilder<$Id>>::state_mut(&mut self.base);
-                        $crate::binding::re_immediate($name:: [< $field:upper >] .set(state, id.$obj(), value));
+                        $name:: [< $field:upper >] .set(state, id.$obj(), value).immediate();
                         self
                     }
                 ]
@@ -2565,7 +2564,7 @@ macro_rules! dep_type_impl_raw {
                     $vis fn $field(mut self, value: $field_ty) -> Self {
                         let id = <$BaseBuilder as $crate::DepObjBaseBuilder<$Id>>::id(&self.base);
                         let state = <$BaseBuilder as $crate::DepObjBaseBuilder<$Id>>::state_mut(&mut self.base);
-                        $crate::binding::re_immediate($name:: [< $field:upper >] .set(state, id.$obj(), value));
+                        $name:: [< $field:upper >] .set(state, id.$obj(), value).immediate();
                         self
                     }
                 ]
@@ -2637,7 +2636,7 @@ macro_rules! dep_type_impl_raw {
                     $vis fn [< $field _ref >] (mut self, value: $field_ty) -> Self {
                         let id = <$BaseBuilder as $crate::DepObjBaseBuilder<$Id>>::id(&self.base);
                         let state = <$BaseBuilder as $crate::DepObjBaseBuilder<$Id>>::state_mut(&mut self.base);
-                        $crate::binding::re_immediate($name:: [< $field:upper >] .set(state, id.$obj(), value));
+                        $name:: [< $field:upper >] .set(state, id.$obj(), value).immediate();
                         self
                     }
                 ]
@@ -2709,7 +2708,7 @@ macro_rules! dep_type_impl_raw {
                     $vis fn $field(mut self, value: $field_ty) -> Self {
                         let id = <$BaseBuilder as $crate::DepObjBaseBuilder<$Id>>::id(&self.base);
                         let state = <$BaseBuilder as $crate::DepObjBaseBuilder<$Id>>::state_mut(&mut self.base);
-                        $crate::binding::re_immediate($name:: [< $field:upper >] .set(state, id.$obj(), value));
+                        $name:: [< $field:upper >] .set(state, id.$obj(), value).immediate();
                         self
                     }
                 ]

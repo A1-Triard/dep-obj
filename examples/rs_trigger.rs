@@ -126,7 +126,7 @@ mod not_chip {
 }
 
 use circuit::*;
-use dep_obj::binding::{Binding1, Bindings, b_immediate};
+use dep_obj::binding::{Binding1, Bindings};
 use dyn_context::state::{State, StateExt, StateRefMut};
 use not_chip::*;
 use or_chip::*;
@@ -215,14 +215,14 @@ fn main() {
         writeln!(state.log, "{} -> {}", old, new).unwrap();
     });
     print_out.set_source_1(state, &mut NotLegs::OUT.change_source(chips.not_2.legs()));
-    b_immediate(OrLegs::IN_1.set(state, chips.or_1.legs(), true));
-    b_immediate(OrLegs::IN_1.set(state, chips.or_1.legs(), false));
-    b_immediate(OrLegs::IN_1.set(state, chips.or_2.legs(), true));
-    b_immediate(OrLegs::IN_1.set(state, chips.or_2.legs(), false));
-    b_immediate(OrLegs::IN_1.set(state, chips.or_1.legs(), true));
-    b_immediate(OrLegs::IN_1.set(state, chips.or_1.legs(), false));
-    b_immediate(OrLegs::IN_1.set(state, chips.or_2.legs(), true));
-    b_immediate(OrLegs::IN_1.set(state, chips.or_2.legs(), false));
+    OrLegs::IN_1.set(state, chips.or_1.legs(), true).immediate();
+    OrLegs::IN_1.set(state, chips.or_1.legs(), false).immediate();
+    OrLegs::IN_1.set(state, chips.or_2.legs(), true).immediate();
+    OrLegs::IN_1.set(state, chips.or_2.legs(), false).immediate();
+    OrLegs::IN_1.set(state, chips.or_1.legs(), true).immediate();
+    OrLegs::IN_1.set(state, chips.or_1.legs(), false).immediate();
+    OrLegs::IN_1.set(state, chips.or_2.legs(), true).immediate();
+    OrLegs::IN_1.set(state, chips.or_2.legs(), false).immediate();
 
     print_out.drop_binding(state);
     chips.or_1.drop_chip(state);

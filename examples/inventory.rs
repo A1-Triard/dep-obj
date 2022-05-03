@@ -6,7 +6,7 @@
 use components_arena::{Arena, Component, NewtypeComponentId, Id};
 use dep_obj::{Change, DepObjBaseBuilder, DepObjId, dep_obj, dep_type, dep_type_with_builder, ItemChange, DepVecItemPos};
 use macro_attr_2018::macro_attr;
-use dep_obj::binding::{Binding1, Binding2, BindingExt2, Bindings, b_yield, b_immediate, b_continue};
+use dep_obj::binding::{Binding1, Binding2, BindingExt2, Bindings, Re};
 use dyn_context::state::{State, StateExt};
 use std::any::{TypeId, Any};
 use std::borrow::Cow;
@@ -129,10 +129,10 @@ impl Npc {
                 } else if change.is_insert() || change.is_update_insert() {
                     ItemProps::ENHANCEMENT.set(state, change.item.props(), enhancement)
                 } else {
-                    b_continue()
+                    Re::Continue
                 }
             } else {
-                b_yield(())
+                Re::Yield(())
             }
         });
         enhancement.set_source_2(state, &mut NpcProps::EQUIPPED_ITEMS.item_source_with_update(enhancement, npc.props()));
@@ -201,7 +201,7 @@ impl Game {
 fn main() {
     let game = &mut Game::new();
     let npc = Npc::new(game);
-    b_immediate(NpcProps::ITEMS_ENHANCEMENT.set(game, npc.props(), 5));
+    NpcProps::ITEMS_ENHANCEMENT.set(game, npc.props(), 5).immediate();
     let sword = Item::new(game);
     sword.build(game, |sword| sword
         .props(|props| props
@@ -209,7 +209,7 @@ fn main() {
         )
     );
     let shield = Item::new(game);
-    b_immediate(ItemProps::NAME.set(game, shield.props(), Cow::Borrowed("Shield")));
+    ItemProps::NAME.set(game, shield.props(), Cow::Borrowed("Shield")).immediate();
     for item in [sword, shield] {
         let equipped = Binding2::new(game, (), |(), name, equipped: Option<Change<bool>>|
             equipped.map(|equipped| (name, equipped.new))
@@ -232,11 +232,11 @@ fn main() {
         enhancement.set_source_1(game, &mut ItemProps::NAME.value_source(item.props()));
         enhancement.set_source_2(game, &mut ItemProps::ENHANCEMENT.change_source(item.props()));
     }
-    b_immediate(NpcProps::EQUIPPED_ITEMS.push(game, npc.props(), sword));
-    b_immediate(NpcProps::EQUIPPED_ITEMS.push(game, npc.props(), shield));
-    b_immediate(NpcProps::ITEMS_ENHANCEMENT.set(game, npc.props(), 4));
-    b_immediate(NpcProps::EQUIPPED_ITEMS.remove(game, npc.props(), DepVecItemPos::FirstItem));
-    b_immediate(NpcProps::ITEMS_ENHANCEMENT.set(game, npc.props(), 5));
+    NpcProps::EQUIPPED_ITEMS.push(game, npc.props(), sword).immediate();
+    NpcProps::EQUIPPED_ITEMS.push(game, npc.props(), shield).immediate();
+    NpcProps::ITEMS_ENHANCEMENT.set(game, npc.props(), 4).immediate();
+    NpcProps::EQUIPPED_ITEMS.remove(game, npc.props(), DepVecItemPos::FirstItem).immediate();
+    NpcProps::ITEMS_ENHANCEMENT.set(game, npc.props(), 5).immediate();
     npc.drop_npc(game);
     sword.drop_item(game);
     shield.drop_item(game);
