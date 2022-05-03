@@ -64,13 +64,13 @@ jobs:
       with:
         command: build
         args: "--verbose --release"
-    - name: test --example rs_trigger
+    - name: run --example rs_trigger
       uses: actions-rs/cargo@v1
       with:
-        command: test
+        command: run
         args: "--verbose --example rs_trigger"
-    - name: test --example inventory
+    - name: run --example inventory
       uses: actions-rs/cargo@v1
       with:
-        command: test
+        command: run
         args: "--verbose --example inventory"
