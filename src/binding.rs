@@ -11,19 +11,48 @@ use macro_attr_2018::macro_attr;
 use panicking::panicking;
 use phantom_type::PhantomType;
 
+/// A helper struct, assisting to keep reactive code reentrant.
+///
+/// Dropping this value (e.g. with `let _ = ...`) most likely is a reentrancy violation.
+/// Functions returning `Re` could not be called in a row in general case
+/// without special precautions resulting in the adding a queue.
+///
+/// If you need to "split" control flow and perform several actions,
+/// use intermediate dependecy property/event. Each dependency property/event has
+/// an inner queue and support multiply listeners.
 #[must_use]
-pub struct BYield<T: Convenient>(Option<T>);
+pub struct Re<T: Convenient>(Option<T>);
 
-pub fn b_yield<T: Convenient>(value: T) -> BYield<T> {
-    BYield(Some(value))
+impl<T: Convenient> Re<T> {
+    /// Wraps `value` into the `Re` helper struct, allowing
+    /// to return it from reactive callback.
+    ///
+    /// Such callback are required, for example,
+    /// by `BindingExt` constructor's `dispatch` argument
+    /// (see [`BindingExt1::new`], [`BindingExt2::new`], ...).
+    #[allow(non_snake_case)]
+    pub fn Yield(value: T) -> Re<T> {
+        Re(Some(value))
+    }
+
+    /// An instance with no value.
+    ///
+    /// It indends to prevent remaining processing of current reactive action.
+    /// For example, it can be used in `BindingExt` constructor's `dispatch` argument 
+    /// (see [`BindingExt1::new`], [`BindingExt2::new`], ...)
+    /// to prevent going value into the binding target.
+    ///
+    /// Also it can be used as `Re<!>` instance in places where no further reactive
+    /// processing supposed, such as in a [`BindingBase::dispatch`] /  [`Binding::dispatch`]
+    /// callback.
+    #[allow(non_upper_case_globals)]
+    pub const Continue: Re<T> = Re(None);
 }
 
-pub fn b_continue<T: Convenient>() -> BYield<T> {
-    BYield(None)
-}
-
-pub fn b_immediate(x: BYield<!>) {
-    let _ = x;
+impl Re<!> {
+    pub fn immediate(self) {
+        let _ = self;
+    }
 }
 
 pub trait Target<T: Convenient>: DynClone {
@@ -40,7 +69,7 @@ pub trait Holder {
 #[educe(Clone)]
 struct DispatchTarget<Context: Clone, T: Convenient> {
     context: Context,
-    execute: fn(state: &mut dyn State, context: Context, value: T) -> BYield<!>,
+    execute: fn(state: &mut dyn State, context: Context, value: T) -> Re<!>,
 }
 
 impl<Context: Clone, T: Convenient> Target<T> for DispatchTarget<Context, T> {
@@ -220,7 +249,7 @@ impl<T: Convenient> BindingBase<T> {
         self,
         state: &mut dyn State,
         context: Context,
-        execute: fn(state: &mut dyn State, context: Context, value: T) -> BYield<!>
+        execute: fn(state: &mut dyn State, context: Context, value: T) -> Re<!>
     ) {
         self.set_target(state, Box::new(DispatchTarget { context, execute }));
     }
@@ -270,7 +299,7 @@ impl<T: Convenient> Binding<T> {
         self,
         state: &mut dyn State,
         context: Context,
-        execute: fn(state: &mut dyn State, context: Context, value: T) -> BYield<!>
+        execute: fn(state: &mut dyn State, context: Context, value: T) -> Re<!>
     ) {
         BindingBase::from(self).dispatch(state, context, execute);
     }
@@ -329,7 +358,7 @@ macro_rules! binding_n {
                     &mut dyn State,
                     Glob <  P >,
                     $( < < [< S $i >] as Source > ::Cache as SourceCache< [< S $i >] ::Value > >::Value ),*
-                ) -> BYield<T>,
+                ) -> Re<T>,
             }
 
             impl<
@@ -383,7 +412,7 @@ macro_rules! binding_n {
                         &mut dyn State,
                         Glob < P >,
                         $( < < [< S $i >] as Source > ::Cache as SourceCache< [< S $i >] ::Value > >::Value ),*
-                    ) -> BYield<T>,
+                    ) -> Re<T>,
                 ) -> Self {
                     let bindings: &mut Bindings = state.get_mut();
                     let id = bindings.0.insert(|id| {
@@ -439,7 +468,7 @@ macro_rules! binding_n {
                     self,
                     state: &mut dyn State,
                     context: Context,
-                    execute: fn(state: &mut dyn State, context: Context, value: T) -> BYield<!>
+                    execute: fn(state: &mut dyn State, context: Context, value: T) -> Re<!>
                 ) {
                     BindingBase::from(self).dispatch(state, context, execute);
                 }
@@ -560,7 +589,7 @@ macro_rules! binding_n {
                             id: self.binding.into_raw(),
                             descriptor: < [< BindingExt $n >] <P, $( [< S $j >] ,)* T> > ::param_descriptor
                         };
-                        if let BYield(Some(value)) = (sources.dispatch)(state, param, $( [< value_ $j >] ),*) {
+                        if let Re(Some(value)) = (sources.dispatch)(state, param, $( [< value_ $j >] ),*) {
                             target.map(|x| x.execute(state, value));
                         }
                     }
@@ -670,7 +699,7 @@ macro_rules! binding_n {
                     self,
                     state: &mut dyn State,
                     context: Context,
-                    execute: fn(state: &mut dyn State, context: Context, value: T) -> BYield<!>
+                    execute: fn(state: &mut dyn State, context: Context, value: T) -> Re<!>
                 ) {
                     BindingBase::from(self).dispatch(state, context, execute);
                 }

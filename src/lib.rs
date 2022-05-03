@@ -676,7 +676,7 @@ impl<T: DepObjId> DepObjIdBase for T {
 /// }
 ///
 /// fn main() {
-///     use dep_obj::binding::b_immediate;
+///     use dep_obj::binding::re_immediate;
 ///     let mut bindings = Bindings::new();
 ///     let res = Binding1::new(&mut bindings, (), |(), x| Some(x));
 ///     let app = &mut MyApp {
@@ -687,7 +687,7 @@ impl<T: DepObjId> DepObjIdBase for T {
 ///     let id = MyDepTypeId::new(app);
 ///     res.set_source_1(app, &mut MyDepType::PROP_2.value_source(id.obj()));
 ///     assert_eq!(app.res.get_value(app), Some(10));
-///     b_immediate(MyDepType::PROP_2.set(app, id.obj(), 5));
+///     re_immediate(MyDepType::PROP_2.set(app, id.obj(), 5));
 ///     assert_eq!(app.res.get_value(app), Some(5));
 ///     id.drop_my_dep_type(app);
 ///     res.drop_binding(app);
@@ -757,16 +757,16 @@ impl<Owner: DepType, ArgsType: DepEventArgs> DepEvent<Owner, ArgsType> {
         bubble
     }
 
-    pub fn raise<X: Convenient>(self, state: &mut dyn State, mut obj: Glob<Owner>, args: ArgsType) -> BYield<X> {
+    pub fn raise<X: Convenient>(self, state: &mut dyn State, mut obj: Glob<Owner>, args: ArgsType) -> Re<X> {
         let bubble = self.raise_raw(state, obj, &args);
-        if !bubble || args.handled() { return b_continue(); }
+        if !bubble || args.handled() { return Re::Continue; }
         while let Some(parent) = obj.parent(state) {
             obj = parent;
             let bubble = self.raise_raw(state, obj, &args);
             debug_assert!(bubble);
-            if args.handled() { return b_continue(); }
+            if args.handled() { return Re::Continue; }
         }
-        b_continue()
+        Re::Continue
     }
 
     pub fn source(self, obj: Glob<Owner>) -> DepEventSource<Owner, ArgsType> {
@@ -940,14 +940,14 @@ impl<Owner: DepType, PropType: Convenient> DepProp<Owner, PropType> {
         entry_mut.enqueue = false;
     }
 
-    pub fn set<X: Convenient>(self, state: &mut dyn State, obj: Glob<Owner>, value: PropType) -> BYield<X> {
+    pub fn set<X: Convenient>(self, state: &mut dyn State, obj: Glob<Owner>, value: PropType) -> Re<X> {
         self.un_set(state, obj, Some(value));
-        b_continue()
+        Re::Continue
     }
 
-    pub fn unset<X: Convenient>(self, state: &mut dyn State, obj: Glob<Owner>) -> BYield<X> {
+    pub fn unset<X: Convenient>(self, state: &mut dyn State, obj: Glob<Owner>) -> Re<X> {
         self.un_set(state, obj, None);
-        b_continue()
+        Re::Continue
     }
 
     fn bind_raw(
@@ -1016,7 +1016,7 @@ struct DepPropSet<Owner: DepType, PropType: Convenient> {
 
 impl<Owner: DepType, PropType: Convenient> Target<PropType> for DepPropSet<Owner, PropType> {
     fn execute(&self, state: &mut dyn State, value: PropType) {
-        b_immediate(self.prop.set(state, self.obj, value));
+        self.prop.set(state, self.obj, value).immediate();
     }
 }
 
@@ -1200,12 +1200,12 @@ impl<Owner: DepType, ItemType: Convenient> DepVec<Owner, ItemType> {
         entry_mut.enqueue = false;
     }
 
-    pub fn clear<X: Convenient>(self, state: &mut dyn State, obj: Glob<Owner>) -> BYield<X> {
+    pub fn clear<X: Convenient>(self, state: &mut dyn State, obj: Glob<Owner>) -> Re<X> {
         self.modify(state, obj, DepVecModification::Clear);
-        b_continue()
+        Re::Continue
     }
 
-    pub fn push<X: Convenient>(self, state: &mut dyn State, obj: Glob<Owner>, item: ItemType) -> BYield<X> {
+    pub fn push<X: Convenient>(self, state: &mut dyn State, obj: Glob<Owner>, item: ItemType) -> Re<X> {
         self.insert(state, obj, DepVecInsertPos::AfterLastItem, item)
     }
 
@@ -1215,9 +1215,9 @@ impl<Owner: DepType, ItemType: Convenient> DepVec<Owner, ItemType> {
         obj: Glob<Owner>,
         pos: DepVecInsertPos<ItemType>,
         item: ItemType
-    ) -> BYield<X> {
+    ) -> Re<X> {
         self.modify(state, obj, DepVecModification::Insert(pos, item));
-        b_continue()
+        Re::Continue
     }
 
     pub fn move_<X: Convenient>(
@@ -1226,9 +1226,9 @@ impl<Owner: DepType, ItemType: Convenient> DepVec<Owner, ItemType> {
         obj: Glob<Owner>,
         old_pos: DepVecItemPos<ItemType>,
         new_pos: DepVecInsertPos<ItemType>
-    ) -> BYield<X> {
+    ) -> Re<X> {
         self.modify(state, obj, DepVecModification::Move(old_pos, new_pos));
-        b_continue()
+        Re::Continue
     }
 
     pub fn remove<X: Convenient>(
@@ -1236,14 +1236,14 @@ impl<Owner: DepType, ItemType: Convenient> DepVec<Owner, ItemType> {
         state: &mut dyn State,
         obj: Glob<Owner>,
         pos: DepVecItemPos<ItemType>
-    ) -> BYield<X> {
+    ) -> Re<X> {
         self.modify(state, obj, DepVecModification::Remove(pos));
-        b_continue()
+        Re::Continue
     }
 
-    pub fn extend_from<X: Convenient>(self, state: &mut dyn State, obj: Glob<Owner>, other: Vec<ItemType>) -> BYield<X> {
+    pub fn extend_from<X: Convenient>(self, state: &mut dyn State, obj: Glob<Owner>, other: Vec<ItemType>) -> Re<X> {
         self.modify(state, obj, DepVecModification::ExtendFrom(other));
-        b_continue()
+        Re::Continue
     }
 
     pub fn changed_source(self, obj: Glob<Owner>) -> DepVecChangedSource<Owner, ItemType> {
@@ -2419,7 +2419,7 @@ macro_rules! dep_type_impl_raw {
                     $vis fn [< $field _ref >] (mut self, value: $field_ty) -> Self {
                         let id = <$BaseBuilder as $crate::DepObjBaseBuilder<$Id>>::id(&self.base);
                         let state = <$BaseBuilder as $crate::DepObjBaseBuilder<$Id>>::state_mut(&mut self.base);
-                        $crate::binding::b_immediate($name:: [< $field:upper >] .set(state, id.$obj(), value));
+                        $crate::binding::re_immediate($name:: [< $field:upper >] .set(state, id.$obj(), value));
                         self
                     }
                 ]
@@ -2492,7 +2492,7 @@ macro_rules! dep_type_impl_raw {
                     $vis fn [< $field _ref >] (mut self, value: $field_ty) -> Self {
                         let id = <$BaseBuilder as $crate::DepObjBaseBuilder<$Id>>::id(&self.base);
                         let state = <$BaseBuilder as $crate::DepObjBaseBuilder<$Id>>::state_mut(&mut self.base);
-                        $crate::binding::b_immediate($name:: [< $field:upper >] .set(state, id.$obj(), value));
+                        $crate::binding::re_immediate($name:: [< $field:upper >] .set(state, id.$obj(), value));
                         self
                     }
                 ]
@@ -2565,7 +2565,7 @@ macro_rules! dep_type_impl_raw {
                     $vis fn $field(mut self, value: $field_ty) -> Self {
                         let id = <$BaseBuilder as $crate::DepObjBaseBuilder<$Id>>::id(&self.base);
                         let state = <$BaseBuilder as $crate::DepObjBaseBuilder<$Id>>::state_mut(&mut self.base);
-                        $crate::binding::b_immediate($name:: [< $field:upper >] .set(state, id.$obj(), value));
+                        $crate::binding::re_immediate($name:: [< $field:upper >] .set(state, id.$obj(), value));
                         self
                     }
                 ]
@@ -2637,7 +2637,7 @@ macro_rules! dep_type_impl_raw {
                     $vis fn [< $field _ref >] (mut self, value: $field_ty) -> Self {
                         let id = <$BaseBuilder as $crate::DepObjBaseBuilder<$Id>>::id(&self.base);
                         let state = <$BaseBuilder as $crate::DepObjBaseBuilder<$Id>>::state_mut(&mut self.base);
-                        $crate::binding::b_immediate($name:: [< $field:upper >] .set(state, id.$obj(), value));
+                        $crate::binding::re_immediate($name:: [< $field:upper >] .set(state, id.$obj(), value));
                         self
                     }
                 ]
@@ -2709,7 +2709,7 @@ macro_rules! dep_type_impl_raw {
                     $vis fn $field(mut self, value: $field_ty) -> Self {
                         let id = <$BaseBuilder as $crate::DepObjBaseBuilder<$Id>>::id(&self.base);
                         let state = <$BaseBuilder as $crate::DepObjBaseBuilder<$Id>>::state_mut(&mut self.base);
-                        $crate::binding::b_immediate($name:: [< $field:upper >] .set(state, id.$obj(), value));
+                        $crate::binding::re_immediate($name:: [< $field:upper >] .set(state, id.$obj(), value));
                         self
                     }
                 ]
