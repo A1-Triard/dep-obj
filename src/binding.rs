@@ -50,17 +50,26 @@ impl<T: Convenient> Re<T> {
 }
 
 impl Re<!> {
+    /// Explicitely drops `Re` with no value, allowing to call
+    /// functions returning `Re` in any context.
+    ///
+    /// This could breaks code piece reenterability, so it
+    /// is supposed to use in places, where it is garanteed to
+    /// be not a problem, e.g. in `main` function (or any other
+    /// place which executes once).
     pub fn immediate(self) {
         let _ = self;
     }
 }
 
+/// A target for a binding: an object which can recieve values from a binding.
 pub trait Target<T: Convenient>: DynClone {
     fn execute(&self, state: &mut dyn State, value: T);
 }
 
 clone_trait_object!(<T: Convenient> Target<T>);
 
+/// A holder of a binding: an object controlling binding lifetime.
 pub trait Holder {
     fn release(&self, state: &mut dyn State);
 }
@@ -91,10 +100,12 @@ impl<Context: Clone, T: Convenient> Target<T> for FnTarget<Context, T> {
     }
 }
 
+/// Base non-generic part of the [`Handler`] trait.
 pub trait AnyHandler: Debug {
     fn clear(&self, state: &mut dyn State);
 }
 
+/// A value stream handler of any nature.
 pub trait Handler<T>: Debug + DynClone + Send + Sync {
     fn into_any(self: Box<Self>) -> Box<dyn AnyHandler>;
     fn execute(&self, state: &mut dyn State, args: T);
@@ -102,12 +113,14 @@ pub trait Handler<T>: Debug + DynClone + Send + Sync {
 
 clone_trait_object!(<T> Handler<T>);
 
+/// A value caching strategy.
 pub trait SourceCache<T: Convenient>: Default + Debug {
     type Value: Convenient;
     fn update(&mut self, value: T);
     fn get(&self, current: Option<T>) -> Option<Self::Value>;
 }
 
+/// Simple straightforward value caching strategy.
 #[derive(Educe)]
 #[educe(Debug)]
 pub struct ValueCache<T: Convenient>(Option<T>);
@@ -126,6 +139,7 @@ impl<T: Convenient> SourceCache<T> for ValueCache<T> {
     }
 }
 
+/// Disabled caching.
 #[derive(Educe)]
 #[educe(Debug)]
 pub struct NoCache(());
@@ -142,6 +156,7 @@ impl<T: Convenient> SourceCache<T> for NoCache {
     fn get(&self, current: Option<T>) -> Option<Option<T>> { Some(current) }
 }
 
+/// A target for a binding: an object which can send values to a binding.
 pub trait Source: Debug {
     type Value: Convenient;
     type Cache: SourceCache<Self::Value>;
@@ -172,6 +187,8 @@ macro_attr! {
     pub struct BoxedBindingNode(Box<dyn AnyBindingNode>);
 }
 
+/// An arena holding all bindings data.
+/// There almost always will be only one object of that type in application.
 pub struct Bindings(Arena<BoxedBindingNode>);
 
 impl SelfState for Bindings { }
@@ -329,6 +346,15 @@ impl<T: Convenient> From<BindingBase<T>> for AnyBindingBase {
         AnyBindingBase(v.0)
     }
 }
+
+pub use n::Binding0;
+pub use n::Binding1;
+pub use n::Binding2;
+pub use n::Binding3;
+pub use n::BindingExt0;
+pub use n::BindingExt1;
+pub use n::BindingExt2;
+pub use n::BindingExt3;
 
 macro_rules! binding_n {
     ($n:tt; $($i:tt),* $(,)?) => {
@@ -841,20 +867,24 @@ macro_rules! binding_n {
     };
 }
 
-binding_n!(0;);
-binding_n!(1; 1);
-binding_n!(2; 1, 2);
-binding_n!(3; 1, 2, 3);
-binding_n!(4; 1, 2, 3, 4);
-binding_n!(5; 1, 2, 3, 4, 5);
-binding_n!(6; 1, 2, 3, 4, 5, 6);
-binding_n!(7; 1, 2, 3, 4, 5, 6, 7);
-binding_n!(8; 1, 2, 3, 4, 5, 6, 7, 8);
-binding_n!(9; 1, 2, 3, 4, 5, 6, 7, 8, 9);
-binding_n!(10; 1, 2, 3, 4, 5, 6, 7, 8, 9, 10);
-binding_n!(11; 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11);
-binding_n!(12; 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12);
-binding_n!(13; 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13);
-binding_n!(14; 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14);
-binding_n!(15; 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15);
-binding_n!(16; 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16);
+pub mod n {
+    use crate::binding::*;
+
+    binding_n!(0;);
+    binding_n!(1; 1);
+    binding_n!(2; 1, 2);
+    binding_n!(3; 1, 2, 3);
+    binding_n!(4; 1, 2, 3, 4);
+    binding_n!(5; 1, 2, 3, 4, 5);
+    binding_n!(6; 1, 2, 3, 4, 5, 6);
+    binding_n!(7; 1, 2, 3, 4, 5, 6, 7);
+    binding_n!(8; 1, 2, 3, 4, 5, 6, 7, 8);
+    binding_n!(9; 1, 2, 3, 4, 5, 6, 7, 8, 9);
+    binding_n!(10; 1, 2, 3, 4, 5, 6, 7, 8, 9, 10);
+    binding_n!(11; 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11);
+    binding_n!(12; 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12);
+    binding_n!(13; 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13);
+    binding_n!(14; 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14);
+    binding_n!(15; 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15);
+    binding_n!(16; 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16);
+}
