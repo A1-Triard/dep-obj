@@ -28,7 +28,7 @@ mod behavior {
     use crate::objs::*;
 
     pub fn new_item(state: &mut dyn State) -> Item {
-        let item = Item::new_raw(state);
+        let item = Item::new(state);
         let weight = Binding3::new(state, (), |(), base_weight, cursed, equipped| Some(
             if equipped && cursed { base_weight + 100.0 } else { base_weight }
         ));

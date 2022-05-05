@@ -345,11 +345,67 @@ mod objs {
 For now out `Item` does not have any meaningful behavior. Lets create some.
 There are thow different concepts where to place this code. In the first one,
 code can be encapsulated inside `Item` (actually in `Item::new`). In the other one
-behavior are separated from data description. Fow now let choose the second
+behavior are separated from data description. Lets stick to the second
 approach and keep the behavior outside of `mod objs`.
 
-We can put the appropited code either inside `Item` constructod
-We also have put `Bindings` in the `Objs` to store reactive chains
-we are supposed to build to make objs mechanics.
+```rust
+pub fn new_item(state: &mut dyn State) -> Item {
+    let item = Item::new(state);
+    let weight = Binding3::new(state, (), |(), base_weight, cursed, equipped| Some(
+        if equipped && cursed { base_weight + 100.0 } else { base_weight }
+    ));
+    ItemProps::WEIGHT.bind(state, item.props(), weight);
+    weight.set_source_1(state, &mut ItemProps::BASE_WEIGHT.value_source(item.props()));
+    weight.set_source_2(state, &mut ItemProps::CURSED.value_source(item.props()));
+    weight.set_source_3(state, &mut ItemProps::EQUIPPED.value_source(item.props()));
+    return item;
+}
+```
 
+With the code above we have created functional dependency between four `Item`
+properties: `weigth` now is a function of other three properties, and will be
+updated automatically when any of the them changes.
 
+Finally, lets write some test code to make our just builded game system work:
+
+```
+fn run(state: &mut dyn State) {
+    let item = new_item(state);
+
+    let weight = Binding1::new(state, (), |(), weight| Some(weight));
+    weight.set_target_fn(state, (), |_state, (), weight| {
+        println!("Item weight changed, new weight: {}", weight);
+    });
+    weight.set_source_1(state, &mut ItemProps::WEIGHT.value_source(item.props()));
+
+    println!("> item.base_weight = 5.0");
+    ItemProps::BASE_WEIGHT.set(state, item.props(), 5.0).immediate();
+
+    println!("> item.cursed = true");
+    ItemProps::CURSED.set(state, item.props(), true).immediate();
+
+    println!("> item.equipped = true");
+    ItemProps::EQUIPPED.set(state, item.props(), true).immediate();
+
+    println!("> item.cursed = false");
+    ItemProps::CURSED.set(state, item.props(), false).immediate();
+
+    weight.drop_self(state);
+    item.drop_self(state);
+}
+```
+
+And the really last thing to do: construct `State` instance and call `run`.
+Our system requires `State` containing `Objs` and special arena for bindings.
+It can be easily reached with `merge_mut_and_then` method, combining two
+state objects into a single one. And, of course, we should not forget to
+call `Objs::drop_self` at the end:
+
+```rust
+fn main() {
+    (&mut Objs::new()).merge_mut_and_then(|state| {
+        run(state);
+        Objs::drop_self(state);
+    }, &mut Bindings::new());
+}
+```

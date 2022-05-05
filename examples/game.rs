@@ -75,7 +75,7 @@ mod objs {
     }
 
     impl Item {
-        pub fn new_raw(state: &mut dyn State) -> Item {
+        pub fn new(state: &mut dyn State) -> Item {
             let objs: &mut Objs = state.get_mut();
             objs.0.get_mut().items.insert(|id| (ItemData { props: ItemProps::new_priv() }, Item(id)))
         }
@@ -104,7 +104,7 @@ mod behavior {
     use crate::objs::*;
 
     pub fn new_item(state: &mut dyn State) -> Item {
-        let item = Item::new_raw(state);
+        let item = Item::new(state);
         let weight = Binding3::new(state, (), |(), base_weight, cursed, equipped| Some(
             if equipped && cursed { base_weight + 100.0 } else { base_weight }
         ));
