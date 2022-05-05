@@ -2,7 +2,7 @@
 
 #![deny(warnings)]
 
-mod game {
+mod objs {
     use dep_obj::dep_type;
     use dep_obj::templates::detached_static_dep_type;
     use std::borrow::Cow;
@@ -19,24 +19,31 @@ mod game {
     }
 
     pub type Item = detached_static_dep_type::Id<ItemProps>;
-    pub type Game = detached_static_dep_type::Arena<ItemProps>;
+    pub type Objs = detached_static_dep_type::Arena<ItemProps>;
 }
 
-use dep_obj::binding::{Binding1, Binding3, Bindings};
+mod behavior {
+    use dep_obj::binding::Binding3;
+    use dyn_context::state::State;
+    use crate::objs::*;
+
+    pub fn new_item(state: &mut dyn State) -> Item {
+        let item = Item::new_raw(state);
+        let weight = Binding3::new(state, (), |(), base_weight, cursed, equipped| Some(
+            if equipped && cursed { base_weight + 100.0 } else { base_weight }
+        ));
+        ItemProps::WEIGHT.bind(state, item.props(), weight);
+        weight.set_source_1(state, &mut ItemProps::BASE_WEIGHT.value_source(item.props()));
+        weight.set_source_2(state, &mut ItemProps::CURSED.value_source(item.props()));
+        weight.set_source_3(state, &mut ItemProps::EQUIPPED.value_source(item.props()));
+        return item;
+    }
+}
+
+use dep_obj::binding::{Binding1, Bindings};
 use dyn_context::state::{State, StateRefMut};
-use game::*;
-
-fn new_item(state: &mut dyn State) -> Item {
-    let item = Item::new_raw(state);
-    let weight = Binding3::new(state, (), |(), base_weight, cursed, equipped| Some(
-        if equipped && cursed { base_weight + 100.0 } else { base_weight }
-    ));
-    ItemProps::WEIGHT.bind(state, item.props(), weight);
-    weight.set_source_1(state, &mut ItemProps::BASE_WEIGHT.value_source(item.props()));
-    weight.set_source_2(state, &mut ItemProps::CURSED.value_source(item.props()));
-    weight.set_source_3(state, &mut ItemProps::EQUIPPED.value_source(item.props()));
-    return item;
-}
+use objs::*;
+use behavior::*;
 
 fn run(state: &mut dyn State) {
     let item = new_item(state);
@@ -64,8 +71,8 @@ fn run(state: &mut dyn State) {
 }
 
 fn main() {
-    (&mut Game::new()).merge_mut_and_then(|state| {
+    (&mut Objs::new()).merge_mut_and_then(|state| {
         run(state);
-        Game::drop_self(state);
+        Objs::drop_self(state);
     }, &mut Bindings::new());
 }
