@@ -4,7 +4,7 @@
 
 mod game {
     use dep_obj::dep_type;
-    use dep_obj::templates::detached_static_dep_obj;
+    use dep_obj::templates::detached_static_dep_type;
     use std::borrow::Cow;
 
     dep_type! {
@@ -18,8 +18,8 @@ mod game {
         }
     }
 
-    pub type Item = detached_static_dep_obj::Id<ItemProps>;
-    pub type Game = detached_static_dep_obj::Arena<ItemProps>;
+    pub type Item = detached_static_dep_type::Id<ItemProps>;
+    pub type Game = detached_static_dep_type::Arena<ItemProps>;
 }
 
 use dep_obj::binding::{Binding1, Binding3, Bindings};

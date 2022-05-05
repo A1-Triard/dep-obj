@@ -1,1 +1,1 @@
-pub mod detached_static_dep_obj;
+pub mod detached_static_dep_type;
