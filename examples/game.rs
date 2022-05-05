@@ -98,7 +98,7 @@ mod game {
     }
 }
 
-use dep_obj::binding::{Binding3, Bindings};
+use dep_obj::binding::{Binding1, Binding3, Bindings};
 use dyn_context::state::{State, StateRefMut};
 use game::*;
 
@@ -116,7 +116,26 @@ fn new_item(state: &mut dyn State) -> Item {
 
 fn run(state: &mut dyn State) {
     let item = new_item(state);
+
+    let weight = Binding1::new(state, (), |(), weight| Some(weight));
+    weight.set_target_fn(state, (), |_state, (), weight| {
+        println!("Item weight changed, new weight: {}", weight);
+    });
+    weight.set_source_1(state, &mut ItemProps::WEIGHT.value_source(item.props()));
+
+    println!("> item.base_weight = 5.0");
     ItemProps::BASE_WEIGHT.set(state, item.props(), 5.0).immediate();
+
+    println!("> item.cursed = true");
+    ItemProps::CURSED.set(state, item.props(), true).immediate();
+
+    println!("> item.equipped = true");
+    ItemProps::EQUIPPED.set(state, item.props(), true).immediate();
+
+    println!("> item.cursed = false");
+    ItemProps::CURSED.set(state, item.props(), false).immediate();
+
+    weight.drop_self(state);
     item.drop_self(state);
 }
 
