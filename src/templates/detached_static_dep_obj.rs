@@ -4,7 +4,8 @@ use debug_panic::debug_panic;
 use dyn_context::state::{RequiresStateDrop, SelfState, State, StateExt, StateDrop};
 use educe::Educe;
 use macro_attr_2018::macro_attr;
-use crate::fw::{DepType, DetachedDepObjId, dep_obj};
+use crate::fw::{DepType, DetachedDepObjId};
+use crate::dep_obj;
 
 pub trait DepObjProps: DepType {
     fn new_priv() -> Self;
