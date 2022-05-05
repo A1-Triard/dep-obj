@@ -52,7 +52,7 @@ dep_type! {
     pub struct ItemProps in Item {
         name: Cow<'static, str> = Cow::Borrowed(""),
         base_weight: f32 = 0.0,
-	weight: f32 = 0.0,
+        weight: f32 = 0.0,
         equipped: bool = false,
         cursed: bool = false,
     }
