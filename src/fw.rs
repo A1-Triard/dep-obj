@@ -1810,3 +1810,8 @@ impl<Owner: DepType + 'static, ItemType: Convenient> Source for DepVecItemInitia
         }
     }
 }
+
+#[doc(hidden)]
+pub trait NewPriv {
+    fn new_priv() -> Self;
+}

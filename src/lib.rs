@@ -1245,6 +1245,12 @@ macro_rules! dep_type_impl_raw {
                 core: [< $name Core >] $($r)*
             }
 
+            impl $($g)* $crate::NewPriv for $name $($r)* $($w)* {
+                fn new_priv() -> Self {
+                    Self::new_priv()
+                }
+            }
+
             impl $($g)* $name $($r)* $($w)* {
                 const fn new_priv() -> Self {
                     Self { core: [< $name Core >] ::new() }
