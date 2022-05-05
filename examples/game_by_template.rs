@@ -26,11 +26,8 @@ use dep_obj::binding::{Binding3, Bindings};
 use dyn_context::state::{State, StateRefMut};
 use game::*;
 
-fn new_item(state: &mut dyn State) {
-}
-
-fn run(state: &mut dyn State) {
-    let item = Item::new(state);
+fn new_item(state: &mut dyn State) -> Item {
+    let item = Item::new_raw(state);
     let weight = Binding3::new(state, (), |(), base_weight, cursed, equipped| Some(
         if equipped && cursed { base_weight + 100.0 } else { base_weight }
     ));
@@ -38,6 +35,12 @@ fn run(state: &mut dyn State) {
     weight.set_source_1(state, &mut ItemProps::BASE_WEIGHT.value_source(item.props()));
     weight.set_source_2(state, &mut ItemProps::CURSED.value_source(item.props()));
     weight.set_source_3(state, &mut ItemProps::EQUIPPED.value_source(item.props()));
+    return item;
+}
+
+fn run(state: &mut dyn State) {
+    let item = new_item(state);
+    ItemProps::BASE_WEIGHT.set(state, item.props(), 5.0).immediate();
     item.drop_self(state);
 }
 

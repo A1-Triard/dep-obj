@@ -67,7 +67,7 @@ macro_attr! {
 impl<P> DetachedDepObjId for Id<P> { }
 
 impl<P: Props + 'static> Id<P> {
-    pub fn new(state: &mut dyn State) -> Self {
+    pub fn new_raw(state: &mut dyn State) -> Self {
         let arena: &mut Arena<P> = state.get_mut();
         arena.0.get_mut().0.insert(|id| (Component { props: P::new_priv() }, Id(id)))
     }
