@@ -102,6 +102,9 @@ use dep_obj::binding::{Binding3, Bindings};
 use dyn_context::state::{State, StateRefMut};
 use game::*;
 
+fn new_item(state: &mut dyn State) {
+}
+
 fn run(state: &mut dyn State) {
     let item = Item::new(state);
     let weight = Binding3::new(state, (), |(), base_weight, cursed, equipped| Some(
