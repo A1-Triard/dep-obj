@@ -51,7 +51,7 @@ dep_type! {
     #[derive(Debug)]
     pub struct ItemProps in Item {
         name: Cow<'static, str> = Cow::Borrowed(""),
-        base_weight: f16 = 0.0f,
+        base_weight: f16 = 0.0,
 	weight: f16 = 0.0,
         equipped: bool = false,
         cursed: bool = false,
