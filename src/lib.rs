@@ -1356,7 +1356,7 @@ macro_rules! dep_obj {
                     };
                 )?
                 for binding in bindings {
-                    binding.drop_binding(state);
+                    binding.drop_self(state);
                 }
             )*
             $(

@@ -235,7 +235,7 @@ macro_attr! {
 }
 
 impl AnyBindingBase {
-    pub fn drop_binding(self, state: &mut dyn State) {
+    pub fn drop_self(self, state: &mut dyn State) {
         let bindings: &mut Bindings = state.get_mut();
         let mut node = bindings.0.remove(self.0);
         node.0.unhandle_sources_and_release_holder(state, self);
@@ -281,8 +281,8 @@ impl<T: Convenient> BindingBase<T> {
         self.set_target(state, Box::new(FnTarget { context, execute }));
     }
 
-    pub fn drop_binding(self, state: &mut dyn State) {
-        AnyBindingBase::from(self).drop_binding(state);
+    pub fn drop_self(self, state: &mut dyn State) {
+        AnyBindingBase::from(self).drop_self(state);
     }
 }
 
@@ -331,8 +331,8 @@ impl<T: Convenient> Binding<T> {
         BindingBase::from(self).set_target_fn(state, context, execute);
     }
 
-    pub fn drop_binding(self, state: &mut dyn State) {
-        AnyBindingBase::from(self).drop_binding(state);
+    pub fn drop_self(self, state: &mut dyn State) {
+        AnyBindingBase::from(self).drop_self(state);
     }
 
     pub fn get_value(self, state: &dyn State) -> Option<T> {
@@ -509,8 +509,8 @@ macro_rules! binding_n {
                     BindingBase::from(self).set_target_fn(state, context, execute);
                 }
 
-                pub fn drop_binding(self, state: &mut dyn State) {
-                    AnyBindingBase::from(self).drop_binding(state);
+                pub fn drop_self(self, state: &mut dyn State) {
+                    AnyBindingBase::from(self).drop_self(state);
                 }
 
                 $(
@@ -740,8 +740,8 @@ macro_rules! binding_n {
                     BindingBase::from(self).set_target_fn(state, context, execute);
                 }
 
-                pub fn drop_binding(self, state: &mut dyn State) {
-                    AnyBindingBase::from(self).drop_binding(state);
+                pub fn drop_self(self, state: &mut dyn State) {
+                    AnyBindingBase::from(self).drop_self(state);
                 }
 
                 pub fn get_value(self, state: &dyn State) -> Option<T> {

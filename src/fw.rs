@@ -510,7 +510,7 @@ impl<T: DetachedDepObjId> DepObjId for T {
 ///     MyDepType::PROP_2.set(app, id.obj(), 5).immediate();
 ///     assert_eq!(app.res.get_value(app), Some(5));
 ///     id.drop_my_dep_type(app);
-///     res.drop_binding(app);
+///     res.drop_self(app);
 /// }
 /// ```
 pub trait DepType: Debug {
@@ -799,7 +799,7 @@ impl<Owner: DepType, PropType: Convenient> DepProp<Owner, PropType> {
             let entry_mut = self.entry_mut(&mut obj_mut);
             entry_mut.binding
         } {
-            binding.drop_binding(state);
+            binding.drop_self(state);
         }
     }
 
@@ -1602,7 +1602,7 @@ impl<Owner: DepType, ItemType: Convenient> HandlerId for DepVecItemHandledInitia
         handler.update.filter(|&x| {
             let x: AnyBindingBase = x.into();
             x != dropping_binding
-        }).map(|binding| binding.drop_binding(state));
+        }).map(|binding| binding.drop_self(state));
     }
 }
 
@@ -1622,7 +1622,7 @@ impl<Owner: DepType, ItemType: Convenient> HandlerId for DepVecItemHandledSource
         handler.update.filter(|&x| {
             let x: AnyBindingBase = x.into();
             x != dropping_binding
-        }).map(|binding| binding.drop_binding(state));
+        }).map(|binding| binding.drop_self(state));
     }
 }
 
