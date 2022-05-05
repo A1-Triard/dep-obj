@@ -1,5 +1,5 @@
 [package]
-edition = "2018"
+edition = "2021"
 name = "dep-obj"
 version = "0.35.0"
 authors = ["warlock <internalmike@gmail.com>"]
@@ -16,7 +16,7 @@ rustc-args = ["--cfg", "docsrs"]
 rustdoc-args = ["--cfg", "docsrs"]
 
 [dependencies]
-components-arena = "2.1.5"
+components-arena = { version = "3.0.0", git = "https://github.com/A1-Triard/components-arena.git" }
 downcast-rs = { version = "1.2.0", default-features = false }
 dyn-clone = "1.0.2"
 dyn-context = "0.10.7"

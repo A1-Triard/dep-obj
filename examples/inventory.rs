@@ -4,7 +4,8 @@
 #![feature(const_ptr_offset_from)]
 
 use components_arena::{Arena, Component, NewtypeComponentId, Id};
-use dep_obj::{Change, DepObjBaseBuilder, DepObjId, dep_obj, dep_type, dep_type_with_builder, ItemChange, DepVecItemPos};
+use dep_obj::{Change, DepObjBaseBuilder, DepVecItemPos, DetachedDepObjId, ItemChange};
+use dep_obj::{dep_obj, dep_type, dep_type_with_builder};
 use macro_attr_2018::macro_attr;
 use dep_obj::binding::{Binding1, Binding2, BindingExt2, Bindings, Re};
 use dyn_context::state::{State, StateExt};
@@ -24,7 +25,7 @@ macro_attr! {
     struct Item(Id<ItemData>);
 }
 
-impl DepObjId for Item { }
+impl DetachedDepObjId for Item { }
 
 dep_type_with_builder! {
     #[derive(Debug)]
@@ -100,7 +101,7 @@ macro_attr! {
     struct Npc(Id<NpcComponent>);
 }
 
-impl DepObjId for Npc { }
+impl DetachedDepObjId for Npc { }
 
 dep_type! {
     #[derive(Debug)]

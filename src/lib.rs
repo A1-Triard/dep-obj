@@ -44,7 +44,7 @@ pub mod example {
     //!     pub struct MyDepTypeId(Id<MyDepTypePrivateData>);
     //! }
     //!
-    //! impl DepObjId for MyDepTypeId { }
+    //! impl DetachedDepObjId for MyDepTypeId { }
     //!
     //! macro_attr! {
     //!     #[derive(State!, Debug)]
@@ -78,7 +78,7 @@ pub mod example {
     //!     }
     //! }
 
-    use crate::{DepObjId, dep_obj, dep_type};
+    use crate::{DetachedDepObjId, dep_obj, dep_type};
     use components_arena::{Arena, Component, Id, NewtypeComponentId};
     use dyn_context::state::{SelfState, State, StateExt};
 
@@ -102,7 +102,7 @@ pub mod example {
 
     NewtypeComponentId!(() pub struct MyDepTypeId(Id<MyDepTypePrivateData>););
 
-    impl DepObjId for MyDepTypeId { }
+    impl DetachedDepObjId for MyDepTypeId { }
 
     #[derive(Debug)]
     pub struct MyApp {
@@ -569,15 +569,15 @@ impl<Owner: DepType> BaseDepObjCore<Owner> {
     }
 }
 
-pub trait DepObjIdBase: ComponentId {
+pub trait DepObjId: ComponentId {
     fn parent(self, state: &dyn State) -> Option<Self>;
     fn next(self, state: &dyn State) -> Self;
     fn first_child(self, state: &dyn State) -> Option<Self>;
 }
 
-pub trait DepObjId: ComponentId { }
+pub trait DetachedDepObjId: ComponentId { }
 
-impl<T: DepObjId> DepObjIdBase for T {
+impl<T: DetachedDepObjId> DepObjId for T {
     fn parent(self, _state: &dyn State) -> Option<Self> { None }
 
     fn next(self, _state: &dyn State) -> Self { self }
@@ -594,7 +594,7 @@ impl<T: DepObjId> DepObjIdBase for T {
 /// ```rust
 /// # #![feature(const_ptr_offset_from)]
 /// use components_arena::{Arena, Component, NewtypeComponentId, Id};
-/// use dep_obj::{DepObjId, dep_obj, dep_type};
+/// use dep_obj::{DetachedDepObjId, dep_obj, dep_type};
 /// use dep_obj::binding::{Bindings, Binding, Binding1};
 /// use dyn_context::state::{State, StateExt};
 /// use macro_attr_2018::macro_attr;
@@ -620,7 +620,7 @@ impl<T: DepObjId> DepObjIdBase for T {
 ///     pub struct MyDepTypeId(Id<MyDepTypePrivateData>);
 /// }
 ///
-/// impl DepObjId for MyDepTypeId { }
+/// impl DetachedDepObjId for MyDepTypeId { }
 ///
 /// pub struct MyApp {
 ///     bindings: Bindings,
@@ -693,7 +693,7 @@ impl<T: DepObjId> DepObjIdBase for T {
 /// }
 /// ```
 pub trait DepType: Debug {
-    type Id: DepObjIdBase;
+    type Id: DepObjId;
 
     #[doc(hidden)]
     fn core_base_priv(&self) -> &BaseDepObjCore<Self> where Self: Sized;

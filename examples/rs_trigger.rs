@@ -5,7 +5,7 @@
 
 mod circuit {
     use components_arena::{Arena, Component, Id, NewtypeComponentId};
-    use dep_obj::{DepObjId, DepType, dep_obj};
+    use dep_obj::{DetachedDepObjId, DepType, dep_obj};
     use downcast_rs::{Downcast, impl_downcast};
     use dyn_context::state::{SelfState, State, StateExt};
     use macro_attr_2018::macro_attr;
@@ -55,7 +55,7 @@ mod circuit {
         }
     }
 
-    impl DepObjId for Chip { }
+    impl DetachedDepObjId for Chip { }
 
     #[derive(Debug)]
     pub struct Circuit {
