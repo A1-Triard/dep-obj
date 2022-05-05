@@ -36,9 +36,9 @@ macro_attr! {
 ```
 
 Dependency objects support properties inheritance. The tree structure of objects is defined
-by `DepObjId` trait implementation. We do not need inheritance for `Item`, and we
-can express it and get appropriate ``empty'' `DepObjId` implementation
-by marking it with `DetachedDepObjId` trait:
+by the `DepObjId` trait implementation. We do not need inheritance for `Item`, and we
+can express it and get appropriate «empty» `DepObjId` implementation
+by marking it with the `DetachedDepObjId` trait:
 
 ```rust
 impl DetachedDepObjId for Item { }
