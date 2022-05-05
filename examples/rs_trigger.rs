@@ -38,7 +38,7 @@ mod circuit {
             })
         }
 
-        pub fn drop_chip(self, state: &mut dyn State) {
+        pub fn drop_self(self, state: &mut dyn State) {
             self.drop_bindings_priv(state);
             let circuit: &mut Circuit = state.get_mut();
             circuit.arena.remove(self.0);
@@ -224,11 +224,11 @@ fn main() {
     OrLegs::IN_1.set(state, chips.or_2.legs(), true).immediate();
     OrLegs::IN_1.set(state, chips.or_2.legs(), false).immediate();
 
-    print_out.drop_binding(state);
-    chips.or_1.drop_chip(state);
-    chips.or_2.drop_chip(state);
-    chips.not_2.drop_chip(state);
-    chips.not_1.drop_chip(state);
+    print_out.drop_self(state);
+    chips.or_1.drop_self(state);
+    chips.or_2.drop_self(state);
+    chips.not_2.drop_self(state);
+    chips.not_1.drop_self(state);
 
     print!("{}", state.log);
     assert_eq!(state.log, "\
