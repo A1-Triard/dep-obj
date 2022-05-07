@@ -5,7 +5,7 @@
 
 mod circuit {
     use components_arena::{Arena, Component, Id, NewtypeComponentId};
-    use dep_obj::{DetachedDepObjId, DepType, dep_obj};
+    use dep_obj::{DetachedDepObjId, DepType, dep_obj_x};
     use downcast_rs::{Downcast, impl_downcast};
     use dyn_context::state::{SelfState, State, StateExt};
     use macro_attr_2018::macro_attr;
@@ -45,8 +45,10 @@ mod circuit {
             let circuit: &mut Circuit = state.get_mut();
             circuit.arena.remove(self.0);
         }
+    }
 
-        dep_obj! {
+    dep_obj_x! {
+        impl Chip {
             pub fn legs(self as this, circuit: Circuit) -> (trait ChipLegs) as DynChipLegs {
                 if mut {
                     circuit.arena[this.0].legs.as_mut()

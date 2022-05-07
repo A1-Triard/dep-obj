@@ -8,7 +8,7 @@ use dyn_context::state::{RequiresStateDrop, SelfState, State, StateExt, StateDro
 use educe::Educe;
 use macro_attr_2018::macro_attr;
 use crate::fw::{DepType, DetachedDepObjId, NewPriv};
-use crate::dep_obj;
+use crate::dep_obj_x;
 
 pub trait Props: NewPriv + DepType { }
 
@@ -81,8 +81,10 @@ impl<P: Props + 'static> Id<P> {
         let arena: &mut Arena<P> = state.get_mut();
         arena.0.get_mut().0.remove(self.0);
     }
+}
 
-    dep_obj! {
+dep_obj_x! {
+    impl<P: Props + 'static> Id<P> {
         pub fn props(self as this, arena: Arena<P>) -> (P) as P {
             if mut {
                 &mut arena.0.get_mut().0[this.0].props
