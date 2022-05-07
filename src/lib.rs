@@ -1335,14 +1335,14 @@ macro_rules! dep_type_impl_raw {
 macro_rules! dep_obj {
     (
         $(
-            $vis:vis fn $name:ident (self as $this:ident, $arena:ident : $Arena:ty) -> $(optional(trait $opt_tr:tt))? $((trait $tr:tt))? $(optional($opt_ty:ty))? $(($ty:ty))? {
+            $vis:vis fn $name:ident (self as $this:ident, $arena:ident : $Arena:ty) -> $(optional(trait $opt_tr:tt))? $((trait $tr:tt))? $(optional($opt_ty:ty))? $(($ty:ty))? as $Dyn:ty {
                 if mut { $field_mut:expr } else { $field:expr }
             }
         )*
     ) => {
         $(
             $crate::dep_obj_impl! {
-                $vis fn $name (self as $this, $arena : $Arena) -> $(optional(trait $opt_tr))? $((trait $tr))? $(optional($opt_ty))? $(($ty))? {
+                $vis fn $name (self as $this, $arena : $Arena) -> $(optional(trait $opt_tr))? $((trait $tr))? $(optional($opt_ty))? $(($ty))? as $Dyn {
                     if mut { $field_mut } else { $field }
                 }
             }
@@ -1413,7 +1413,7 @@ macro_rules! dep_obj {
 #[macro_export]
 macro_rules! dep_obj_impl {
     (
-        $vis:vis fn $name:ident (self as $this:ident, $arena:ident : $Arena:ty) -> optional(trait $ty:tt) {
+        $vis:vis fn $name:ident (self as $this:ident, $arena:ident : $Arena:ty) -> optional(trait $ty:tt) as $Dyn:ty {
             if mut { $field_mut:expr } else { $field:expr }
         }
     ) => {
@@ -1460,7 +1460,7 @@ macro_rules! dep_obj_impl {
         }
     };
     (
-        $vis:vis fn $name:ident (self as $this:ident, $arena:ident : $Arena:ty) -> (trait $ty:tt) {
+        $vis:vis fn $name:ident (self as $this:ident, $arena:ident : $Arena:ty) -> (trait $ty:tt) as $Dyn:ty {
             if mut { $field_mut:expr } else { $field:expr }
         }
     ) => {
@@ -1503,7 +1503,7 @@ macro_rules! dep_obj_impl {
         }
     };
     (
-        $vis:vis fn $name:ident (self as $this:ident, $arena:ident: $Arena:ty) -> optional($ty:ty) {
+        $vis:vis fn $name:ident (self as $this:ident, $arena:ident: $Arena:ty) -> optional($ty:ty) as $Dyn:ty {
             if mut { $field_mut:expr } else { $field:expr }
         }
     ) => {
@@ -1545,7 +1545,7 @@ macro_rules! dep_obj_impl {
         }
     };
     (
-        $vis:vis fn $name:ident (self as $this:ident, $arena:ident: $Arena:ty) -> ($ty:ty) {
+        $vis:vis fn $name:ident (self as $this:ident, $arena:ident: $Arena:ty) -> ($ty:ty) as $Dyn:ty {
             if mut { $field_mut:expr } else { $field:expr }
         }
     ) => {
@@ -1587,8 +1587,7 @@ macro_rules! dep_obj_impl {
         }
     };
     (
-        $vis:vis fn $name:ident (self as $this:ident, $arena:ident : $Arena:ty) -> $(optional(trait $opt_tr:tt))? $(trait $tr:tt)? $(optional($opt_ty:ty))? $($ty:ty)? {
-            if mut { $field_mut:expr } else { $field:expr }
+        $vis:vis fn $name:ident (self as $this:ident, $arena:ident : $Arena:ty) -> $(optional(trait $opt_tr:tt))? $(trait $tr:tt)? $(optional($opt_ty:ty))? $($ty:ty)? as $Dyn:ty {
         }
     ) => {
         $crate::std_compile_error!($crate::std_concat!("\
