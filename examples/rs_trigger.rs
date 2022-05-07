@@ -10,7 +10,9 @@ mod circuit {
     use dyn_context::state::{SelfState, State, StateExt};
     use macro_attr_2018::macro_attr;
 
-    pub trait ChipLegs: Downcast + DepType<Id=Chip> { }
+    pub enum DynChipLegs { }
+
+    pub trait ChipLegs: Downcast + DepType<Id=Chip, Dyn=DynChipLegs> { }
 
     impl_downcast!(ChipLegs);
 
@@ -77,7 +79,7 @@ mod or_chip {
 
     dep_type! {
         #[derive(Debug)]
-        pub struct OrLegs in Chip {
+        pub struct OrLegs in Chip as DynChipLegs {
             in_1: bool = false,
             in_2: bool = false,
             out: bool = false,
@@ -106,7 +108,7 @@ mod not_chip {
 
     dep_type! {
         #[derive(Debug)]
-        pub struct NotLegs in Chip {
+        pub struct NotLegs in Chip as DynChipLegs {
             in_: bool = false,
             out: bool = true,
         }

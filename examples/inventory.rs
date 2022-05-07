@@ -29,7 +29,7 @@ impl DetachedDepObjId for Item { }
 
 dep_type_with_builder! {
     #[derive(Debug)]
-    struct ItemProps become props in Item {
+    struct ItemProps become props in Item as ItemProps {
         name: Cow<'static, str> = Cow::Borrowed(""),
         equipped: bool = false,
         enhancement: i8 = 0,
@@ -105,7 +105,7 @@ impl DetachedDepObjId for Npc { }
 
 dep_type! {
     #[derive(Debug)]
-    struct NpcProps in Npc {
+    struct NpcProps in Npc as NpcProps {
         equipped_items [Item],
         items_enhancement: i8 = 0,
     }

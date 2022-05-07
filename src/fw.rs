@@ -423,7 +423,7 @@ impl<T: DetachedDepObjId> DepObjId for T {
 ///
 /// dep_type! {
 ///     #[derive(Debug)]
-///     pub struct MyDepType in MyDepTypeId {
+///     pub struct MyDepType in MyDepTypeId as MyDepType {
 ///         prop_1: bool = false,
 ///         prop_2: i32 = 10,
 ///     }
@@ -515,6 +515,7 @@ impl<T: DetachedDepObjId> DepObjId for T {
 /// ```
 pub trait DepType: Debug {
     type Id: DepObjId;
+    type Dyn: ?Sized;
 
     #[doc(hidden)]
     fn core_base_priv(&self) -> &BaseDepObjCore<Self> where Self: Sized;
