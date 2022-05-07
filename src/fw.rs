@@ -415,7 +415,7 @@ impl<T: DetachedDepObjId> DepObjId for T {
 /// ```rust
 /// # #![feature(const_ptr_offset_from)]
 /// use components_arena::{Arena, Component, NewtypeComponentId, Id};
-/// use dep_obj::{DetachedDepObjId, dep_obj_x, dep_type};
+/// use dep_obj::{DetachedDepObjId, dep_obj, dep_type};
 /// use dep_obj::binding::{Bindings, Binding, Binding1};
 /// use dyn_context::state::{State, StateExt};
 /// use macro_attr_2018::macro_attr;
@@ -486,7 +486,7 @@ impl<T: DetachedDepObjId> DepObjId for T {
 ///     }
 /// }
 ///
-/// dep_obj_x! {
+/// dep_obj! {
 ///     impl MyDepTypeId {
 ///         pub fn obj(self as this, app: MyApp) -> (MyDepType) as MyDepType {
 ///             if mut {

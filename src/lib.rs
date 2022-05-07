@@ -1332,12 +1332,12 @@ macro_rules! dep_type_impl_raw {
 }
 
 #[macro_export]
-macro_rules! dep_obj_x {
+macro_rules! dep_obj {
     (
         impl $($token:tt)+
     ) => {
         $crate::generics_parse! {
-            $crate::dep_obj_x_impl {
+            $crate::dep_obj_impl {
                 @impl
             }
             $($token)+
@@ -1423,7 +1423,7 @@ macro_rules! dep_obj_drop_bindings {
 
 #[doc(hidden)]
 #[macro_export]
-macro_rules! dep_obj_x_impl {
+macro_rules! dep_obj_impl {
     (
         @impl $g:tt $r:tt $w:tt $t:ty {
             $(
@@ -1443,7 +1443,7 @@ macro_rules! dep_obj_x_impl {
             }
         }
         $(
-            $crate::dep_obj_x_impl_raw! {
+            $crate::dep_obj_impl_raw! {
                 $g $w [$t]
                 $vis fn $name (self as $this, $arena : $Arena) -> $(optional(trait $opt_tr))? $((trait $tr))? $(optional($opt_ty))? $(($ty))? as $Dyn {
                     if mut { $field_mut } else { $field }
@@ -1470,7 +1470,7 @@ macro_rules! dep_obj_x_impl {
 
 #[doc(hidden)]
 #[macro_export]
-macro_rules! dep_obj_x_impl_raw {
+macro_rules! dep_obj_impl_raw {
     (
         [$($g:tt)*] [$($w:tt)*] [$t:ty]
         $vis:vis fn $name:ident (self as $this:ident, $arena:ident : $Arena:ty) -> optional(trait $ty:tt) as $Dyn:ty {

@@ -5,7 +5,7 @@
 mod objs {
     use components_arena::{Arena, Component, NewtypeComponentId, Id};
     use debug_panic::debug_panic;
-    use dep_obj::{DetachedDepObjId, dep_obj_x, dep_type};
+    use dep_obj::{DetachedDepObjId, dep_obj, dep_type};
     use dyn_context::state::{RequiresStateDrop, SelfState, State, StateExt, StateDrop};
     use macro_attr_2018::macro_attr;
     use std::borrow::Cow;
@@ -87,7 +87,7 @@ mod objs {
         }
     }
 
-    dep_obj_x! {
+    dep_obj! {
         impl Item {
             pub fn props(self as this, objs: Objs) -> (ItemProps) as ItemProps {
                 if mut {
