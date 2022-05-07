@@ -16,8 +16,16 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-latest, windows-latest, macOS-latest]
-        rust: [nightly]
+        include:
+        - os: ubuntu-latest
+          rust: nightly
+          triple: x86_64-unknown-linux-gnu
+        - os: windows-latest
+          rust: nightly
+          triple: x86_64-pc-windows-msvc
+        - os: macOS-latest
+          rust: nightly
+          triple: x86_64-apple-darwin
     runs-on: ${{ matrix.os }}
     steps:
     - uses: actions-rs/toolchain@v1
@@ -66,6 +74,13 @@ jobs:
       with:
         command: build
         args: "--verbose --release"
+    - name: rustup component add rust-src
+      run: "rustup component add rust-src --toolchain nightly-${{ matrix.triple }}"
+    - name: ensure_no_std build
+      run: "cargo +nightly build --verbose -Z build-std=core,alloc,panic_abort --target ${{ matrix.triple }} --release"
+      working-directory: ensure_no_std
+    - name: ensure_no_std run
+      run: "./ensure_no_std/target/${{ matrix.triple }}/release/ensure_no_std"
     - name: run --example rs_trigger
       uses: actions-rs/cargo@v1
       with:
@@ -76,3 +91,25 @@ jobs:
       with:
         command: run
         args: "--verbose --example inventory"
+    - name: run --example game
+      uses: actions-rs/cargo@v1
+      with:
+        command: run
+        args: "--verbose --example game"
+    - name: run --example game_by_template
+      uses: actions-rs/cargo@v1
+      with:
+        command: run
+        args: "--verbose --example game_by_template"
+    - name: outdated
+      uses: actions-rs/cargo@v1
+      with:
+        command: outdated
+        args: "--verbose --aggresssive --root-deps-only --exit-code 1"
+    - name: rustup component add clippy
+      run: "rustup component add clippy"
+    - name: clippy
+      uses: actions-rs/cargo@v1
+      with:
+        command: clippy
+        args: "--verbose"

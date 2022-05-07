@@ -20,7 +20,7 @@ components-arena = { version = "3.0.0", git = "https://github.com/A1-Triard/comp
 debug_panic = "0.2.1"
 downcast-rs = { version = "1.2.0", default-features = false }
 dyn-clone = "1.0.2"
-dyn-context = "0.10.7"
+dyn-context = "0.11.0"
 educe = "0.4.13"
 generics = "0.3.2"
 macro-attr-2018 = "1.1.1"
