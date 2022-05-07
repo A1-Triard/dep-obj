@@ -1477,10 +1477,45 @@ macro_rules! dep_obj_impl_raw {
             if mut { $field_mut:expr } else { $field:expr }
         }
     ) => {
+        $crate::dep_obj_impl_raw! {
+            @add_parameter DepObjType
+            [$($g)*] [$($w)*] [$t]
+            $vis fn $name (self as $this, $arena : $Arena) -> optional(trait $ty) as $Dyn {
+                if mut { $field_mut } else { $field }
+            }
+        }
+    };
+    (
+        @add_parameter $p:ident
+        [$($g:tt)*] [$($w:tt)*] [$t:ty]
+        $vis:vis fn $name:ident (self as $this:ident, $arena:ident : $Arena:ty) -> optional(trait $ty:tt) as $Dyn:ty {
+            if mut { $field_mut:expr } else { $field:expr }
+        }
+    ) => {
+        $crate::generics_concat! {
+            $crate::dep_obj_impl_raw {
+                @continue
+                [$p] [$($g)*] [$($w)*] [$t]
+                $vis fn $name (self as $this, $arena : $Arena) -> optional(trait $ty) as $Dyn {
+                    if mut { $field_mut } else { $field }
+                }
+            }
+            [$($g)*] [] [],
+            [ < $p : $ty + $crate::DepType<Id=Self> > ] [] []
+        }
+    };
+    (
+        @continue
+        [$p:ident] [$($g:tt)*] [$($w:tt)*] [$t:ty]
+        $vis:vis fn $name:ident (self as $this:ident, $arena:ident : $Arena:ty) -> optional(trait $ty:tt) as $Dyn:ty {
+            if mut { $field_mut:expr } else { $field:expr }
+        }
+        [$($gp:tt)*] [] []
+    ) => {
         $crate::paste_paste! {
-            impl $($g)* $crate::DepObj<$Dyn, Type> for $t $($w)* {
-                fn descriptor(self) -> $crate::GlobDescriptor<Type> {
-                    self. [< $name _descriptor >] ()
+            impl $($gp)* $crate::DepObj<$Dyn, $p> for $t $($w)* {
+                fn descriptor() -> $crate::GlobDescriptor<$p> {
+                    Self:: [< $name _descriptor >] ()
                 }
             }
 
@@ -1533,10 +1568,45 @@ macro_rules! dep_obj_impl_raw {
             if mut { $field_mut:expr } else { $field:expr }
         }
     ) => {
+        $crate::dep_obj_impl_raw! {
+            @add_parameter DepObjType
+            [$($g)*] [$($w)*] [$t]
+            $vis fn $name (self as $this, $arena : $Arena) -> (trait $ty) as $Dyn {
+                if mut { $field_mut } else { $field }
+            }
+        }
+    };
+    (
+        @add_parameter $p:ident
+        [$($g:tt)*] [$($w:tt)*] [$t:ty]
+        $vis:vis fn $name:ident (self as $this:ident, $arena:ident : $Arena:ty) -> (trait $ty:tt) as $Dyn:ty {
+            if mut { $field_mut:expr } else { $field:expr }
+        }
+    ) => {
+        $crate::generics_concat! {
+            $crate::dep_obj_impl_raw {
+                @continue2
+                [$p] [$($g)*] [$($w)*] [$t]
+                $vis fn $name (self as $this, $arena : $Arena) -> (trait $ty) as $Dyn {
+                    if mut { $field_mut } else { $field }
+                }
+            }
+            [$($g)*] [] [],
+            [ < $p : $ty + $crate::DepType<Id=Self> > ] [] []
+        }
+    };
+    (
+        @continue2
+        [$p:ident] [$($g:tt)*] [$($w:tt)*] [$t:ty]
+        $vis:vis fn $name:ident (self as $this:ident, $arena:ident : $Arena:ty) -> (trait $ty:tt) as $Dyn:ty {
+            if mut { $field_mut:expr } else { $field:expr }
+        }
+        [$($gp:tt)*] [] []
+    ) => {
         $crate::paste_paste! {
-            impl $($g)* $crate::DepObj<$Dyn, Type> for $t $($w)* {
-                fn descriptor(self) -> $crate::GlobDescriptor<Type> {
-                    self. [< $name _descriptor >] ()
+            impl $($gp)* $crate::DepObj<$Dyn, $p> for $t $($w)* {
+                fn descriptor() -> $crate::GlobDescriptor<$p> {
+                    Self:: [< $name _descriptor >] ()
                 }
             }
 

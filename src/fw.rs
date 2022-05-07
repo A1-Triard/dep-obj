@@ -1831,5 +1831,5 @@ pub trait NewPriv {
 }
 
 pub trait DepObj<Dyn, Type: DepType> {
-    fn descriptor(self) -> GlobDescriptor<Type>;
+    fn descriptor() -> GlobDescriptor<Type>;
 }
