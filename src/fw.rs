@@ -750,7 +750,13 @@ impl<Owner: DepType, PropType: Convenient> DepProp<Owner, PropType> {
         handlers.execute(state, &change, obj, self);
     }
 
-    fn un_set(self, state: &mut dyn State, obj: Glob<Owner>, mut value: Option<PropType>) {
+    fn un_set(
+        self, state: &mut dyn State, id: Owner::Id, mut value: Option<PropType>
+    ) where Owner::Id: DepObj<Owner::Dyn, Owner> {
+        let obj = Glob {
+            id: id.into_raw(),
+            descriptor: <Owner::Id as DepObj<Owner::Dyn, Owner>>::descriptor
+        };
         let mut obj_mut = obj.get_mut(state);
         let entry_mut = self.entry_mut(&mut obj_mut);
         if replace(&mut entry_mut.enqueue, true) {
@@ -773,37 +779,45 @@ impl<Owner: DepType, PropType: Convenient> DepProp<Owner, PropType> {
         entry_mut.enqueue = false;
     }
 
-    pub fn set<X: Convenient>(self, state: &mut dyn State, obj: Glob<Owner>, value: PropType) -> Re<X> {
-        self.un_set(state, obj, Some(value));
+    pub fn set<X: Convenient>(
+        self, state: &mut dyn State, id: Owner::Id, value: PropType
+    ) -> Re<X> where Owner::Id: DepObj<Owner::Dyn, Owner> {
+        self.un_set(state, id, Some(value));
         Re::Continue
     }
 
-    pub fn unset<X: Convenient>(self, state: &mut dyn State, obj: Glob<Owner>) -> Re<X> {
-        self.un_set(state, obj, None);
+    pub fn unset<X: Convenient>(
+        self, state: &mut dyn State, id: Owner::Id
+    ) -> Re<X> where Owner::Id: DepObj<Owner::Dyn, Owner> {
+        self.un_set(state, id, None);
         Re::Continue
     }
 
     fn bind_raw(
         self,
         state: &mut dyn State,
-        obj: Glob<Owner>,
+        id: Owner::Id,
         binding: BindingBase<PropType>
-    ) where Owner: 'static {
+    ) where Owner: 'static, Owner::Id: DepObj<Owner::Dyn, Owner> {
+        let obj = Glob {
+            id: id.into_raw(),
+            descriptor: <Owner::Id as DepObj<Owner::Dyn, Owner>>::descriptor
+        };
         self.unbind(state, obj);
         let mut obj_mut = obj.get_mut(state);
         let entry_mut = self.entry_mut(&mut obj_mut);
         entry_mut.binding = Some(binding);
-        binding.set_target(state, Box::new(DepPropSet { prop: self, obj }));
-        binding.set_holder(state, Box::new(DepPropSet { prop: self, obj }));
+        binding.set_target(state, Box::new(DepPropSet { prop: self, id }));
+        binding.set_holder(state, Box::new(DepPropSet { prop: self, id }));
     }
 
     pub fn bind(
         self,
         state: &mut dyn State,
-        obj: Glob<Owner>,
+        id: Owner::Id,
         binding: impl Into<BindingBase<PropType>>
-    ) where Owner: 'static {
-        self.bind_raw(state, obj, binding.into());
+    ) where Owner: 'static, Owner::Id: DepObj<Owner::Dyn, Owner> {
+        self.bind_raw(state, id, binding.into());
     }
 
     pub fn unbind(self, state: &mut dyn State, obj: Glob<Owner>) {
@@ -816,7 +830,11 @@ impl<Owner: DepType, PropType: Convenient> DepProp<Owner, PropType> {
         }
     }
 
-    fn clear_binding(self, state: &mut dyn State, obj: Glob<Owner>) {
+    fn clear_binding(self, state: &mut dyn State, id: Owner::Id) where Owner::Id: DepObj<Owner::Dyn, Owner> {
+        let obj = Glob {
+            id: id.into_raw(),
+            descriptor: <Owner::Id as DepObj<Owner::Dyn, Owner>>::descriptor
+        };
         let mut obj_mut = obj.get_mut(state);
         let entry_mut = self.entry_mut(&mut obj_mut);
         let ok = entry_mut.binding.take().is_some();
@@ -842,20 +860,20 @@ impl<Owner: DepType, PropType: Convenient> DepProp<Owner, PropType> {
 
 #[derive(Educe)]
 #[educe(Debug, Clone)]
-struct DepPropSet<Owner: DepType, PropType: Convenient> {
-    obj: Glob<Owner>,
+struct DepPropSet<Owner: DepType, PropType: Convenient> where Owner::Id: DepObj<Owner::Dyn, Owner> {
+    id: Owner::Id,
     prop: DepProp<Owner, PropType>,
 }
 
-impl<Owner: DepType, PropType: Convenient> Target<PropType> for DepPropSet<Owner, PropType> {
+impl<Owner: DepType, PropType: Convenient> Target<PropType> for DepPropSet<Owner, PropType> where Owner::Id: DepObj<Owner::Dyn, Owner> {
     fn execute(&self, state: &mut dyn State, value: PropType) {
-        self.prop.set(state, self.obj, value).immediate();
+        self.prop.set(state, self.id, value).immediate();
     }
 }
 
-impl<Owner: DepType, PropType: Convenient> Holder for DepPropSet<Owner, PropType> {
+impl<Owner: DepType, PropType: Convenient> Holder for DepPropSet<Owner, PropType> where Owner::Id: DepObj<Owner::Dyn, Owner> {
     fn release(&self, state: &mut dyn State) {
-        self.prop.clear_binding(state, self.obj);
+        self.prop.clear_binding(state, self.id);
     }
 }
 
@@ -1830,6 +1848,6 @@ pub trait NewPriv {
     fn new_priv() -> Self;
 }
 
-pub trait DepObj<Dyn, Type: DepType> {
+pub trait DepObj<Dyn: ?Sized, Type: DepType> {
     fn descriptor() -> GlobDescriptor<Type>;
 }

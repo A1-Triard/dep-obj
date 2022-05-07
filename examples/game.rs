@@ -110,7 +110,7 @@ mod behavior {
         let weight = Binding3::new(state, (), |(), base_weight, cursed, equipped| Some(
             if equipped && cursed { base_weight + 100.0 } else { base_weight }
         ));
-        ItemProps::WEIGHT.bind(state, item.props(), weight);
+        ItemProps::WEIGHT.bind(state, item, weight);
         weight.set_source_1(state, &mut ItemProps::BASE_WEIGHT.value_source(item.props()));
         weight.set_source_2(state, &mut ItemProps::CURSED.value_source(item.props()));
         weight.set_source_3(state, &mut ItemProps::EQUIPPED.value_source(item.props()));
@@ -133,16 +133,16 @@ fn run(state: &mut dyn State) {
     weight.set_source_1(state, &mut ItemProps::WEIGHT.value_source(item.props()));
 
     println!("> item.base_weight = 5.0");
-    ItemProps::BASE_WEIGHT.set(state, item.props(), 5.0).immediate();
+    ItemProps::BASE_WEIGHT.set(state, item, 5.0).immediate();
 
     println!("> item.cursed = true");
-    ItemProps::CURSED.set(state, item.props(), true).immediate();
+    ItemProps::CURSED.set(state, item, true).immediate();
 
     println!("> item.equipped = true");
-    ItemProps::EQUIPPED.set(state, item.props(), true).immediate();
+    ItemProps::EQUIPPED.set(state, item, true).immediate();
 
     println!("> item.cursed = false");
-    ItemProps::CURSED.set(state, item.props(), false).immediate();
+    ItemProps::CURSED.set(state, item, false).immediate();
 
     weight.drop_self(state);
     item.drop_self(state);
