@@ -140,13 +140,8 @@ impl<T: Convenient> SourceCache<T> for ValueCache<T> {
 }
 
 /// Disabled caching.
-#[derive(Educe)]
-#[educe(Debug)]
+#[derive(Debug, Default)]
 pub struct NoCache(());
-
-impl Default for NoCache {
-    fn default() -> Self { NoCache(()) }
-}
 
 impl<T: Convenient> SourceCache<T> for NoCache {
     type Value = Option<T>;

@@ -14,10 +14,14 @@ pub trait Props: NewPriv + DepType { }
 
 impl<T: NewPriv + DepType> Props for T { }
 
+#[derive(Educe)]
+#[educe(Default)]
 pub struct Arena<P: Props + 'static>(StateDrop<ArenaImpl<P>>);
 
 impl<P: Props + 'static> SelfState for Arena<P> { }
 
+#[derive(Educe)]
+#[educe(Default)]
 struct ArenaImpl<P>(components_arena_Arena<Component<P>>);
 
 impl<P: Props + 'static> RequiresStateDrop for ArenaImpl<P> {

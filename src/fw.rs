@@ -46,19 +46,19 @@ pub enum ItemChangeAction<ItemType: Convenient> {
 
 impl<ItemType: Convenient> ItemChangeAction<ItemType> {
     pub fn is_insert(&self) -> bool {
-        if let ItemChangeAction::Insert { .. } = self { true } else { false }
+        matches!(self, ItemChangeAction::Insert { .. })
     }
 
     pub fn is_remove(&self) -> bool { self == &ItemChangeAction::Remove }
 
     pub fn is_update_insert(&self) -> bool {
-        if let ItemChangeAction::UpdateInsert { .. } = self { true } else { false }
+        matches!(self, ItemChangeAction::UpdateInsert { .. })
     }
 
     pub fn is_update_remove(&self) -> bool { self == &ItemChangeAction::UpdateRemove }
 
     pub fn is_move_insert(&self) -> bool {
-        if let ItemChangeAction::MoveInsert { .. } = self { true } else { false }
+        matches!(self, ItemChangeAction::MoveInsert { .. })
     }
 
     pub fn is_move_remove(&self) -> bool { self == &ItemChangeAction::MoveRemove }
@@ -544,6 +544,11 @@ pub struct DepEvent<Owner: DepType, ArgsType: DepEventArgs> {
 }
 
 impl<Owner: DepType, ArgsType: DepEventArgs> DepEvent<Owner, ArgsType> {
+    /// # Safety
+    ///
+    /// The function is not intended for direct use.
+    /// Using the [`dep_type!`](dep_type) or the [`dep_type_with_builder!`](dep_type_with_builder)
+    /// macros garantees the function safe use.
     pub const unsafe fn new(offset: usize) -> Self {
         DepEvent { offset, _phantom: PhantomType::new() }
     }
@@ -603,8 +608,13 @@ pub struct DepProp<Owner: DepType, PropType: Convenient> {
 }
 
 impl<Owner: DepType, PropType: Convenient> DepProp<Owner, PropType> {
-    /// Creates dependency property. The only safe way to call this function is through
-    /// the [`dep_type`] or the [`dep_type_with_builder`] macro using.
+    /// Creates dependency property.
+    ///
+    /// # Safety
+    ///
+    /// The function is not intended for direct use.
+    /// Using the [`dep_type!`](dep_type) or the [`dep_type_with_builder!`](dep_type_with_builder)
+    /// macros garantees the function safe use.
     pub const unsafe fn new(offset: usize) -> Self {
         DepProp { offset, _phantom: PhantomType::new() }
     }
@@ -634,10 +644,10 @@ impl<Owner: DepType, PropType: Convenient> DepProp<Owner, PropType> {
             if let Some(parent) = obj.parent(state) {
                 self.current_value(state, parent, f)
             } else {
-                f(&entry.default)
+                f(entry.default)
             }
         } else {
-            f(&entry.default)
+            f(entry.default)
         }
     }
 
@@ -918,6 +928,11 @@ pub struct DepVec<Owner: DepType, ItemType: Convenient> {
 }
 
 impl<Owner: DepType, ItemType: Convenient> DepVec<Owner, ItemType> {
+    /// # Safety
+    ///
+    /// The function is not intended for direct use.
+    /// Using the [`dep_type!`](dep_type) or the [`dep_type_with_builder!`](dep_type_with_builder)
+    /// macros garantees the function safe use.
     pub const unsafe fn new(offset: usize) -> Self {
         DepVec { offset, _phantom: PhantomType::new() }
     }
@@ -1189,7 +1204,7 @@ impl<Owner: DepType + 'static, PropType: Convenient> AnySetter<Owner> for Setter
         let change = if old.is_some() && value.is_some() {
             unsafe { Change { old: old.unwrap_unchecked(), new: value.unwrap_unchecked() } }
         } else {
-            if let Some(change) = self.prop.unstyled_non_local_value(state, obj, |unstyled_non_local_value| {
+            self.prop.unstyled_non_local_value(state, obj, |unstyled_non_local_value| {
                 let old_ref = old.as_ref().unwrap_or(unstyled_non_local_value);
                 let value_ref = value.as_ref().unwrap_or(unstyled_non_local_value);
                 if old_ref == value_ref {
@@ -1199,11 +1214,7 @@ impl<Owner: DepType + 'static, PropType: Convenient> AnySetter<Owner> for Setter
                     let new = value.unwrap_or_else(|| unstyled_non_local_value.clone());
                     Some(Change { old, new })
                 }
-            }) {
-                change
-            } else {
-                return None;
-            }
+            })?
         };
         let prop = self.prop;
         Some(Box::new(move |state: &'_ mut dyn State| handlers.execute(state, &change, obj, prop)))
