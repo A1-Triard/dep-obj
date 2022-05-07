@@ -1830,8 +1830,6 @@ pub trait NewPriv {
     fn new_priv() -> Self;
 }
 
-pub trait DepObj<Dyn> {
-    type Type: DepType;
-
-    fn descriptor() -> GlobDescriptor<Self::Type>;
+pub trait DepObj<Dyn, Type: DepType> {
+    fn descriptor(self) -> GlobDescriptor<Type>;
 }
