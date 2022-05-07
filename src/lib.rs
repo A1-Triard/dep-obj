@@ -1656,6 +1656,12 @@ macro_rules! dep_obj_impl_raw {
         }
     ) => {
         $crate::paste_paste! {
+            impl $($g)* $crate::DepObj<$Dyn, $ty> for $t $($w)* {
+                fn descriptor() -> $crate::GlobDescriptor<$ty> {
+                    Self:: [< $name _descriptor >] ()
+                }
+            }
+
             impl $($g)* $t $($w)* {
                 fn [< $name _ref >] <'arena_lifetime>(
                     $arena: &'arena_lifetime dyn $crate::std_any_Any,
@@ -1701,6 +1707,12 @@ macro_rules! dep_obj_impl_raw {
         }
     ) => {
         $crate::paste_paste! {
+            impl $($g)* $crate::DepObj<$Dyn, $ty> for $t $($w)* {
+                fn descriptor() -> $crate::GlobDescriptor<$ty> {
+                    Self:: [< $name _descriptor >] ()
+                }
+            }
+
             impl $($g)* $t $($w)* {
                 fn [< $name _ref >] <'arena_lifetime>(
                     $arena: &'arena_lifetime dyn $crate::std_any_Any,
