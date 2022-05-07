@@ -5,7 +5,7 @@
 
 use components_arena::{Arena, Component, NewtypeComponentId, Id};
 use dep_obj::{Change, DepObjBaseBuilder, DepVecItemPos, DetachedDepObjId, ItemChange};
-use dep_obj::{dep_obj, dep_type, dep_type_with_builder};
+use dep_obj::{dep_obj_x, dep_type, dep_type_with_builder};
 use macro_attr_2018::macro_attr;
 use dep_obj::binding::{Binding1, Binding2, BindingExt2, Bindings, Re};
 use dyn_context::state::{State, StateExt};
@@ -77,8 +77,10 @@ impl Item {
     ) {
         f(ItemBuilder { item: self, state });
     }
+}
 
-    dep_obj! {
+dep_obj_x! {
+    impl Item {
         fn props(self as this, game: Game) -> (ItemProps) as ItemProps {
             if mut {
                 &mut game.items[this.0].props
@@ -147,8 +149,10 @@ impl Npc {
         let game: &mut Game = state.get_mut();
         game.npcs.remove(self.0);
     }
+}
 
-    dep_obj! {
+dep_obj_x! {
+    impl Npc {
         fn props(self as this, game: Game) -> (NpcProps) as NpcProps {
             if mut {
                 &mut game.npcs[this.0].props

@@ -1827,3 +1827,9 @@ impl<Owner: DepType + 'static, ItemType: Convenient> Source for DepVecItemInitia
 pub trait NewPriv {
     fn new_priv() -> Self;
 }
+
+pub trait DepObj<Dyn> {
+    type Type: DepType;
+
+    fn descriptor() -> GlobDescriptor<Self::Type>;
+}
