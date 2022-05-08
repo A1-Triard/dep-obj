@@ -90,7 +90,7 @@ mod objs {
 
     dep_obj! {
         impl Item {
-            fn(self as this, objs: Objs) -> (ItemProps) as ItemProps {
+            ItemProps => fn(self as this, objs: Objs) -> (ItemProps) {
                 if mut {
                     &mut objs.0.get_mut().items[this.0].props
                 } else {

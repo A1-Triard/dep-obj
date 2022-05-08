@@ -85,7 +85,7 @@ impl<P: Props + 'static> Id<P> {
 
 dep_obj! {
     impl<P: Props + 'static> Id<P> {
-        fn(self as this, arena: Arena<P>) -> (P) as P {
+        P => fn(self as this, arena: Arena<P>) -> (P) {
             if mut {
                 &mut arena.0.get_mut().0[this.0].props
             } else {

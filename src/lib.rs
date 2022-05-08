@@ -1263,7 +1263,7 @@ macro_rules! dep_obj_impl {
         @generics_parsed
         $g:tt $r:tt $w:tt $t:ty {
             $(
-                fn (self as $this:ident, $arena:ident : $Arena:ty) -> $(optional(trait $opt_tr:tt))? $((trait $tr:tt))? $(optional($opt_ty:ty))? $(($ty:ty))? as $Dyn:ty {
+                $Dyn:ty => fn(self as $this:ident, $arena:ident : $Arena:ty) -> $(optional(trait $opt_tr:tt))? $((trait $tr:tt))? $(optional($opt_ty:ty))? $(($ty:ty))? {
                     if mut { $field_mut:expr } else { $field:expr }
                 }
             )*
@@ -1297,7 +1297,7 @@ macro_rules! dep_obj_impl {
             \n\
             impl $generics $name $(where $where_clause)? {\n\
                 $(\n\
-                    fn (self as $this:ident, $arena:ident : $Arena:ty) -> $(optional(trait $opt_tr:tt))? $((trait $tr:tt))? $(optional($opt_ty:ty))? $(($ty:ty))? as $Dyn:ty {\n\
+                    $Dyn:ty => fn (self as $this:ident, $arena:ident : $Arena:ty) -> $(optional(trait $opt_tr:tt))? $((trait $tr:tt))? $(optional($opt_ty:ty))? $(($ty:ty))? {\n\
                         if mut { $field_mut:expr } else { $field:expr }\n\
                     }\n\
                 )*\n\

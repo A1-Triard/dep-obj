@@ -542,7 +542,7 @@ impl<T: DetachedDepObjId> DepObjId for T {
 ///
 /// dep_obj! {
 ///     impl MyDepTypeId {
-///         fn(self as this, app: MyApp) -> (MyDepType) as MyDepType {
+///         MyDepType => fn(self as this, app: MyApp) -> (MyDepType) {
 ///             if mut {
 ///                 &mut app.my_dep_types[this.0].dep_data
 ///             } else {
