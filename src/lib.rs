@@ -238,7 +238,7 @@ macro_rules! dep_type_impl {
         $crate::std_compile_error!("\
             invalid dep type definition; allowed form is \
             '$(#[$attr])* $vis struct $name $(<$generics> $(where $where_clause)?)? \
-            in $Id as $Dyn { ... }'\
+            in $Id as $DepObjToken { ... }'\
         ");
     };
     (
@@ -268,14 +268,14 @@ macro_rules! dep_type_impl {
         [[$BaseBuilder:ty] [$($bc_g:tt)*] [$($bc_r:tt)*] [$($bc_w:tt)*]]
         [$([$attr:meta])*] [$vis:vis] [$name:ident]
         [$($g:tt)*] [$($r:tt)*] [$($w:tt)*]
-        in $Id:ty as $Dyn:ty
+        in $Id:ty as $DepObjToken:ty
         {
             $($($(#[$inherits:tt])* $field:ident $delim:tt $($field_ty:ty $(= $field_val:expr)?)?),+ $(,)?)?
         }
     ) => {
         $crate::dep_type_impl! {
             @concat_generics
-            [$([$attr])*] [$vis] [$name] [id] [$Id] [$Dyn]
+            [$([$attr])*] [$vis] [$name] [id] [$Id] [$DepObjToken]
             [$($g)*] [$($r)*] [$($w)*]
             [[$BaseBuilder] [$($bc_g)*] [$($bc_r)*] [$($bc_w)*]]
             [$($([[$($inherits)*] $field $delim $($field_ty $(= $field_val)?)?])+)?]
@@ -286,7 +286,7 @@ macro_rules! dep_type_impl {
         [[$BaseBuilder:ty] [$($bc_g:tt)*] [$($bc_r:tt)*] [$($bc_w:tt)*]]
         [$([$attr:meta])*] [$vis:vis] [$name:ident]
         [$($g:tt)*] [$($r:tt)*] [$($w:tt)*]
-        in $Id:ty as $Dyn:ty
+        in $Id:ty as $DepObjToken:ty
         {
             $($($(#[$inherits:tt])* $field:ident $delim:tt $($field_ty:ty $(= $field_val:expr)?)?),+ $(,)?)?
         }
@@ -299,7 +299,7 @@ macro_rules! dep_type_impl {
         []
         [$([$attr:meta])*] [$vis:vis] [$name:ident]
         [$($g:tt)*] [$($r:tt)*] [$($w:tt)*]
-        in $Id:ty as $Dyn:ty
+        in $Id:ty as $DepObjToken:ty
         {
             $($($(#[$inherits:tt])* $field:ident $delim:tt $($field_ty:ty $(= $field_val:expr)?)?),+ $(,)?)?
         }
@@ -309,7 +309,7 @@ macro_rules! dep_type_impl {
         $crate::generics_parse! {
             $crate::dep_type_impl {
                 @type BaseBuilder after
-                [$([$attr])*] [$vis] [$name] [id] [$Id] [$Dyn]
+                [$([$attr])*] [$vis] [$name] [id] [$Id] [$DepObjToken]
                 [$($g)*] [$($r)*] [$($w)*]
                 [$($([[$($inherits)*] $field $delim $($field_ty $(= $field_val)?)?])+)?]
             }
@@ -321,14 +321,14 @@ macro_rules! dep_type_impl {
         []
         [$([$attr:meta])*] [$vis:vis] [$name:ident]
         [$($g:tt)*] [$($r:tt)*] [$($w:tt)*]
-        in $Id:ty as $Dyn:ty
+        in $Id:ty as $DepObjToken:ty
         {
             $($($(#[$inherits:tt])* $field:ident $delim:tt $($field_ty:ty $(= $field_val:expr)?)?),+ $(,)?)?
         }
     ) => {
         $crate::dep_type_impl! {
             @unroll_fields
-            [$([$attr])*] [$vis] [$name] [id] [$Id] [$Dyn] [state] [this] [bindings] [handlers]
+            [$([$attr])*] [$vis] [$name] [id] [$Id] [$DepObjToken] [state] [this] [bindings] [handlers]
             [$($g)*] [$($r)*] [$($w)*]
             [] [] [] [] [] [] []
             []
@@ -340,7 +340,7 @@ macro_rules! dep_type_impl {
         []
         [$([$attr:meta])*] [$vis:vis] [$name:ident]
         [$($g:tt)*] [$($r:tt)*] [$($w:tt)*]
-        in $Id:ty as $Dyn:ty
+        in $Id:ty as $DepObjToken:ty
         {
             $($($(#[$inherits:tt])* $field:ident $delim:tt $($field_ty:ty $(= $field_val:expr)?)?),+ $(,)?)?
         }
@@ -362,7 +362,7 @@ macro_rules! dep_type_impl {
         $crate::std_compile_error!($crate::indoc_indoc!("
             invalid dep type definition, allowed form is
 
-            $(#[$attr])* $vis struct $name $(<$generics> $(where $where_clause)?)? in $Id as $Dyn {
+            $(#[$attr])* $vis struct $name $(<$generics> $(where $where_clause)?)? in $Id as $DepObjToken {
                 $(#[$field_1_attr])* $field_1_name $(: $field_1_type = $field_1_value | [$field_1_type] | yield $field_1_type),
                 $(#[$field_2_attr])* $field_2_name $(: $field_2_type = $field_2_value | [$field_2_type] | yield $field_2_type),
                 ...
@@ -372,7 +372,7 @@ macro_rules! dep_type_impl {
     };
     (
         @type BaseBuilder after
-        [$([$attr:meta])*] [$vis:vis] [$name:ident] [$id:ident] [$Id:ty] [$Dyn:ty]
+        [$([$attr:meta])*] [$vis:vis] [$name:ident] [$id:ident] [$Id:ty] [$DepObjToken:ty]
         [$($g:tt)*] [$($r:tt)*] [$($w:tt)*]
         [$($([[$($inherits:tt)*] $field:ident $delim:tt $($field_ty:ty $(= $field_val:expr)?)?])+)?]
         [$($bc_g:tt)*] [$($bc_r:tt)*] [$($bc_w:tt)*]
@@ -380,7 +380,7 @@ macro_rules! dep_type_impl {
     ) => {
         $crate::dep_type_impl! {
             @concat_generics
-            [$([$attr])*] [$vis] [$name] [$id] [$Id] [$Dyn]
+            [$([$attr])*] [$vis] [$name] [$id] [$Id] [$DepObjToken]
             [$($g)*] [$($r)*] [$($w)*]
             [[$BaseBuilder] [$($bc_g)*] [$($bc_r)*] [$($bc_w)*]]
             [$($([[$($inherits)*] $field $delim $($field_ty $(= $field_val)?)?])+)?]
@@ -388,7 +388,7 @@ macro_rules! dep_type_impl {
     };
     (
         @type BaseBuilder after
-        [$([$attr:meta])*] [$vis:vis] [$name:ident] [$id:ident] [$Id:ty] [$Dyn:ty]
+        [$([$attr:meta])*] [$vis:vis] [$name:ident] [$id:ident] [$Id:ty] [$DepObjToken:ty]
         [$($g:tt)*] [$($r:tt)*] [$($w:tt)*]
         [$($([[$($inherits:tt)*] $field:ident $delim:tt $($field_ty:ty $(= $field_val:expr)?)?])+)?]
         [$($bc_g:tt)*] [$($bc_r:tt)*] [$($bc_w:tt)*]
@@ -400,7 +400,7 @@ macro_rules! dep_type_impl {
     };
     (
         @type BaseBuilder after
-        [$([$attr:meta])*] [$vis:vis] [$name:ident] [$id:ident] [$Id:ty] [$Dyn:ty]
+        [$([$attr:meta])*] [$vis:vis] [$name:ident] [$id:ident] [$Id:ty] [$DepObjToken:ty]
         [$($g:tt)*] [$($r:tt)*] [$($w:tt)*]
         [$($([[$($inherits:tt)*] $field:ident $delim:tt $($field_ty:ty $(= $field_val:expr)?)?])+)?]
         [$($bc_g:tt)*] [$($bc_r:tt)*] [$($bc_w:tt)*]
@@ -413,7 +413,7 @@ macro_rules! dep_type_impl {
     };
     (
         @concat_generics
-        [$([$attr:meta])*] [$vis:vis] [$name:ident] [$id:ident] [$Id:ty] [$Dyn:ty]
+        [$([$attr:meta])*] [$vis:vis] [$name:ident] [$id:ident] [$Id:ty] [$DepObjToken:ty]
         [$($g:tt)*] [$($r:tt)*] [$($w:tt)*]
         [[$BaseBuilder:ty] [$($bc_g:tt)*] [$($bc_r:tt)*] [$($bc_w:tt)*]]
         [$([[$($inherits:tt)*] $field:ident $delim:tt $($field_ty:ty $(= $field_val:expr)?)?])*]
@@ -422,7 +422,7 @@ macro_rules! dep_type_impl {
             $crate::dep_type_impl {
                 @concat_generics_done
                 [$BaseBuilder]
-                [$([$attr])*] [$vis] [$name] [$id] [$Id] [$Dyn]
+                [$([$attr])*] [$vis] [$name] [$id] [$Id] [$DepObjToken]
                 [$($g)*] [$($r)*] [$($w)*]
                 [$([[$($inherits)*] $field $delim $($field_ty $(= $field_val)?)?])*]
             }
@@ -433,14 +433,14 @@ macro_rules! dep_type_impl {
     (
         @concat_generics_done
         [$BaseBuilder:ty]
-        [$([$attr:meta])*] [$vis:vis] [$name:ident] [$id:ident] [$Id:ty] [$Dyn:ty]
+        [$([$attr:meta])*] [$vis:vis] [$name:ident] [$id:ident] [$Id:ty] [$DepObjToken:ty]
         [$($g:tt)*] [$($r:tt)*] [$($w:tt)*]
         [$([[$($inherits:tt)*] $field:ident $delim:tt $($field_ty:ty $(= $field_val:expr)?)?])*]
         [$($bc_g:tt)*] [$($bc_r:tt)*] [$($bc_w:tt)*]
     ) => {
         $crate::dep_type_impl! {
             @unroll_fields
-            [$([$attr])*] [$vis] [$name] [$id] [$Id] [$Dyn] [state] [this] [bindings] [handlers]
+            [$([$attr])*] [$vis] [$name] [$id] [$Id] [$DepObjToken] [state] [this] [bindings] [handlers]
             [$($g)*] [$($r)*] [$($w)*]
             [] [] [] [] [] [] []
             [[$BaseBuilder] [$($bc_g)*] [$($bc_r)*] [$($bc_w)*] []]
@@ -449,7 +449,7 @@ macro_rules! dep_type_impl {
     };
     (
         @unroll_fields
-        [$([$attr:meta])*] [$vis:vis] [$name:ident] [$id:ident] [$Id:ty] [$Dyn:ty]
+        [$([$attr:meta])*] [$vis:vis] [$name:ident] [$id:ident] [$Id:ty] [$DepObjToken:ty]
         [$state:ident] [$this:ident] [$bindings:ident] [$handlers:ident]
         [$($g:tt)*] [$($r:tt)*] [$($w:tt)*]
         [$($core_fields:tt)*]
@@ -467,7 +467,7 @@ macro_rules! dep_type_impl {
     ) => {
         $crate::dep_type_impl! {
             @unroll_fields
-            [$([$attr])*] [$vis] [$name] [$id] [$Id] [$Dyn]
+            [$([$attr])*] [$vis] [$name] [$id] [$Id] [$DepObjToken]
             [$state] [$this] [$bindings] [$handlers]
             [$($g)*] [$($r)*] [$($w)*]
             [
@@ -524,7 +524,7 @@ macro_rules! dep_type_impl {
     };
     (
         @unroll_fields
-        [$([$attr:meta])*] [$vis:vis] [$name:ident] [$id:ident] [$Id:ty] [$Dyn:ty]
+        [$([$attr:meta])*] [$vis:vis] [$name:ident] [$id:ident] [$Id:ty] [$DepObjToken:ty]
         [$state:ident] [$this:ident] [$bindings:ident] [$handlers:ident]
         [$($g:tt)*] [$($r:tt)*] [$($w:tt)*]
         [$($core_fields:tt)*]
@@ -542,7 +542,7 @@ macro_rules! dep_type_impl {
     ) => {
         $crate::dep_type_impl! {
             @unroll_fields
-            [$([$attr])*] [$vis] [$name] [$id] [$Id] [$Dyn] [$state] [$this] [$bindings] [$handlers]
+            [$([$attr])*] [$vis] [$name] [$id] [$Id] [$DepObjToken] [$state] [$this] [$bindings] [$handlers]
             [$($g)*] [$($r)*] [$($w)*]
             [
                 $($core_fields)*
@@ -598,7 +598,7 @@ macro_rules! dep_type_impl {
     };
     (
         @unroll_fields
-        [$([$attr:meta])*] [$vis:vis] [$name:ident] [$id:ident] [$Id:ty] [$Dyn:ty]
+        [$([$attr:meta])*] [$vis:vis] [$name:ident] [$id:ident] [$Id:ty] [$DepObjToken:ty]
         [$state:ident] [$this:ident] [$bindings:ident] [$handlers:ident]
         [$($g:tt)*] [$($r:tt)*] [$($w:tt)*]
         [$($core_fields:tt)*]
@@ -616,7 +616,7 @@ macro_rules! dep_type_impl {
     ) => {
         $crate::dep_type_impl! {
             @unroll_fields
-            [$([$attr])*] [$vis] [$name] [$id] [$Id] [$Dyn] [$state] [$this] [$bindings] [$handlers]
+            [$([$attr])*] [$vis] [$name] [$id] [$Id] [$DepObjToken] [$state] [$this] [$bindings] [$handlers]
             [$($g)*] [$($r)*] [$($w)*]
             [
                 $($core_fields)*
@@ -672,7 +672,7 @@ macro_rules! dep_type_impl {
     };
     (
         @unroll_fields
-        [$([$attr:meta])*] [$vis:vis] [$name:ident] [$id:ident] [$Id:ty] [$Dyn:ty]
+        [$([$attr:meta])*] [$vis:vis] [$name:ident] [$id:ident] [$Id:ty] [$DepObjToken:ty]
         [$state:ident] [$this:ident] [$bindings:ident] [$handlers:ident]
         [$($g:tt)*] [$($r:tt)*] [$($w:tt)*]
         [$($core_fields:tt)*]
@@ -690,7 +690,7 @@ macro_rules! dep_type_impl {
     ) => {
         $crate::dep_type_impl! {
             @unroll_fields
-            [$([$attr])*] [$vis] [$name] [$id] [$Id] [$Dyn] [$state] [$this] [$bindings] [$handlers]
+            [$([$attr])*] [$vis] [$name] [$id] [$Id] [$DepObjToken] [$state] [$this] [$bindings] [$handlers]
             [$($g)*] [$($r)*] [$($w)*]
             [
                 $($core_fields)*
@@ -745,7 +745,7 @@ macro_rules! dep_type_impl {
     };
     (
         @unroll_fields
-        [$([$attr:meta])*] [$vis:vis] [$name:ident] [$id:ident] [$Id:ty] [$Dyn:ty]
+        [$([$attr:meta])*] [$vis:vis] [$name:ident] [$id:ident] [$Id:ty] [$DepObjToken:ty]
         [$state:ident] [$this:ident] [$bindings:ident] [$handlers:ident]
         [$($g:tt)*] [$($r:tt)*] [$($w:tt)*]
         [$($core_fields:tt)*]
@@ -763,7 +763,7 @@ macro_rules! dep_type_impl {
     ) => {
         $crate::dep_type_impl! {
             @unroll_fields
-            [$([$attr])*] [$vis] [$name] [$id] [$Id] [$Dyn] [$state] [$this] [$bindings] [$handlers]
+            [$([$attr])*] [$vis] [$name] [$id] [$Id] [$DepObjToken] [$state] [$this] [$bindings] [$handlers]
             [$($g)*] [$($r)*] [$($w)*]
             [
                 $($core_fields)*
@@ -818,7 +818,7 @@ macro_rules! dep_type_impl {
     };
     (
         @unroll_fields
-        [$([$attr:meta])*] [$vis:vis] [$name:ident] [$id:ident] [$Id:ty] [$Dyn:ty]
+        [$([$attr:meta])*] [$vis:vis] [$name:ident] [$id:ident] [$Id:ty] [$DepObjToken:ty]
         [$state:ident] [$this:ident] [$bindings:ident] [$handlers:ident]
         [$($g:tt)*] [$($r:tt)*] [$($w:tt)*]
         [$($core_fields:tt)*]
@@ -842,7 +842,7 @@ macro_rules! dep_type_impl {
     };
     (
         @unroll_fields
-        [$([$attr:meta])*] [$vis:vis] [$name:ident] [$id:ident] [$Id:ty] [$Dyn:ty]
+        [$([$attr:meta])*] [$vis:vis] [$name:ident] [$id:ident] [$Id:ty] [$DepObjToken:ty]
         [$state:ident] [$this:ident] [$bindings:ident] [$handlers:ident]
         [$($g:tt)*] [$($r:tt)*] [$($w:tt)*]
         [$($core_fields:tt)*]
@@ -860,7 +860,7 @@ macro_rules! dep_type_impl {
     ) => {
         $crate::dep_type_impl! {
             @unroll_fields
-            [$([$attr])*] [$vis] [$name] [$id] [$Id] [$Dyn] [$state] [$this] [$bindings] [$handlers]
+            [$([$attr])*] [$vis] [$name] [$id] [$Id] [$DepObjToken] [$state] [$this] [$bindings] [$handlers]
             [$($g)*] [$($r)*] [$($w)*]
             [
                 $($core_fields)*
@@ -904,7 +904,7 @@ macro_rules! dep_type_impl {
     };
     (
         @unroll_fields
-        [$([$attr:meta])*] [$vis:vis] [$name:ident] [$id:ident] [$Id:ty] [$Dyn:ty]
+        [$([$attr:meta])*] [$vis:vis] [$name:ident] [$id:ident] [$Id:ty] [$DepObjToken:ty]
         [$state:ident] [$this:ident] [$bindings:ident] [$handlers:ident]
         [$($g:tt)*] [$($r:tt)*] [$($w:tt)*]
         [$($core_fields:tt)*]
@@ -922,7 +922,7 @@ macro_rules! dep_type_impl {
     ) => {
         $crate::dep_type_impl! {
             @unroll_fields
-            [$([$attr])*] [$vis] [$name] [$id] [$Id] [$Dyn] [$state] [$this] [$bindings] [$handlers]
+            [$([$attr])*] [$vis] [$name] [$id] [$Id] [$DepObjToken] [$state] [$this] [$bindings] [$handlers]
             [$($g)*] [$($r)*] [$($w)*]
             [
                 $($core_fields)*
@@ -966,7 +966,7 @@ macro_rules! dep_type_impl {
     };
     (
         @unroll_fields
-        [$([$attr:meta])*] [$vis:vis] [$name:ident] [$id:ident] [$Id:ty] [$Dyn:ty]
+        [$([$attr:meta])*] [$vis:vis] [$name:ident] [$id:ident] [$Id:ty] [$DepObjToken:ty]
         [$state:ident] [$this:ident] [$bindings:ident] [$handlers:ident]
         [$($g:tt)*] [$($r:tt)*] [$($w:tt)*]
         [$($core_fields:tt)*]
@@ -990,7 +990,7 @@ macro_rules! dep_type_impl {
     };
     (
         @unroll_fields
-        [$([$attr:meta])*] [$vis:vis] [$name:ident] [$id:ident] [$Id:ty] [$Dyn:ty]
+        [$([$attr:meta])*] [$vis:vis] [$name:ident] [$id:ident] [$Id:ty] [$DepObjToken:ty]
         [$state:ident] [$this:ident] [$bindings:ident] [$handlers:ident]
         [$($g:tt)*] [$($r:tt)*] [$($w:tt)*]
         [$($core_fields:tt)*]
@@ -1008,7 +1008,7 @@ macro_rules! dep_type_impl {
     ) => {
         $crate::dep_type_impl! {
             @unroll_fields
-            [$([$attr])*] [$vis] [$name] [$id] [$Id] [$Dyn] [$state] [$this] [$bindings] [$handlers]
+            [$([$attr])*] [$vis] [$name] [$id] [$Id] [$DepObjToken] [$state] [$this] [$bindings] [$handlers]
             [$($g)*] [$($r)*] [$($w)*]
             [
                 $($core_fields)*
@@ -1053,7 +1053,7 @@ macro_rules! dep_type_impl {
     };
     (
         @unroll_fields
-        [$([$attr:meta])*] [$vis:vis] [$name:ident] [$id:ident] [$Id:ty] [$Dyn:ty]
+        [$([$attr:meta])*] [$vis:vis] [$name:ident] [$id:ident] [$Id:ty] [$DepObjToken:ty]
         [$state:ident] [$this:ident] [$bindings:ident] [$handlers:ident]
         [$($g:tt)*] [$($r:tt)*] [$($w:tt)*]
         [$($core_fields:tt)*]
@@ -1077,7 +1077,7 @@ macro_rules! dep_type_impl {
     };
     (
         @unroll_fields
-        [$([$attr:meta])*] [$vis:vis] [$name:ident] [$id:ident] [$Id:ty] [$Dyn:ty]
+        [$([$attr:meta])*] [$vis:vis] [$name:ident] [$id:ident] [$Id:ty] [$DepObjToken:ty]
         [$state:ident] [$this:ident] [$bindings:ident] [$handlers:ident]
         [$($g:tt)*] [$($r:tt)*] [$($w:tt)*]
         [$($core_fields:tt)*]
@@ -1108,7 +1108,7 @@ macro_rules! dep_type_impl {
     };
     (
         @unroll_fields
-        [$([$attr:meta])*] [$vis:vis] [$name:ident] [$id:ident] [$Id:ty] [$Dyn:ty]
+        [$([$attr:meta])*] [$vis:vis] [$name:ident] [$id:ident] [$Id:ty] [$DepObjToken:ty]
         [$state:ident] [$this:ident] [$bindings:ident] [$handlers:ident]
         [$($g:tt)*] [$($r:tt)*] [$($w:tt)*]
         [$($core_fields:tt)*]
@@ -1177,7 +1177,7 @@ macro_rules! dep_type_impl {
 
             impl $($g)* $crate::DepType for $name $($r)* $($w)* {
                 type Id = $Id;
-                type Dyn = $Dyn;
+                type DepObjToken = $DepObjToken;
 
                 #[doc(hidden)]
                 fn core_base_priv(&self) -> &$crate::BaseDepObjCore<$name $($r)*> {
@@ -1236,7 +1236,7 @@ macro_rules! dep_type_impl {
         $crate::std_compile_error!($crate::indoc_indoc!("
             invalid dep type definition, allowed form is
 
-            $(#[$attr])* $vis struct $name $(<$generics> $(where $where_clause)?)? in $Id as $Dyn {
+            $(#[$attr])* $vis struct $name $(<$generics> $(where $where_clause)?)? in $Id as $DepObjToken {
                 $(#[$field_1_attr])* $field_1_name $(: $field_1_type = $field_1_value | [$field_1_type] | yield $field_1_type),
                 $(#[$field_2_attr])* $field_2_name $(: $field_2_type = $field_2_value | [$field_2_type] | yield $field_2_type),
                 ...
@@ -1267,7 +1267,7 @@ macro_rules! dep_obj_impl {
         @generics_parsed
         $g:tt $r:tt $w:tt $t:ty {
             $(
-                $Dyn:ty => fn(self as $this:ident, $arena:ident : $Arena:ty) -> $(optional(trait $opt_tr:tt))? $((trait $tr:tt))? $(optional($opt_ty:ty))? $(($ty:ty))? {
+                $Token:ty => fn(self as $this:ident, $arena:ident : $Arena:ty) -> $(optional(trait $opt_tr:tt))? $((trait $tr:tt))? $(optional($opt_ty:ty))? $(($ty:ty))? {
                     if mut { $field_mut:expr } else { $field:expr }
                 }
             )*
@@ -1287,7 +1287,7 @@ macro_rules! dep_obj_impl {
             $crate::dep_obj_impl! {
                 @impl
                 $g $w [$t]
-                [$this] [$arena] [$Arena] [$($opt_tr)?] [$($tr)?] [$($opt_ty)?] [$($ty)?] [$Dyn]
+                [$this] [$arena] [$Arena] [$($opt_tr)?] [$($tr)?] [$($opt_ty)?] [$($ty)?] [$Token]
                 [$field_mut] [$field]
             }
         )*
@@ -1301,7 +1301,7 @@ macro_rules! dep_obj_impl {
 
             impl $generics $name $(where $where_clause)? {
                 $(
-                    $Dyn:ty => fn (self as $this:ident, $arena:ident : $Arena:ty) -> $(optional(trait $opt_tr:tt))? $((trait $tr:tt))? $(optional($opt_ty:ty))? $(($ty:ty))? {
+                    $Token:ty => fn (self as $this:ident, $arena:ident : $Arena:ty) -> $(optional(trait $opt_tr:tt))? $((trait $tr:tt))? $(optional($opt_ty:ty))? $(($ty:ty))? {
                         if mut { $field_mut:expr } else { $field:expr }
                     }
                 )*
@@ -1312,14 +1312,14 @@ macro_rules! dep_obj_impl {
     (
         @impl
         [$($g:tt)*] [$($w:tt)*] [$t:ty]
-        [$this:ident] [$arena:ident] [$Arena:ty] [$opt_tr:tt] [] [] [] [$Dyn:ty]
+        [$this:ident] [$arena:ident] [$Arena:ty] [$opt_tr:tt] [] [] [] [$Token:ty]
         [$field_mut:expr] [$field:expr]
     ) => {
         $crate::dep_obj_impl! {
             @add_parameter_to_optional
             [DepObjType]
             [$($g)*] [$($w)*] [$t]
-            [$this] [$arena] [$Arena] [$opt_tr] [$Dyn]
+            [$this] [$arena] [$Arena] [$opt_tr] [$Token]
             [$field_mut] [$field]
         }
     };
@@ -1327,14 +1327,14 @@ macro_rules! dep_obj_impl {
         @add_parameter_to_optional
         [$p:ident]
         [$($g:tt)*] [$($w:tt)*] [$t:ty]
-        [$this:ident] [$arena:ident] [$Arena:ty] [$opt_tr:tt] [$Dyn:ty]
+        [$this:ident] [$arena:ident] [$Arena:ty] [$opt_tr:tt] [$Token:ty]
         [$field_mut:expr] [$field:expr]
     ) => {
         $crate::generics_concat! {
             $crate::dep_obj_impl {
                 @impl_optional_with_parameter
                 [$p] [$($g)*] [$($w)*] [$t]
-                [$this] [$arena] [$Arena] [$Dyn]
+                [$this] [$arena] [$Arena] [$Token]
                 [$field_mut] [$field]
             }
             [$($g)*] [] [],
@@ -1344,12 +1344,12 @@ macro_rules! dep_obj_impl {
     (
         @impl_optional_with_parameter
         [$p:ident] [$($g:tt)*] [$($w:tt)*] [$t:ty]
-        [$this:ident] [$arena:ident] [$Arena:ty] [$Dyn:ty]
+        [$this:ident] [$arena:ident] [$Arena:ty] [$Token:ty]
         [$field_mut:expr] [$field:expr]
         [$($gp:tt)*] [] []
     ) => {
         $crate::paste_paste! {
-            impl $($gp)* $crate::DepObj <$Dyn, $p> for $t $($w)* {
+            impl $($gp)* $crate::DepObj <$Token, $p> for $t $($w)* {
                 const ARENA: $crate::std_any_TypeId = $crate::std_any_TypeId::of::<$Arena>();
 
                 fn get_raw <'arena_lifetime>(
@@ -1380,14 +1380,14 @@ macro_rules! dep_obj_impl {
     (
         @impl
         [$($g:tt)*] [$($w:tt)*] [$t:ty]
-        [$this:ident] [$arena:ident] [$Arena:ty] [] [$tr:tt] [] [] [$Dyn:ty]
+        [$this:ident] [$arena:ident] [$Arena:ty] [] [$tr:tt] [] [] [$Token:ty]
         [$field_mut:expr] [$field:expr]
     ) => {
         $crate::dep_obj_impl! {
             @add_parameter
             [DepObjType]
             [$($g)*] [$($w)*] [$t]
-            [$this] [$arena] [$Arena] [$tr] [$Dyn]
+            [$this] [$arena] [$Arena] [$tr] [$Token]
             [$field_mut] [$field]
         }
     };
@@ -1395,14 +1395,14 @@ macro_rules! dep_obj_impl {
         @add_parameter
         [$p:ident]
         [$($g:tt)*] [$($w:tt)*] [$t:ty]
-        [$this:ident] [$arena:ident] [$Arena:ty] [$tr:tt] [$Dyn:ty]
+        [$this:ident] [$arena:ident] [$Arena:ty] [$tr:tt] [$Token:ty]
         [$field_mut:expr] [$field:expr]
     ) => {
         $crate::generics_concat! {
             $crate::dep_obj_impl {
                 @impl_with_parameter
                 [$p] [$($g)*] [$($w)*] [$t]
-                [$this] [$arena] [$Arena] [$Dyn]
+                [$this] [$arena] [$Arena] [$Token]
                 [$field_mut] [$field]
             }
             [$($g)*] [] [],
@@ -1412,12 +1412,12 @@ macro_rules! dep_obj_impl {
     (
         @impl_with_parameter
         [$p:ident] [$($g:tt)*] [$($w:tt)*] [$t:ty]
-        [$this:ident] [$arena:ident] [$Arena:ty] [$Dyn:ty]
+        [$this:ident] [$arena:ident] [$Arena:ty] [$Token:ty]
         [$field_mut:expr] [$field:expr]
         [$($gp:tt)*] [] []
     ) => {
         $crate::paste_paste! {
-            impl $($gp)* $crate::DepObj<$Dyn, $p> for $t $($w)* {
+            impl $($gp)* $crate::DepObj<$Token, $p> for $t $($w)* {
                 const ARENA: $crate::std_any_TypeId = $crate::std_any_TypeId::of::<$Arena>();
 
                 fn get_raw <'arena_lifetime>(
@@ -1443,11 +1443,11 @@ macro_rules! dep_obj_impl {
     (
         @impl
         [$($g:tt)*] [$($w:tt)*] [$t:ty]
-        [$this:ident] [$arena:ident] [$Arena:ty] [] [] [$opt_ty:ty] [] [$Dyn:ty]
+        [$this:ident] [$arena:ident] [$Arena:ty] [] [] [$opt_ty:ty] [] [$Token:ty]
         [$field_mut:expr] [$field:expr]
     ) => {
         $crate::paste_paste! {
-            impl $($g)* $crate::DepObj<$Dyn, $opt_ty> for $t $($w)* {
+            impl $($g)* $crate::DepObj<$Token, $opt_ty> for $t $($w)* {
                 const ARENA: $crate::std_any_TypeId = $crate::std_any_TypeId::of::<$Arena>();
 
                 fn get_raw <'arena_lifetime>(
@@ -1473,11 +1473,11 @@ macro_rules! dep_obj_impl {
     (
         @impl
         [$($g:tt)*] [$($w:tt)*] [$t:ty]
-        [$this:ident] [$arena:ident] [$Arena:ty] [] [] [] [$ty:ty] [$Dyn:ty]
+        [$this:ident] [$arena:ident] [$Arena:ty] [] [] [] [$ty:ty] [$Token:ty]
         [$field_mut:expr] [$field:expr]
     ) => {
         $crate::paste_paste! {
-            impl $($g)* $crate::DepObj<$Dyn, $ty> for $t $($w)* {
+            impl $($g)* $crate::DepObj<$Token, $ty> for $t $($w)* {
                 const ARENA: $crate::std_any_TypeId = $crate::std_any_TypeId::of::<$Arena>();
 
                 fn get_raw <'arena_lifetime>(
@@ -1503,7 +1503,7 @@ macro_rules! dep_obj_impl {
     (
         @impl
         [$($g:tt)*] [$($w:tt)*] [$t:ty]
-        [$this:ident] [$arena:ident] [$Arena:ty] -> [$($opt_tr:tt)?] [$($tr:tt)?] [$($opt_ty:ty)?] [$($ty:ty)?] [$Dyn:ty]
+        [$this:ident] [$arena:ident] [$Arena:ty] -> [$($opt_tr:tt)?] [$($tr:tt)?] [$($opt_ty:ty)?] [$($ty:ty)?] [$Token:ty]
     ) => {
         $crate::std_compile_error!($crate::std_concat!("\
             invalid dep obj return type\n\

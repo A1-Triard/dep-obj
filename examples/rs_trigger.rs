@@ -11,9 +11,9 @@ mod circuit {
     use dyn_context::state::{SelfState, State, StateExt};
     use macro_attr_2018::macro_attr;
 
-    pub enum DynChipLegs { }
+    pub enum ChipLegsToken { }
 
-    pub trait ChipLegs: Downcast + DepType<Id=Chip, Dyn=DynChipLegs> { }
+    pub trait ChipLegs: Downcast + DepType<Id=Chip, DepObjToken=ChipLegsToken> { }
 
     impl_downcast!(ChipLegs);
 
@@ -50,7 +50,7 @@ mod circuit {
 
     dep_obj! {
         impl Chip {
-            DynChipLegs => fn(self as this, circuit: Circuit) -> (trait ChipLegs) {
+            ChipLegsToken => fn(self as this, circuit: Circuit) -> (trait ChipLegs) {
                 if mut {
                     circuit.arena[this.0].legs.as_mut()
                 } else {
@@ -82,7 +82,7 @@ mod or_chip {
 
     dep_type! {
         #[derive(Debug)]
-        pub struct OrLegs in Chip as DynChipLegs {
+        pub struct OrLegs in Chip as ChipLegsToken {
             in_1: bool = false,
             in_2: bool = false,
             out: bool = false,
@@ -111,7 +111,7 @@ mod not_chip {
 
     dep_type! {
         #[derive(Debug)]
-        pub struct NotLegs in Chip as DynChipLegs {
+        pub struct NotLegs in Chip as ChipLegsToken {
             in_: bool = false,
             out: bool = true,
         }
