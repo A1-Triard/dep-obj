@@ -1260,13 +1260,14 @@ macro_rules! dep_obj {
 #[macro_export]
 macro_rules! dep_obj_drop_bindings {
     (
-        @impl [$($g:tt)*] [$($r:tt)*] [$($w:tt)*] $t:ty {
+        @drop_bindings
+        [$($g:tt)*] [$($r:tt)*] [$($w:tt)*] [$t:ty]
+        [
             $(
-                fn (self as $this:ident, $arena:ident : $Arena:ty) -> $(optional(trait $opt_tr:tt))? $((trait $tr:tt))? $(optional($opt_ty:ty))? $(($ty:ty))? as $Dyn:ty {
-                    if mut { $field_mut:expr } else { $field:expr }
-                }
+                [$this:ident] [$arena:ident] [$Arena:ty] [$($opt_tr:tt)?] [$($tr:tt)?] [$($opt_ty:ty)?] [$($ty:ty)?]
+                [$field_mut:expr] [$field:expr]
             )*
-        }
+        ]
     ) => {
         impl $($g)* $t $($w)* {
             fn drop_bindings_priv(self, state: &mut dyn $crate::dyn_context_state_State) {
@@ -1346,13 +1347,14 @@ macro_rules! dep_obj_impl {
         }
     ) => {
         $crate::dep_obj_drop_bindings! {
-            @impl $g $r $w $t {
+            @drop_bindings
+            $g $r $w [$t]
+            [
                 $(
-                    fn (self as $this, $arena: $Arena) -> $(optional(trait $opt_tr))? $((trait $tr))? $(optional($opt_ty))? $(($ty))? as $Dyn{
-                        if mut { $field_mut} else { $field}
-                    }
+                    [$this] [$arena] [$Arena] [$($opt_tr)?] [$($tr)?] [$($opt_ty)?] [$($ty)?]
+                    [$field_mut] [$field]
                 )*
-            }
+            ]
         }
         $(
             $crate::dep_obj_impl! {
