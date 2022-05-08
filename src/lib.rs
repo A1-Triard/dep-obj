@@ -92,7 +92,7 @@ pub mod example {
 
     dep_type! {
         #[derive(Debug)]
-        pub struct MyDepType in MyDepTypeId {
+        pub struct MyDepType in MyDepTypeId as MyDepType {
             prop_1: bool = false,
             prop_2: i32 = 10,
         }
@@ -132,9 +132,11 @@ pub mod example {
             let app: &mut MyApp = state.get_mut();
             app.my_dep_types.remove(self.0);
         }
+    }
 
-        dep_obj! {
-            pub fn obj(self as this, app: MyApp) -> (MyDepType) {
+    dep_obj! {
+        impl MyDepTypeId {
+            MyDepType => fn obj(self as this, app: MyApp) -> (MyDepType) {
                 if mut {
                     &mut app.my_dep_types[this.0].dep_data
                 } else {
