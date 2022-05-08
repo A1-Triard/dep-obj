@@ -32,7 +32,7 @@ pub mod example {
     //! ```ignore
     //! dep_type! {
     //!     #[derive(Debug)]
-    //!     pub struct MyDepType in MyDepTypeId {
+    //!     pub struct MyDepType in MyDepTypeId as MyDepType {
     //!         prop_1: bool = false,
     //!         prop_2: i32 = 10,
     //!     }
@@ -72,8 +72,10 @@ pub mod example {
     //!         let app: &mut MyApp = state.get_mut();
     //!         app.my_dep_types.remove(self.0);
     //!     }
+    //! }
     //!
-    //!     dep_obj! {
+    //! dep_obj! {
+    //!     impl MyDepTypeId {
     //!         pub fn obj(self as this, app: MyApp) -> (MyDepType) {
     //!             if mut {
     //!                 &mut app.my_dep_types[this.0].dep_data
@@ -1352,7 +1354,7 @@ macro_rules! dep_obj_drop_bindings {
     (
         @impl [$($g:tt)*] [$($r:tt)*] [$($w:tt)*] $t:ty {
             $(
-                $vis:vis fn $name:ident (self as $this:ident, $arena:ident : $Arena:ty) -> $(optional(trait $opt_tr:tt))? $((trait $tr:tt))? $(optional($opt_ty:ty))? $(($ty:ty))? as $Dyn:ty {
+                fn (self as $this:ident, $arena:ident : $Arena:ty) -> $(optional(trait $opt_tr:tt))? $((trait $tr:tt))? $(optional($opt_ty:ty))? $(($ty:ty))? as $Dyn:ty {
                     if mut { $field_mut:expr } else { $field:expr }
                 }
             )*
@@ -1428,7 +1430,7 @@ macro_rules! dep_obj_impl {
     (
         @impl $g:tt $r:tt $w:tt $t:ty {
             $(
-                $vis:vis fn $name:ident (self as $this:ident, $arena:ident : $Arena:ty) -> $(optional(trait $opt_tr:tt))? $((trait $tr:tt))? $(optional($opt_ty:ty))? $(($ty:ty))? as $Dyn:ty {
+                fn (self as $this:ident, $arena:ident : $Arena:ty) -> $(optional(trait $opt_tr:tt))? $((trait $tr:tt))? $(optional($opt_ty:ty))? $(($ty:ty))? as $Dyn:ty {
                     if mut { $field_mut:expr } else { $field:expr }
                 }
             )*
@@ -1437,7 +1439,7 @@ macro_rules! dep_obj_impl {
         $crate::dep_obj_drop_bindings! {
             @impl $g $r $w $t {
                 $(
-                    $vis fn $name (self as $this, $arena: $Arena) -> $(optional(trait $opt_tr))? $((trait $tr))? $(optional($opt_ty))? $(($ty))? as $Dyn{
+                    fn (self as $this, $arena: $Arena) -> $(optional(trait $opt_tr))? $((trait $tr))? $(optional($opt_ty))? $(($ty))? as $Dyn{
                         if mut { $field_mut} else { $field}
                     }
                 )*
@@ -1446,7 +1448,7 @@ macro_rules! dep_obj_impl {
         $(
             $crate::dep_obj_impl_raw! {
                 $g $w [$t]
-                $vis fn $name (self as $this, $arena : $Arena) -> $(optional(trait $opt_tr))? $((trait $tr))? $(optional($opt_ty))? $(($ty))? as $Dyn {
+                fn (self as $this, $arena : $Arena) -> $(optional(trait $opt_tr))? $((trait $tr))? $(optional($opt_ty))? $(($ty))? as $Dyn {
                     if mut { $field_mut } else { $field }
                 }
             }
@@ -1460,7 +1462,7 @@ macro_rules! dep_obj_impl {
             \n\
             impl $generics $name $(where $where_clause)? {\n\
                 $(\n\
-                    $vis:vis fn $name:ident (self as $this:ident, $arena:ident : $Arena:ty) -> $(optional(trait $opt_tr:tt))? $((trait $tr:tt))? $(optional($opt_ty:ty))? $(($ty:ty))? as $Dyn:ty {\n\
+                    fn (self as $this:ident, $arena:ident : $Arena:ty) -> $(optional(trait $opt_tr:tt))? $((trait $tr:tt))? $(optional($opt_ty:ty))? $(($ty:ty))? as $Dyn:ty {\n\
                         if mut { $field_mut:expr } else { $field:expr }\n\
                     }\n\
                 )*\n\
@@ -1474,14 +1476,14 @@ macro_rules! dep_obj_impl {
 macro_rules! dep_obj_impl_raw {
     (
         [$($g:tt)*] [$($w:tt)*] [$t:ty]
-        $vis:vis fn $name:ident (self as $this:ident, $arena:ident : $Arena:ty) -> optional(trait $ty:tt) as $Dyn:ty {
+        fn (self as $this:ident, $arena:ident : $Arena:ty) -> optional(trait $ty:tt) as $Dyn:ty {
             if mut { $field_mut:expr } else { $field:expr }
         }
     ) => {
         $crate::dep_obj_impl_raw! {
             @add_parameter DepObjType
             [$($g)*] [$($w)*] [$t]
-            $vis fn $name (self as $this, $arena : $Arena) -> optional(trait $ty) as $Dyn {
+            fn (self as $this, $arena : $Arena) -> optional(trait $ty) as $Dyn {
                 if mut { $field_mut } else { $field }
             }
         }
@@ -1489,7 +1491,7 @@ macro_rules! dep_obj_impl_raw {
     (
         @add_parameter $p:ident
         [$($g:tt)*] [$($w:tt)*] [$t:ty]
-        $vis:vis fn $name:ident (self as $this:ident, $arena:ident : $Arena:ty) -> optional(trait $ty:tt) as $Dyn:ty {
+        fn (self as $this:ident, $arena:ident : $Arena:ty) -> optional(trait $ty:tt) as $Dyn:ty {
             if mut { $field_mut:expr } else { $field:expr }
         }
     ) => {
@@ -1497,7 +1499,7 @@ macro_rules! dep_obj_impl_raw {
             $crate::dep_obj_impl_raw {
                 @continue
                 [$p] [$($g)*] [$($w)*] [$t]
-                $vis fn $name (self as $this, $arena : $Arena) -> optional(trait $ty) as $Dyn {
+                fn (self as $this, $arena : $Arena) -> optional(trait $ty) as $Dyn {
                     if mut { $field_mut } else { $field }
                 }
             }
@@ -1508,7 +1510,7 @@ macro_rules! dep_obj_impl_raw {
     (
         @continue
         [$p:ident] [$($g:tt)*] [$($w:tt)*] [$t:ty]
-        $vis:vis fn $name:ident (self as $this:ident, $arena:ident : $Arena:ty) -> optional(trait $ty:tt) as $Dyn:ty {
+        fn (self as $this:ident, $arena:ident : $Arena:ty) -> optional(trait $ty:tt) as $Dyn:ty {
             if mut { $field_mut:expr } else { $field:expr }
         }
         [$($gp:tt)*] [] []
@@ -1544,14 +1546,14 @@ macro_rules! dep_obj_impl_raw {
     };
     (
         [$($g:tt)*] [$($w:tt)*] [$t:ty]
-        $vis:vis fn $name:ident (self as $this:ident, $arena:ident : $Arena:ty) -> (trait $ty:tt) as $Dyn:ty {
+        fn (self as $this:ident, $arena:ident : $Arena:ty) -> (trait $ty:tt) as $Dyn:ty {
             if mut { $field_mut:expr } else { $field:expr }
         }
     ) => {
         $crate::dep_obj_impl_raw! {
             @add_parameter DepObjType
             [$($g)*] [$($w)*] [$t]
-            $vis fn $name (self as $this, $arena : $Arena) -> (trait $ty) as $Dyn {
+            fn (self as $this, $arena : $Arena) -> (trait $ty) as $Dyn {
                 if mut { $field_mut } else { $field }
             }
         }
@@ -1559,7 +1561,7 @@ macro_rules! dep_obj_impl_raw {
     (
         @add_parameter $p:ident
         [$($g:tt)*] [$($w:tt)*] [$t:ty]
-        $vis:vis fn $name:ident (self as $this:ident, $arena:ident : $Arena:ty) -> (trait $ty:tt) as $Dyn:ty {
+        fn (self as $this:ident, $arena:ident : $Arena:ty) -> (trait $ty:tt) as $Dyn:ty {
             if mut { $field_mut:expr } else { $field:expr }
         }
     ) => {
@@ -1567,7 +1569,7 @@ macro_rules! dep_obj_impl_raw {
             $crate::dep_obj_impl_raw {
                 @continue2
                 [$p] [$($g)*] [$($w)*] [$t]
-                $vis fn $name (self as $this, $arena : $Arena) -> (trait $ty) as $Dyn {
+                fn (self as $this, $arena : $Arena) -> (trait $ty) as $Dyn {
                     if mut { $field_mut } else { $field }
                 }
             }
@@ -1578,7 +1580,7 @@ macro_rules! dep_obj_impl_raw {
     (
         @continue2
         [$p:ident] [$($g:tt)*] [$($w:tt)*] [$t:ty]
-        $vis:vis fn $name:ident (self as $this:ident, $arena:ident : $Arena:ty) -> (trait $ty:tt) as $Dyn:ty {
+        fn (self as $this:ident, $arena:ident : $Arena:ty) -> (trait $ty:tt) as $Dyn:ty {
             if mut { $field_mut:expr } else { $field:expr }
         }
         [$($gp:tt)*] [] []
@@ -1609,7 +1611,7 @@ macro_rules! dep_obj_impl_raw {
     };
     (
         [$($g:tt)*] [$($w:tt)*] [$t:ty]
-        $vis:vis fn $name:ident (self as $this:ident, $arena:ident: $Arena:ty) -> optional($ty:ty) as $Dyn:ty {
+        fn (self as $this:ident, $arena:ident: $Arena:ty) -> optional($ty:ty) as $Dyn:ty {
             if mut { $field_mut:expr } else { $field:expr }
         }
     ) => {
@@ -1639,7 +1641,7 @@ macro_rules! dep_obj_impl_raw {
     };
     (
         [$($g:tt)*] [$($w:tt)*] [$t:ty]
-        $vis:vis fn $name:ident (self as $this:ident, $arena:ident: $Arena:ty) -> ($ty:ty) as $Dyn:ty {
+        fn (self as $this:ident, $arena:ident: $Arena:ty) -> ($ty:ty) as $Dyn:ty {
             if mut { $field_mut:expr } else { $field:expr }
         }
     ) => {
@@ -1669,7 +1671,7 @@ macro_rules! dep_obj_impl_raw {
     };
     (
         [$($g:tt)*] [$($w:tt)*] [$t:ty]
-        $vis:vis fn $name:ident (self as $this:ident, $arena:ident : $Arena:ty) -> $(optional(trait $opt_tr:tt))? $(trait $tr:tt)? $(optional($opt_ty:ty))? $($ty:ty)? as $Dyn:ty {
+        fn (self as $this:ident, $arena:ident : $Arena:ty) -> $(optional(trait $opt_tr:tt))? $(trait $tr:tt)? $(optional($opt_ty:ty))? $($ty:ty)? as $Dyn:ty {
         }
     ) => {
         $crate::std_compile_error!($crate::std_concat!("\
