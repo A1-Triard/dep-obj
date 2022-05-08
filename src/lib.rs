@@ -1265,7 +1265,7 @@ macro_rules! dep_obj {
 macro_rules! dep_obj_impl {
     (
         @generics_parsed
-        $g:tt $r:tt $w:tt $t:ty {
+        $g:tt $r:tt $w:tt $Id:ty {
             $(
                 $Key:ty => fn(self as $this:ident, $arena:ident : $Arena:ty) -> $(optional(trait $opt_tr:tt))? $((trait $tr:tt))? $(optional($opt_ty:ty))? $(($ty:ty))? {
                     if mut { $field_mut:expr } else { $field:expr }
@@ -1275,7 +1275,7 @@ macro_rules! dep_obj_impl {
     ) => {
         $crate::dep_obj_impl! {
             @drop_bindings
-            $g $r $w [$t]
+            $g $r $w [$Id]
             [
                 $(
                     [$this] [$arena] [$Arena] [$($opt_tr)?] [$($tr)?] [$($opt_ty)?] [$($ty)?]
@@ -1286,7 +1286,7 @@ macro_rules! dep_obj_impl {
         $(
             $crate::dep_obj_impl! {
                 @impl
-                $g $w [$t]
+                $g $w [$Id]
                 [$this] [$arena] [$Arena] [$($opt_tr)?] [$($tr)?] [$($opt_ty)?] [$($ty)?] [$Key]
                 [$field_mut] [$field]
             }
@@ -1299,7 +1299,7 @@ macro_rules! dep_obj_impl {
         $crate::std_compile_error!($crate::indoc_indoc!("
             invalid dep obj implementation, allowed form is
 
-            impl $generics $name $(where $where_clause)? {
+            impl $generics $Id:ty $(where $where_clause)? {
                 $(
                     $Key:ty => fn (self as $this:ident, $arena:ident : $Arena:ty) -> $(optional(trait $opt_tr:tt))? $((trait $tr:tt))? $(optional($opt_ty:ty))? $(($ty:ty))? {
                         if mut { $field_mut:expr } else { $field:expr }
@@ -1311,14 +1311,14 @@ macro_rules! dep_obj_impl {
     };
     (
         @impl
-        [$($g:tt)*] [$($w:tt)*] [$t:ty]
+        [$($g:tt)*] [$($w:tt)*] [$Id:ty]
         [$this:ident] [$arena:ident] [$Arena:ty] [$opt_tr:tt] [] [] [] [$Key:ty]
         [$field_mut:expr] [$field:expr]
     ) => {
         $crate::dep_obj_impl! {
             @add_parameter_to_optional
             [DepObjType]
-            [$($g)*] [$($w)*] [$t]
+            [$($g)*] [$($w)*] [$Id]
             [$this] [$arena] [$Arena] [$opt_tr] [$Key]
             [$field_mut] [$field]
         }
@@ -1326,14 +1326,14 @@ macro_rules! dep_obj_impl {
     (
         @add_parameter_to_optional
         [$p:ident]
-        [$($g:tt)*] [$($w:tt)*] [$t:ty]
+        [$($g:tt)*] [$($w:tt)*] [$Id:ty]
         [$this:ident] [$arena:ident] [$Arena:ty] [$opt_tr:tt] [$Key:ty]
         [$field_mut:expr] [$field:expr]
     ) => {
         $crate::generics_concat! {
             $crate::dep_obj_impl {
                 @impl_optional_with_parameter
-                [$p] [$($g)*] [$($w)*] [$t]
+                [$p] [$($g)*] [$($w)*] [$Id]
                 [$this] [$arena] [$Arena] [$Key]
                 [$field_mut] [$field]
             }
@@ -1343,13 +1343,13 @@ macro_rules! dep_obj_impl {
     };
     (
         @impl_optional_with_parameter
-        [$p:ident] [$($g:tt)*] [$($w:tt)*] [$t:ty]
+        [$p:ident] [$($g:tt)*] [$($w:tt)*] [$Id:ty]
         [$this:ident] [$arena:ident] [$Arena:ty] [$Key:ty]
         [$field_mut:expr] [$field:expr]
         [$($gp:tt)*] [] []
     ) => {
         $crate::paste_paste! {
-            impl $($gp)* $crate::DepObj <$Key, $p> for $t $($w)* {
+            impl $($gp)* $crate::DepObj <$Key, $p> for $Id $($w)* {
                 const ARENA: $crate::std_any_TypeId = $crate::std_any_TypeId::of::<$Arena>();
 
                 fn get_raw <'arena_lifetime>(
@@ -1379,14 +1379,14 @@ macro_rules! dep_obj_impl {
     };
     (
         @impl
-        [$($g:tt)*] [$($w:tt)*] [$t:ty]
+        [$($g:tt)*] [$($w:tt)*] [$Id:ty]
         [$this:ident] [$arena:ident] [$Arena:ty] [] [$tr:tt] [] [] [$Key:ty]
         [$field_mut:expr] [$field:expr]
     ) => {
         $crate::dep_obj_impl! {
             @add_parameter
             [DepObjType]
-            [$($g)*] [$($w)*] [$t]
+            [$($g)*] [$($w)*] [$Id]
             [$this] [$arena] [$Arena] [$tr] [$Key]
             [$field_mut] [$field]
         }
@@ -1394,14 +1394,14 @@ macro_rules! dep_obj_impl {
     (
         @add_parameter
         [$p:ident]
-        [$($g:tt)*] [$($w:tt)*] [$t:ty]
+        [$($g:tt)*] [$($w:tt)*] [$Id:ty]
         [$this:ident] [$arena:ident] [$Arena:ty] [$tr:tt] [$Key:ty]
         [$field_mut:expr] [$field:expr]
     ) => {
         $crate::generics_concat! {
             $crate::dep_obj_impl {
                 @impl_with_parameter
-                [$p] [$($g)*] [$($w)*] [$t]
+                [$p] [$($g)*] [$($w)*] [$Id]
                 [$this] [$arena] [$Arena] [$Key]
                 [$field_mut] [$field]
             }
@@ -1411,13 +1411,13 @@ macro_rules! dep_obj_impl {
     };
     (
         @impl_with_parameter
-        [$p:ident] [$($g:tt)*] [$($w:tt)*] [$t:ty]
+        [$p:ident] [$($g:tt)*] [$($w:tt)*] [$Id:ty]
         [$this:ident] [$arena:ident] [$Arena:ty] [$Key:ty]
         [$field_mut:expr] [$field:expr]
         [$($gp:tt)*] [] []
     ) => {
         $crate::paste_paste! {
-            impl $($gp)* $crate::DepObj<$Key, $p> for $t $($w)* {
+            impl $($gp)* $crate::DepObj<$Key, $p> for $Id $($w)* {
                 const ARENA: $crate::std_any_TypeId = $crate::std_any_TypeId::of::<$Arena>();
 
                 fn get_raw <'arena_lifetime>(
@@ -1442,12 +1442,12 @@ macro_rules! dep_obj_impl {
     };
     (
         @impl
-        [$($g:tt)*] [$($w:tt)*] [$t:ty]
+        [$($g:tt)*] [$($w:tt)*] [$Id:ty]
         [$this:ident] [$arena:ident] [$Arena:ty] [] [] [$opt_ty:ty] [] [$Key:ty]
         [$field_mut:expr] [$field:expr]
     ) => {
         $crate::paste_paste! {
-            impl $($g)* $crate::DepObj<$Key, $opt_ty> for $t $($w)* {
+            impl $($g)* $crate::DepObj<$Key, $opt_ty> for $Id $($w)* {
                 const ARENA: $crate::std_any_TypeId = $crate::std_any_TypeId::of::<$Arena>();
 
                 fn get_raw <'arena_lifetime>(
@@ -1472,12 +1472,12 @@ macro_rules! dep_obj_impl {
     };
     (
         @impl
-        [$($g:tt)*] [$($w:tt)*] [$t:ty]
+        [$($g:tt)*] [$($w:tt)*] [$Id:ty]
         [$this:ident] [$arena:ident] [$Arena:ty] [] [] [] [$ty:ty] [$Key:ty]
         [$field_mut:expr] [$field:expr]
     ) => {
         $crate::paste_paste! {
-            impl $($g)* $crate::DepObj<$Key, $ty> for $t $($w)* {
+            impl $($g)* $crate::DepObj<$Key, $ty> for $Id $($w)* {
                 const ARENA: $crate::std_any_TypeId = $crate::std_any_TypeId::of::<$Arena>();
 
                 fn get_raw <'arena_lifetime>(
@@ -1502,7 +1502,7 @@ macro_rules! dep_obj_impl {
     };
     (
         @impl
-        [$($g:tt)*] [$($w:tt)*] [$t:ty]
+        [$($g:tt)*] [$($w:tt)*] [$Id:ty]
         [$this:ident] [$arena:ident] [$Arena:ty] -> [$($opt_tr:tt)?] [$($tr:tt)?] [$($opt_ty:ty)?] [$($ty:ty)?] [$Key:ty]
     ) => {
         $crate::std_compile_error!($crate::std_concat!("\
@@ -1521,7 +1521,7 @@ macro_rules! dep_obj_impl {
     };
     (
         @drop_bindings
-        [$($g:tt)*] [$($r:tt)*] [$($w:tt)*] [$t:ty]
+        [$($g:tt)*] [$($r:tt)*] [$($w:tt)*] [$Id:ty]
         [
             $(
                 [$this:ident] [$arena:ident] [$Arena:ty] [$($opt_tr:tt)?] [$($tr:tt)?] [$($opt_ty:ty)?] [$($ty:ty)?]
@@ -1529,7 +1529,7 @@ macro_rules! dep_obj_impl {
             )*
         ]
     ) => {
-        impl $($g)* $t $($w)* {
+        impl $($g)* $Id $($w)* {
             fn drop_bindings_priv(self, state: &mut dyn $crate::dyn_context_state_State) {
                 $(
                     let $this = self;
