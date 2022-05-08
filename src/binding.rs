@@ -3,6 +3,7 @@ use alloc::boxed::Box;
 use components_arena::{Component, ComponentId, Id, Arena, NewtypeComponentId, RawId};
 use core::any::{Any, TypeId};
 use core::fmt::Debug;
+use core::ops::{Deref, DerefMut};
 use downcast_rs::{Downcast, impl_downcast};
 use dyn_clone::{DynClone, clone_trait_object};
 use dyn_context::state::{SelfState, State, StateExt};
@@ -10,6 +11,70 @@ use educe::Educe;
 use macro_attr_2018::macro_attr;
 use panicking::panicking;
 use phantom_type::PhantomType;
+
+pub struct GlobBDescriptor<Obj> {
+    pub arena: TypeId,
+    pub field_ref: fn(arena: &dyn Any, id: RawId) -> &Obj,
+    pub field_mut: fn(arena: &mut dyn Any, id: RawId) -> &mut Obj
+}
+
+#[derive(Educe)]
+#[educe(Debug, Clone, Copy)]
+pub struct GlobB<Obj> {
+    pub id: RawId,
+    pub descriptor: fn() -> GlobBDescriptor<Obj>,
+}
+
+pub struct GlobBRef<'a, Obj> {
+    arena: &'a dyn Any,
+    glob: GlobB<Obj>,
+}
+
+impl<'a, Obj> Deref for GlobBRef<'a, Obj> {
+    type Target = Obj;
+
+    fn deref(&self) -> &Obj {
+        ((self.glob.descriptor)().field_ref)(self.arena.deref(), self.glob.id)
+    }
+}
+
+pub struct GlobBMut<'a, Obj> {
+    arena: &'a mut dyn Any,
+    glob: GlobB<Obj>,
+}
+
+impl<'a, Obj> Deref for GlobBMut<'a, Obj> {
+    type Target = Obj;
+
+    fn deref(&self) -> &Obj {
+        ((self.glob.descriptor)().field_ref)(self.arena.deref(), self.glob.id)
+    }
+}
+
+impl<'a, Obj> DerefMut for GlobBMut<'a, Obj> {
+    fn deref_mut(&mut self) -> &mut Obj {
+        ((self.glob.descriptor)().field_mut)(self.arena.deref_mut(), self.glob.id)
+    }
+}
+
+impl<Obj> GlobB<Obj> {
+    pub fn get(self, state: &dyn State) -> GlobBRef<Obj> {
+        let arena = (self.descriptor)().arena;
+        GlobBRef {
+            arena: state.get_raw(arena).unwrap_or_else(|| panic!("{:?} required", arena)),
+            glob: self
+        }
+    }
+
+    pub fn get_mut(self, state: &mut dyn State) -> GlobBMut<Obj> {
+        let arena = (self.descriptor)().arena;
+        GlobBMut {
+            arena: state.get_mut_raw(arena).unwrap_or_else(|| panic!("{:?} required", arena)),
+            glob: self
+        }
+    }
+}
+
 
 /// A helper struct, assisting to keep reactive code reentrant.
 ///
@@ -378,7 +443,7 @@ macro_rules! binding_n {
                 #[educe(Debug(ignore))]
                 dispatch: fn(
                     &mut dyn State,
-                    Glob <  P >,
+                    GlobB <  P >,
                     $( < < [< S $i >] as Source > ::Cache as SourceCache< [< S $i >] ::Value > >::Value ),*
                 ) -> Re<T>,
             }
@@ -432,7 +497,7 @@ macro_rules! binding_n {
                     param: P,
                     dispatch: fn(
                         &mut dyn State,
-                        Glob < P >,
+                        GlobB < P >,
                         $( < < [< S $i >] as Source > ::Cache as SourceCache< [< S $i >] ::Value > >::Value ),*
                     ) -> Re<T>,
                 ) -> Self {
@@ -470,8 +535,8 @@ macro_rules! binding_n {
                 }
 
                 #[allow(dead_code)]
-                fn param_descriptor() -> GlobDescriptor<P> {
-                    GlobDescriptor {
+                fn param_descriptor() -> GlobBDescriptor<P> {
+                    GlobBDescriptor {
                         arena: TypeId::of::<Bindings>(),
                         field_ref: Self::param_ref,
                         field_mut: Self::param_mut,
@@ -607,7 +672,7 @@ macro_rules! binding_n {
                         )*
 
                         let target = node.target.clone();
-                        let param = Glob {
+                        let param = GlobB {
                             id: self.binding.into_raw(),
                             descriptor: < [< BindingExt $n >] <P, $( [< S $j >] ,)* T> > ::param_descriptor
                         };

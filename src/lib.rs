@@ -1514,8 +1514,8 @@ macro_rules! dep_obj_impl_raw {
     ) => {
         $crate::paste_paste! {
             impl $($gp)* $crate::DepObj<$Dyn, $p> for $t $($w)* {
-                fn descriptor() -> $crate::GlobDescriptor<$p> {
-                    Self:: [< $name _descriptor >] ()
+                fn glob() -> $crate::Glob<$p> {
+                    Self:: $name ()
                 }
             }
 
@@ -1542,21 +1542,12 @@ macro_rules! dep_obj_impl_raw {
                         .downcast_mut::<DepObjType>().expect("invalid cast")
                 }
 
-                $vis fn [< $name _descriptor >] <DepObjType: $ty + $crate::DepType<Id=Self>>(
-                ) -> $crate::GlobDescriptor<DepObjType> {
-                    $crate::GlobDescriptor {
+                $vis fn $name <DepObjType: $ty + $crate::DepType<Id=Self>>(
+                ) -> $crate::Glob<DepObjType> {
+                    $crate::Glob {
                         arena: $crate::std_any_TypeId::of::<$Arena>(),
                         field_ref: Self:: [< $name _ref >] ,
                         field_mut: Self:: [< $name _mut >] ,
-                    }
-                }
-
-                $vis fn $name <DepObjType: $ty + $crate::DepType<Id=Self>>(
-                    self
-                ) -> $crate::Glob<DepObjType> {
-                    $crate::Glob {
-                        id: <Self as $crate::components_arena_ComponentId>::into_raw(self),
-                        descriptor: Self:: [< $name _descriptor >]
                     }
                 }
             }
@@ -1605,8 +1596,8 @@ macro_rules! dep_obj_impl_raw {
     ) => {
         $crate::paste_paste! {
             impl $($gp)* $crate::DepObj<$Dyn, $p> for $t $($w)* {
-                fn descriptor() -> $crate::GlobDescriptor<$p> {
-                    Self:: [< $name _descriptor >] ()
+                fn glob() -> $crate::Glob<$p> {
+                    Self:: $name ()
                 }
             }
 
@@ -1629,21 +1620,12 @@ macro_rules! dep_obj_impl_raw {
                     ($field_mut).downcast_mut::<DepObjType>().expect("invalid cast")
                 }
 
-                $vis fn [< $name _descriptor >] <DepObjType: $ty + $crate::DepType<Id=Self>>(
-                ) -> $crate::GlobDescriptor<DepObjType> {
-                    $crate::GlobDescriptor {
+                $vis fn $name <DepObjType: $ty + $crate::DepType<Id=Self>>(
+                ) -> $crate::Glob<DepObjType> {
+                    $crate::Glob {
                         arena: $crate::std_any_TypeId::of::<$Arena>(),
                         field_ref: Self:: [< $name _ref >] ,
                         field_mut: Self:: [< $name _mut >] ,
-                    }
-                }
-
-                $vis fn $name <DepObjType: $ty + $crate::DepType<Id=Self>>(
-                    self
-                ) -> $crate::Glob<DepObjType> {
-                    $crate::Glob {
-                        id: <Self as $crate::components_arena_ComponentId>::into_raw(self),
-                        descriptor: Self:: [< $name _descriptor >]
                     }
                 }
             }
@@ -1657,8 +1639,8 @@ macro_rules! dep_obj_impl_raw {
     ) => {
         $crate::paste_paste! {
             impl $($g)* $crate::DepObj<$Dyn, $ty> for $t $($w)* {
-                fn descriptor() -> $crate::GlobDescriptor<$ty> {
-                    Self:: [< $name _descriptor >] ()
+                fn glob() -> $crate::Glob<$ty> {
+                    Self:: $name ()
                 }
             }
 
@@ -1681,20 +1663,11 @@ macro_rules! dep_obj_impl_raw {
                     ($field_mut).expect($crate::std_concat!("missing ", $crate::std_stringify!($name)))
                 }
 
-                $vis fn [< $name _descriptor >] () -> $crate::GlobDescriptor<$ty> {
-                    $crate::GlobDescriptor {
+                $vis fn $name () -> $crate::Glob<$ty> {
+                    $crate::Glob {
                         arena: $crate::std_any_TypeId::of::<$Arena>(),
                         field_ref: Self:: [< $name _ref >] ,
                         field_mut: Self:: [< $name _mut >] ,
-                    }
-                }
-
-                $vis fn $name (
-                    self
-                ) -> $crate::Glob<$ty> {
-                    $crate::Glob {
-                        id: <Self as $crate::components_arena_ComponentId>::into_raw(self),
-                        descriptor: Self:: [< $name _descriptor >]
                     }
                 }
             }
@@ -1708,8 +1681,8 @@ macro_rules! dep_obj_impl_raw {
     ) => {
         $crate::paste_paste! {
             impl $($g)* $crate::DepObj<$Dyn, $ty> for $t $($w)* {
-                fn descriptor() -> $crate::GlobDescriptor<$ty> {
-                    Self:: [< $name _descriptor >] ()
+                fn glob() -> $crate::Glob<$ty> {
+                    Self:: $name ()
                 }
             }
 
@@ -1732,20 +1705,11 @@ macro_rules! dep_obj_impl_raw {
                     $field_mut
                 }
 
-                $vis fn [< $name _descriptor >] () -> $crate::GlobDescriptor<$ty> {
-                    $crate::GlobDescriptor {
+                $vis fn $name () -> $crate::Glob<$ty> {
+                    $crate::Glob {
                         arena: $crate::std_any_TypeId::of::<$Arena>(),
                         field_ref: Self:: [< $name _ref >] ,
                         field_mut: Self:: [< $name _mut >] ,
-                    }
-                }
-
-                $vis fn $name (
-                    self
-                ) -> $crate::Glob<$ty> {
-                    $crate::Glob {
-                        id: <Self as $crate::components_arena_ComponentId>::into_raw(self),
-                        descriptor: Self:: [< $name _descriptor >]
                     }
                 }
             }
