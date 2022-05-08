@@ -664,8 +664,10 @@ impl<Owner: DepType, ArgsType: DepEventArgs> DepEvent<Owner, ArgsType> {
         Re::Continue
     }
 
-    pub fn source(self, obj: Glob<Owner>) -> DepEventSource<Owner, ArgsType> {
-        DepEventSource { obj, event: self }
+    pub fn source(self, id: Owner::Id) -> DepEventSource<Owner, ArgsType> where
+        Owner::Id: DepObj<Owner::Dyn, Owner> {
+
+        DepEventSource { id, event: self }
     }
 }
 
@@ -908,7 +910,7 @@ impl<Owner: DepType, PropType: Convenient> DepProp<Owner, PropType> {
             id: id.into_raw(),
             descriptor: <Owner::Id as DepObj<Owner::Dyn, Owner>>::descriptor
         };
-        self.unbind(state, obj);
+        self.unbind(state, id);
         let mut obj_mut = obj.get_mut(state);
         let entry_mut = self.entry_mut(&mut obj_mut);
         entry_mut.binding = Some(binding);
@@ -925,8 +927,14 @@ impl<Owner: DepType, PropType: Convenient> DepProp<Owner, PropType> {
         self.bind_raw(state, id, binding.into());
     }
 
-    pub fn unbind(self, state: &mut dyn State, obj: Glob<Owner>) {
+    pub fn unbind(
+        self, state: &mut dyn State, id: Owner::Id
+    ) where Owner::Id: DepObj<Owner::Dyn, Owner> {
         if let Some(binding) = {
+            let obj = Glob {
+                id: id.into_raw(),
+                descriptor: <Owner::Id as DepObj<Owner::Dyn, Owner>>::descriptor
+            };
             let mut obj_mut = obj.get_mut(state);
             let entry_mut = self.entry_mut(&mut obj_mut);
             entry_mut.binding
@@ -1389,14 +1397,20 @@ pub trait DepObjBaseBuilder<OwnerId: ComponentId> {
 #[derive(Educe)]
 #[educe(Debug)]
 struct DepEventHandledSource<Owner: DepType, ArgsType: DepEventArgs> {
-    obj: Glob<Owner>,
+    id: Owner::Id,
     handler_id: Id<BoxedHandler<ArgsType>>,
     event: DepEvent<Owner, ArgsType>,
 }
 
-impl<Owner: DepType, ArgsType: DepEventArgs> HandlerId for DepEventHandledSource<Owner, ArgsType> {
+impl<Owner: DepType, ArgsType: DepEventArgs> HandlerId for DepEventHandledSource<Owner, ArgsType> where
+    Owner::Id: DepObj<Owner::Dyn, Owner> {
+
     fn unhandle(&self, state: &mut dyn State, _dropping_binding: AnyBindingBase) {
-        let mut obj = self.obj.get_mut(state);
+        let obj = Glob {
+            id: self.id.into_raw(),
+            descriptor: <Owner::Id as DepObj<Owner::Dyn, Owner>>::descriptor
+        };
+        let mut obj = obj.get_mut(state);
         let entry_mut = self.event.entry_mut(&mut obj);
         entry_mut.handlers.remove(self.handler_id);
     }
@@ -1405,11 +1419,13 @@ impl<Owner: DepType, ArgsType: DepEventArgs> HandlerId for DepEventHandledSource
 #[derive(Educe)]
 #[educe(Debug)]
 pub struct DepEventSource<Owner: DepType, ArgsType: DepEventArgs> {
-    obj: Glob<Owner>,
+    id: Owner::Id,
     event: DepEvent<Owner, ArgsType>,
 }
 
-impl<Owner: DepType + 'static, ArgsType: DepEventArgs + 'static> Source for DepEventSource<Owner, ArgsType> {
+impl<Owner: DepType + 'static, ArgsType: DepEventArgs + 'static> Source for DepEventSource<Owner, ArgsType> where
+    Owner::Id: DepObj<Owner::Dyn, Owner> {
+
     type Value = ArgsType;
     type Cache = NoCache;
 
@@ -1418,11 +1434,15 @@ impl<Owner: DepType + 'static, ArgsType: DepEventArgs + 'static> Source for DepE
         state: &mut dyn State,
         handler: Box<dyn Handler<ArgsType>>,
     ) -> HandledSource {
-        let mut obj = self.obj.get_mut(state);
+        let obj = Glob {
+            id: self.id.into_raw(),
+            descriptor: <Owner::Id as DepObj<Owner::Dyn, Owner>>::descriptor
+        };
+        let mut obj = obj.get_mut(state);
         let entry = self.event.entry_mut(&mut obj);
         let handler_id = entry.handlers.insert(|handler_id| (BoxedHandler(handler), handler_id));
         HandledSource {
-            handler_id: Box::new(DepEventHandledSource { handler_id, obj: self.obj, event: self.event }),
+            handler_id: Box::new(DepEventHandledSource { handler_id, id: self.id, event: self.event }),
             init: None // TODO some events with cached value?
         }
     }
