@@ -1,5 +1,6 @@
 #![feature(const_mut_refs)]
 #![feature(const_ptr_offset_from)]
+#![feature(const_type_id)]
 #![feature(never_type)]
 #![feature(unchecked_math)]
 
@@ -1514,16 +1515,12 @@ macro_rules! dep_obj_impl_raw {
     ) => {
         $crate::paste_paste! {
             impl $($gp)* $crate::DepObj<$Dyn, $p> for $t $($w)* {
-                fn glob() -> $crate::Glob<$p> {
-                    Self:: $name ()
-                }
-            }
+                const ARENA: $crate::std_any_TypeId = $crate::std_any_TypeId::of::<$Arena>();
 
-            impl $($g)* $t $($w)* {
-                fn [< $name _ref >] <'arena_lifetime, DepObjType: $ty + $crate::DepType<Id=Self>>(
+                fn get_raw <'arena_lifetime>(
                     $arena: &'arena_lifetime dyn $crate::std_any_Any,
                     $this: $crate::components_arena_RawId,
-                ) -> &'arena_lifetime DepObjType {
+                ) -> &'arena_lifetime $p {
                     let $this = <Self as $crate::components_arena_ComponentId>::from_raw($this);
                     let $arena = $arena.downcast_ref::<$Arena>().expect("invalid arena cast");
                     ($field)
@@ -1531,10 +1528,10 @@ macro_rules! dep_obj_impl_raw {
                         .downcast_ref::<DepObjType>().expect("invalid cast")
                 }
 
-                fn [< $name _mut >] <'arena_lifetime, DepObjType: $ty + $crate::DepType<Id=Self>>(
+                fn get_raw_mut <'arena_lifetime>(
                     $arena: &'arena_lifetime mut dyn $crate::std_any_Any,
                     $this: $crate::components_arena_RawId,
-                ) -> &'arena_lifetime mut DepObjType {
+                ) -> &'arena_lifetime mut $p {
                     let $this = <Self as $crate::components_arena_ComponentId>::from_raw($this);
                     let $arena = $arena.downcast_mut::<$Arena>().expect("invalid arena cast");
                     ($field_mut)
@@ -1542,14 +1539,6 @@ macro_rules! dep_obj_impl_raw {
                         .downcast_mut::<DepObjType>().expect("invalid cast")
                 }
 
-                $vis fn $name <DepObjType: $ty + $crate::DepType<Id=Self>>(
-                ) -> $crate::Glob<DepObjType> {
-                    $crate::Glob {
-                        arena: $crate::std_any_TypeId::of::<$Arena>(),
-                        field_ref: Self:: [< $name _ref >] ,
-                        field_mut: Self:: [< $name _mut >] ,
-                    }
-                }
             }
         }
     };
@@ -1596,37 +1585,24 @@ macro_rules! dep_obj_impl_raw {
     ) => {
         $crate::paste_paste! {
             impl $($gp)* $crate::DepObj<$Dyn, $p> for $t $($w)* {
-                fn glob() -> $crate::Glob<$p> {
-                    Self:: $name ()
-                }
-            }
+                const ARENA: $crate::std_any_TypeId = $crate::std_any_TypeId::of::<$Arena>();
 
-            impl $($g)* $t $($w)* {
-                fn [< $name _ref >] <'arena_lifetime, DepObjType: $ty + $crate::DepType<Id=Self>>(
+                fn get_raw <'arena_lifetime>(
                     $arena: &'arena_lifetime dyn $crate::std_any_Any,
                     $this: $crate::components_arena_RawId,
-                ) -> &'arena_lifetime DepObjType {
+                ) -> &'arena_lifetime $p {
                     let $this = <Self as $crate::components_arena_ComponentId>::from_raw($this);
                     let $arena = $arena.downcast_ref::<$Arena>().expect("invalid arena cast");
                     ($field).downcast_ref::<DepObjType>().expect("invalid cast")
                 }
 
-                fn [< $name _mut >] <'arena_lifetime, DepObjType: $ty + $crate::DepType<Id=Self>>(
+                fn get_raw_mut <'arena_lifetime>(
                     $arena: &'arena_lifetime mut dyn $crate::std_any_Any,
                     $this: $crate::components_arena_RawId,
-                ) -> &'arena_lifetime mut DepObjType {
+                ) -> &'arena_lifetime mut $p {
                     let $this = <Self as $crate::components_arena_ComponentId>::from_raw($this);
                     let $arena = $arena.downcast_mut::<$Arena>().expect("invalid arena cast");
                     ($field_mut).downcast_mut::<DepObjType>().expect("invalid cast")
-                }
-
-                $vis fn $name <DepObjType: $ty + $crate::DepType<Id=Self>>(
-                ) -> $crate::Glob<DepObjType> {
-                    $crate::Glob {
-                        arena: $crate::std_any_TypeId::of::<$Arena>(),
-                        field_ref: Self:: [< $name _ref >] ,
-                        field_mut: Self:: [< $name _mut >] ,
-                    }
                 }
             }
         }
@@ -1639,13 +1615,9 @@ macro_rules! dep_obj_impl_raw {
     ) => {
         $crate::paste_paste! {
             impl $($g)* $crate::DepObj<$Dyn, $ty> for $t $($w)* {
-                fn glob() -> $crate::Glob<$ty> {
-                    Self:: $name ()
-                }
-            }
+                const ARENA: $crate::std_any_TypeId = $crate::std_any_TypeId::of::<$Arena>();
 
-            impl $($g)* $t $($w)* {
-                fn [< $name _ref >] <'arena_lifetime>(
+                fn get_raw <'arena_lifetime>(
                     $arena: &'arena_lifetime dyn $crate::std_any_Any,
                     $this: $crate::components_arena_RawId,
                 ) -> &'arena_lifetime $ty {
@@ -1654,21 +1626,13 @@ macro_rules! dep_obj_impl_raw {
                     ($field).expect($crate::std_concat!("missing ", $crate::std_stringify!($name)))
                 }
 
-                fn [< $name _mut >] <'arena_lifetime>(
+                fn get_raw_mut <'arena_lifetime>(
                     $arena: &'arena_lifetime mut dyn $crate::std_any_Any,
                     $this: $crate::components_arena_RawId,
                 ) -> &'arena_lifetime mut $ty {
                     let $this = <Self as $crate::components_arena_ComponentId>::from_raw($this);
                     let $arena = $arena.downcast_mut::<$Arena>().expect("invalid arena cast");
                     ($field_mut).expect($crate::std_concat!("missing ", $crate::std_stringify!($name)))
-                }
-
-                $vis fn $name () -> $crate::Glob<$ty> {
-                    $crate::Glob {
-                        arena: $crate::std_any_TypeId::of::<$Arena>(),
-                        field_ref: Self:: [< $name _ref >] ,
-                        field_mut: Self:: [< $name _mut >] ,
-                    }
                 }
             }
         }
@@ -1681,13 +1645,9 @@ macro_rules! dep_obj_impl_raw {
     ) => {
         $crate::paste_paste! {
             impl $($g)* $crate::DepObj<$Dyn, $ty> for $t $($w)* {
-                fn glob() -> $crate::Glob<$ty> {
-                    Self:: $name ()
-                }
-            }
+                const ARENA: $crate::std_any_TypeId = $crate::std_any_TypeId::of::<$Arena>();
 
-            impl $($g)* $t $($w)* {
-                fn [< $name _ref >] <'arena_lifetime>(
+                fn get_raw <'arena_lifetime>(
                     $arena: &'arena_lifetime dyn $crate::std_any_Any,
                     $this: $crate::components_arena_RawId,
                 ) -> &'arena_lifetime $ty {
@@ -1696,21 +1656,13 @@ macro_rules! dep_obj_impl_raw {
                     $field
                 }
 
-                fn [< $name _mut >] <'arena_lifetime>(
+                fn get_raw_mut <'arena_lifetime>(
                     $arena: &'arena_lifetime mut dyn $crate::std_any_Any,
                     $this: $crate::components_arena_RawId,
                 ) -> &'arena_lifetime mut $ty {
                     let $this = <Self as $crate::components_arena_ComponentId>::from_raw($this);
                     let $arena = $arena.downcast_mut::<$Arena>().expect("invalid arena cast");
                     $field_mut
-                }
-
-                $vis fn $name () -> $crate::Glob<$ty> {
-                    $crate::Glob {
-                        arena: $crate::std_any_TypeId::of::<$Arena>(),
-                        field_ref: Self:: [< $name _ref >] ,
-                        field_mut: Self:: [< $name _mut >] ,
-                    }
                 }
             }
         }

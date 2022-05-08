@@ -1,4 +1,5 @@
 #![feature(const_ptr_offset_from)]
+#![feature(const_type_id)]
 
 #![deny(warnings)]
 

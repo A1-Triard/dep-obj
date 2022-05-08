@@ -1,7 +1,8 @@
+#![feature(const_ptr_offset_from)]
+#![feature(const_type_id)]
+
 #![deny(warnings)]
 #![allow(dead_code)]
-
-#![feature(const_ptr_offset_from)]
 
 mod circuit {
     use components_arena::{Arena, Component, Id, NewtypeComponentId};
