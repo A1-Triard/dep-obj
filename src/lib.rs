@@ -1258,83 +1258,6 @@ macro_rules! dep_obj {
 
 #[doc(hidden)]
 #[macro_export]
-macro_rules! dep_obj_drop_bindings {
-    (
-        @drop_bindings
-        [$($g:tt)*] [$($r:tt)*] [$($w:tt)*] [$t:ty]
-        [
-            $(
-                [$this:ident] [$arena:ident] [$Arena:ty] [$($opt_tr:tt)?] [$($tr:tt)?] [$($opt_ty:ty)?] [$($ty:ty)?]
-                [$field_mut:expr] [$field:expr]
-            )*
-        ]
-    ) => {
-        impl $($g)* $t $($w)* {
-            fn drop_bindings_priv(self, state: &mut dyn $crate::dyn_context_state_State) {
-                $(
-                    let $this = self;
-                    let $arena: &mut $Arena = <dyn $crate::dyn_context_state_State as $crate::dyn_context_state_StateExt>::get_mut(state);
-                    $(
-                        let bindings = <dyn $tr as $crate::DepType>::collect_all_bindings($field);
-                    )?
-                    $(
-                        let bindings = if let $crate::std_option_Option::Some(f) = $field {
-                            <dyn $opt_tr as $crate::DepType>::collect_all_bindings(f)
-                        } else {
-                            $crate::std_vec_Vec::new()
-                        };
-                    )?
-                    $(
-                        let bindings = <$ty as $crate::DepType>::collect_all_bindings($field);
-                    )?
-                    $(
-                        let bindings = if let $crate::std_option_Option::Some(f) = $field {
-                            <$opt_ty as $crate::DepType>::collect_all_bindings(f)
-                        } else {
-                            $crate::std_vec_Vec::new()
-                        };
-                    )?
-                    for binding in bindings {
-                        binding.drop_self(state);
-                    }
-                )*
-                $(
-                    let $this = self;
-                    let $arena: &mut $Arena = <dyn $crate::dyn_context_state_State as $crate::dyn_context_state_StateExt>::get_mut(state);
-                    $(
-                        let handlers = <dyn $tr as $crate::DepType>::take_all_handlers($field_mut);
-                    )?
-                    $(
-                        let handlers = if let $crate::std_option_Option::Some(f) = $field_mut {
-                            <dyn $opt_tr as $crate::DepType>::take_all_handlers(f)
-                        } else {
-                            $crate::std_vec_Vec::new()
-                        };
-                    )?
-                    $(
-                        let handlers = <$ty as $crate::DepType>::take_all_handlers($field_mut);
-                        if !handlers.is_empty() {
-                            <$ty as $crate::DepType>::update_parent_children_has_handlers(state, <Self as $crate::components_arena_ComponentId>::into_raw(self));
-                        }
-                    )?
-                    $(
-                        let handlers = if let $crate::std_option_Option::Some(f) = $field_mut {
-                            <$opt_ty as $crate::DepType>::take_all_handlers(f)
-                        } else {
-                            $crate::std_vec_Vec::new()
-                        };
-                    )?
-                    for handler in handlers {
-                        handler.clear(state);
-                    }
-                )*
-            }
-        }
-    };
-}
-
-#[doc(hidden)]
-#[macro_export]
 macro_rules! dep_obj_impl {
     (
         @generics_parsed
@@ -1346,7 +1269,7 @@ macro_rules! dep_obj_impl {
             )*
         }
     ) => {
-        $crate::dep_obj_drop_bindings! {
+        $crate::dep_obj_impl! {
             @drop_bindings
             $g $r $w [$t]
             [
@@ -1590,5 +1513,77 @@ macro_rules! dep_obj_impl {
             'optional($ty:ty)', and \
             'optional(trait $trait:tt)'\
         "));
+    };
+    (
+        @drop_bindings
+        [$($g:tt)*] [$($r:tt)*] [$($w:tt)*] [$t:ty]
+        [
+            $(
+                [$this:ident] [$arena:ident] [$Arena:ty] [$($opt_tr:tt)?] [$($tr:tt)?] [$($opt_ty:ty)?] [$($ty:ty)?]
+                [$field_mut:expr] [$field:expr]
+            )*
+        ]
+    ) => {
+        impl $($g)* $t $($w)* {
+            fn drop_bindings_priv(self, state: &mut dyn $crate::dyn_context_state_State) {
+                $(
+                    let $this = self;
+                    let $arena: &mut $Arena = <dyn $crate::dyn_context_state_State as $crate::dyn_context_state_StateExt>::get_mut(state);
+                    $(
+                        let bindings = <dyn $tr as $crate::DepType>::collect_all_bindings($field);
+                    )?
+                    $(
+                        let bindings = if let $crate::std_option_Option::Some(f) = $field {
+                            <dyn $opt_tr as $crate::DepType>::collect_all_bindings(f)
+                        } else {
+                            $crate::std_vec_Vec::new()
+                        };
+                    )?
+                    $(
+                        let bindings = <$ty as $crate::DepType>::collect_all_bindings($field);
+                    )?
+                    $(
+                        let bindings = if let $crate::std_option_Option::Some(f) = $field {
+                            <$opt_ty as $crate::DepType>::collect_all_bindings(f)
+                        } else {
+                            $crate::std_vec_Vec::new()
+                        };
+                    )?
+                    for binding in bindings {
+                        binding.drop_self(state);
+                    }
+                )*
+                $(
+                    let $this = self;
+                    let $arena: &mut $Arena = <dyn $crate::dyn_context_state_State as $crate::dyn_context_state_StateExt>::get_mut(state);
+                    $(
+                        let handlers = <dyn $tr as $crate::DepType>::take_all_handlers($field_mut);
+                    )?
+                    $(
+                        let handlers = if let $crate::std_option_Option::Some(f) = $field_mut {
+                            <dyn $opt_tr as $crate::DepType>::take_all_handlers(f)
+                        } else {
+                            $crate::std_vec_Vec::new()
+                        };
+                    )?
+                    $(
+                        let handlers = <$ty as $crate::DepType>::take_all_handlers($field_mut);
+                        if !handlers.is_empty() {
+                            <$ty as $crate::DepType>::update_parent_children_has_handlers(state, <Self as $crate::components_arena_ComponentId>::into_raw(self));
+                        }
+                    )?
+                    $(
+                        let handlers = if let $crate::std_option_Option::Some(f) = $field_mut {
+                            <$opt_ty as $crate::DepType>::take_all_handlers(f)
+                        } else {
+                            $crate::std_vec_Vec::new()
+                        };
+                    )?
+                    for handler in handlers {
+                        handler.clear(state);
+                    }
+                )*
+            }
+        }
     };
 }
