@@ -48,7 +48,7 @@ mod objs {
 
     dep_type! {
         #[derive(Debug)]
-        pub struct ItemProps in Item {
+        pub struct ItemProps in Item as ItemProps {
             name: Cow<'static, str> = Cow::Borrowed(""),
             base_weight: f32 = 0.0,
             weight: f32 = 0.0,
@@ -71,10 +71,10 @@ mod behavior {
         let weight = Binding3::new(state, (), |(), base_weight, cursed, equipped| Some(
             if equipped && cursed { base_weight + 100.0 } else { base_weight }
         ));
-        ItemProps::WEIGHT.bind(state, item.props(), weight);
-        weight.set_source_1(state, &mut ItemProps::BASE_WEIGHT.value_source(item.props()));
-        weight.set_source_2(state, &mut ItemProps::CURSED.value_source(item.props()));
-        weight.set_source_3(state, &mut ItemProps::EQUIPPED.value_source(item.props()));
+        ItemProps::WEIGHT.bind(state, item, weight);
+        weight.set_source_1(state, &mut ItemProps::BASE_WEIGHT.value_source(item));
+        weight.set_source_2(state, &mut ItemProps::CURSED.value_source(item));
+        weight.set_source_3(state, &mut ItemProps::EQUIPPED.value_source(item));
         return item;
     }
 }
@@ -86,10 +86,10 @@ use behavior::*;
 
 fn run(state: &mut dyn State) {
     let item = new_item(state);
-    ItemProps::BASE_WEIGHT.set(state, item.props(), 5.0).immediate();
-    ItemProps::CURSED.set(state, item.props(), true).immediate();
-    ItemProps::EQUIPPED.set(state, item.props(), true).immediate();
-    ItemProps::CURSED.set(state, item.props(), false).immediate();
+    ItemProps::BASE_WEIGHT.set(state, item, 5.0).immediate();
+    ItemProps::CURSED.set(state, item, true).immediate();
+    ItemProps::EQUIPPED.set(state, item, true).immediate();
+    ItemProps::CURSED.set(state, item, false).immediate();
     item.drop_self(state);
 }
 
