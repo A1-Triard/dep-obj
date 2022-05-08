@@ -184,6 +184,8 @@ pub use generics::concat as generics_concat;
 #[doc(hidden)]
 pub use generics::parse as generics_parse;
 #[doc(hidden)]
+pub use indoc::indoc as indoc_indoc;
+#[doc(hidden)]
 pub use memoffset::offset_of as memoffset_offset_of;
 #[doc(hidden)]
 pub use paste::paste as paste_paste;
@@ -357,7 +359,7 @@ macro_rules! dep_type_impl {
         [$($g:tt)*] [$($r:tt)*] [$($w:tt)*]
         $($token:tt)*
     ) => {
-        $crate::std_compile_error!("\
+        $crate::std_compile_error!($crate::indoc_indoc!("
             invalid dep type definition, allowed form is
 
             $(#[$attr])* $vis struct $name $(<$generics> $(where $where_clause)?)? in $Id as $Dyn {
@@ -366,7 +368,7 @@ macro_rules! dep_type_impl {
                 ...
             }
 
-        ");
+        "));
     };
     (
         @type BaseBuilder after
@@ -1231,7 +1233,7 @@ macro_rules! dep_type_impl {
     (
         $($token:tt)*
     ) => {
-        $crate::std_compile_error!("
+        $crate::std_compile_error!($crate::indoc_indoc!("
             invalid dep type definition, allowed form is
 
             $(#[$attr])* $vis struct $name $(<$generics> $(where $where_clause)?)? in $Id as $Dyn {
@@ -1240,7 +1242,7 @@ macro_rules! dep_type_impl {
                 ...
             }
 
-        ");
+        "));
     };
 }
 
@@ -1294,7 +1296,7 @@ macro_rules! dep_obj_impl {
         @generics_parsed
         [$($g:tt)*] [$($r:tt)*] [$($w:tt)*] $($body:tt)*
     ) => {
-        $crate::std_compile_error!($crate::std_concat!("
+        $crate::std_compile_error!($crate::indoc_indoc!("
             invalid dep obj implementation, allowed form is
 
             impl $generics $name $(where $where_clause)? {
