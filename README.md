@@ -2,7 +2,7 @@
 
 Dependency object: effective reactive heterogeneous container.
 
-## Define dependency type
+## Example: simple dependency type
 
 The dependency objects system bases on [`component-arena`](https://crates.io/crates/components-arena).
 A component may have multiply dependency objects as its parts. Some of them may be dynamicaly typed
@@ -49,7 +49,7 @@ Now we are ready to specify the dependency type itself:
 ```rust
 dep_type! {
     #[derive(Debug)]
-    pub struct ItemProps in Item {
+    pub struct ItemProps in Item as ItemProps {
         name: Cow<'static, str> = Cow::Borrowed(""),
         base_weight: f32 = 0.0,
         weight: f32 = 0.0,
@@ -103,11 +103,13 @@ the `props` field:
 
 ```rust
 dep_obj! {
-    pub fn props(self as this, objs: Objs) -> (ItemProps) {
-        if mut {
-            &mut objs.items[this.0].props
-        } else {
-            &objs.items[this.0].props
+    impl Item {
+        ItemProps => fn(self as this, objs: Objs) -> (ItemProps) {
+            if mut {
+                &mut objs.items[this.0].props
+            } else {
+                &objs.items[this.0].props
+            }
         }
     }
 }
@@ -147,7 +149,7 @@ mod objs {
 
     dep_type! {
         #[derive(Debug)]
-        pub struct ItemProps in Item {
+        pub struct ItemProps in Item as ItemProps {
             name: Cow<'static, str> = Cow::Borrowed(""),
             base_weight: f32 = 0.0,
             weight: f32 = 0.0,
@@ -167,9 +169,11 @@ mod objs {
             let objs: &mut Objs = state.get_mut();
             objs.items.remove(self.0);
         }
+    }
 
-        dep_obj! {
-            pub fn props(self as this, objs: Objs) -> (ItemProps) {
+    dep_obj! {
+        impl Item {
+            ItemProps => fn(self as this, objs: Objs) -> (ItemProps) {
                 if mut {
                     &mut objs.items[this.0].props
                 } else {
@@ -184,7 +188,7 @@ mod objs {
 The things we lack here are `Objs` constructor, and, unfortunatly, destructor.
 Adding constructor is straightforward. The destructor however is tricky.
 The `Item::drop_self` method do two things:
-first, it drops all bindings item owes, and second, it removes items from arena.
+first, it drops all bindings item owes, and, second, it removes items from arena.
 The second thing would do automatically, but bindings require manual destroying.
 Thus we need explicit `Objs` destructor to correctly drop all `Item`s' bindings.
 
@@ -308,7 +312,7 @@ mod objs {
 
     dep_type! {
         #[derive(Debug)]
-        pub struct ItemProps in Item {
+        pub struct ItemProps in Item as ItemProps {
             name: Cow<'static, str> = Cow::Borrowed(""),
             base_weight: f32 = 0.0,
             weight: f32 = 0.0,
@@ -328,9 +332,11 @@ mod objs {
             let objs: &mut Objs = state.get_mut();
             objs.0.get_mut().items.remove(self.0);
         }
+    }
 
-        dep_obj! {
-            pub fn props(self as this, objs: Objs) -> (ItemProps) {
+    dep_obj! {
+        impl Item {
+            ItemProps => fn(self as this, objs: Objs) -> (ItemProps) {
                 if mut {
                     &mut objs.0.get_mut().items[this.0].props
                 } else {
@@ -354,16 +360,16 @@ pub fn new_item(state: &mut dyn State) -> Item {
     let weight = Binding3::new(state, (), |(), base_weight, cursed, equipped| Some(
         if equipped && cursed { base_weight + 100.0 } else { base_weight }
     ));
-    ItemProps::WEIGHT.bind(state, item.props(), weight);
-    weight.set_source_1(state, &mut ItemProps::BASE_WEIGHT.value_source(item.props()));
-    weight.set_source_2(state, &mut ItemProps::CURSED.value_source(item.props()));
-    weight.set_source_3(state, &mut ItemProps::EQUIPPED.value_source(item.props()));
+    ItemProps::WEIGHT.bind(state, item, weight);
+    weight.set_source_1(state, &mut ItemProps::BASE_WEIGHT.value_source(item));
+    weight.set_source_2(state, &mut ItemProps::CURSED.value_source(item));
+    weight.set_source_3(state, &mut ItemProps::EQUIPPED.value_source(item));
     return item;
 }
 ```
 
 With the code above we have created functional dependency between four `Item`
-properties: `weigth` now is a function of other three properties, and will be
+properties: `weight` now is a function of other three properties, and will be
 updated automatically when any of the them changes.
 
 Finally, lets write some test code to make our just builded game system work:
@@ -376,19 +382,19 @@ fn run(state: &mut dyn State) {
     weight.set_target_fn(state, (), |_state, (), weight| {
         println!("Item weight changed, new weight: {}", weight);
     });
-    weight.set_source_1(state, &mut ItemProps::WEIGHT.value_source(item.props()));
+    weight.set_source_1(state, &mut ItemProps::WEIGHT.value_source(item));
 
     println!("> item.base_weight = 5.0");
-    ItemProps::BASE_WEIGHT.set(state, item.props(), 5.0).immediate();
+    ItemProps::BASE_WEIGHT.set(state, item, 5.0).immediate();
 
     println!("> item.cursed = true");
-    ItemProps::CURSED.set(state, item.props(), true).immediate();
+    ItemProps::CURSED.set(state, item, true).immediate();
 
     println!("> item.equipped = true");
-    ItemProps::EQUIPPED.set(state, item.props(), true).immediate();
+    ItemProps::EQUIPPED.set(state, item, true).immediate();
 
     println!("> item.cursed = false");
-    ItemProps::CURSED.set(state, item.props(), false).immediate();
+    ItemProps::CURSED.set(state, item, false).immediate();
 
     weight.drop_self(state);
     item.drop_self(state);
