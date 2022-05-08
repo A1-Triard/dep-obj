@@ -111,9 +111,9 @@ mod behavior {
             if equipped && cursed { base_weight + 100.0 } else { base_weight }
         ));
         ItemProps::WEIGHT.bind(state, item, weight);
-        weight.set_source_1(state, &mut ItemProps::BASE_WEIGHT.value_source(item.props()));
-        weight.set_source_2(state, &mut ItemProps::CURSED.value_source(item.props()));
-        weight.set_source_3(state, &mut ItemProps::EQUIPPED.value_source(item.props()));
+        weight.set_source_1(state, &mut ItemProps::BASE_WEIGHT.value_source(item));
+        weight.set_source_2(state, &mut ItemProps::CURSED.value_source(item));
+        weight.set_source_3(state, &mut ItemProps::EQUIPPED.value_source(item));
         return item;
     }
 }
@@ -130,7 +130,7 @@ fn run(state: &mut dyn State) {
     weight.set_target_fn(state, (), |_state, (), weight| {
         println!("Item weight changed, new weight: {}", weight);
     });
-    weight.set_source_1(state, &mut ItemProps::WEIGHT.value_source(item.props()));
+    weight.set_source_1(state, &mut ItemProps::WEIGHT.value_source(item));
 
     println!("> item.base_weight = 5.0");
     ItemProps::BASE_WEIGHT.set(state, item, 5.0).immediate();

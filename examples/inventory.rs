@@ -1,10 +1,11 @@
+#![feature(const_ptr_offset_from)]
+#![feature(explicit_generic_args_with_impl_trait)]
+
 #![deny(warnings)]
 #![allow(dead_code)]
 
-#![feature(const_ptr_offset_from)]
-
 use components_arena::{Arena, Component, NewtypeComponentId, Id};
-use dep_obj::{Change, DepObjBaseBuilder, DepVecItemPos, DetachedDepObjId, ItemChange};
+use dep_obj::{Change, DepObjBaseBuilder, DepObjId, DepVecItemPos, DetachedDepObjId, ItemChange};
 use dep_obj::{dep_obj, dep_type, dep_type_with_builder};
 use macro_attr_2018::macro_attr;
 use dep_obj::binding::{Binding1, Binding2, BindingExt2, Bindings, Re};
@@ -29,7 +30,7 @@ impl DetachedDepObjId for Item { }
 
 dep_type_with_builder! {
     #[derive(Debug)]
-    struct ItemProps become props in Item as ItemProps {
+    struct ItemProps in Item as ItemProps {
         name: Cow<'static, str> = Cow::Borrowed(""),
         equipped: bool = false,
         enhancement: i8 = 0,
@@ -120,17 +121,17 @@ impl Npc {
 
         let equipped = Binding1::new(state, (), |(), change: Option<ItemChange<Item>>| change);
         equipped.dispatch(state, (), |state, (), change|
-            ItemProps::EQUIPPED.set(state, change.item.props(), change.is_insert())
+            ItemProps::EQUIPPED.set(state, change.item, change.is_insert())
         );
-        npc.props().add_binding(state, equipped);
-        equipped.set_source_1(state, &mut NpcProps::EQUIPPED_ITEMS.item_source(npc.props()));
+        npc.add_binding::<NpcProps, _>(state, equipped);
+        equipped.set_source_1(state, &mut NpcProps::EQUIPPED_ITEMS.item_source(npc));
 
         let enhancement = BindingExt2::new(state, (), |state, _, enhancement, change: Option<ItemChange<Item>>| {
             if let Some(change) = change {
                 if change.is_remove() {
-                    ItemProps::ENHANCEMENT.unset(state, change.item.props())
+                    ItemProps::ENHANCEMENT.unset(state, change.item)
                 } else if change.is_insert() || change.is_update_insert() {
-                    ItemProps::ENHANCEMENT.set(state, change.item.props(), enhancement)
+                    ItemProps::ENHANCEMENT.set(state, change.item, enhancement)
                 } else {
                     Re::Continue
                 }
@@ -138,8 +139,8 @@ impl Npc {
                 Re::Yield(())
             }
         });
-        enhancement.set_source_2(state, &mut NpcProps::EQUIPPED_ITEMS.item_source_with_update(enhancement, npc.props()));
-        enhancement.set_source_1(state, &mut NpcProps::ITEMS_ENHANCEMENT.value_source(npc.props()));
+        enhancement.set_source_2(state, &mut NpcProps::EQUIPPED_ITEMS.item_source_with_update(enhancement, npc));
+        enhancement.set_source_1(state, &mut NpcProps::ITEMS_ENHANCEMENT.value_source(npc));
 
         npc
     }
@@ -206,7 +207,7 @@ impl Game {
 fn main() {
     let game = &mut Game::new();
     let npc = Npc::new(game);
-    NpcProps::ITEMS_ENHANCEMENT.set(game, npc.props(), 5).immediate();
+    NpcProps::ITEMS_ENHANCEMENT.set(game, npc, 5).immediate();
     let sword = Item::new(game);
     sword.build(game, |sword| sword
         .props(|props| props
@@ -214,7 +215,7 @@ fn main() {
         )
     );
     let shield = Item::new(game);
-    ItemProps::NAME.set(game, shield.props(), Cow::Borrowed("Shield")).immediate();
+    ItemProps::NAME.set(game, shield, Cow::Borrowed("Shield")).immediate();
     for item in [sword, shield] {
         let equipped = Binding2::new(game, (), |(), name, equipped: Option<Change<bool>>|
             equipped.map(|equipped| (name, equipped.new))
@@ -223,9 +224,9 @@ fn main() {
             let game: &mut Game = game.get_mut();
             writeln!(&mut game.log, "{} {}.", name, if equipped { "equipped" } else { "unequipped" }).unwrap();
         });
-        item.props().add_binding(game, equipped);
-        equipped.set_source_1(game, &mut ItemProps::NAME.value_source(item.props()));
-        equipped.set_source_2(game, &mut ItemProps::EQUIPPED.change_source(item.props()));
+        item.add_binding::<ItemProps, _>(game, equipped);
+        equipped.set_source_1(game, &mut ItemProps::NAME.value_source(item));
+        equipped.set_source_2(game, &mut ItemProps::EQUIPPED.change_source(item));
         let enhancement = Binding2::new(game, (), |(), name, enhancement: Option<Change<i8>>|
             enhancement.map(|enhancement| (name, enhancement))
         );
@@ -233,15 +234,15 @@ fn main() {
             let game: &mut Game = game.get_mut();
             writeln!(&mut game.log, "{} enhancement changed: {} -> {}.", name, enhancement.old, enhancement.new).unwrap();
         });
-        item.props().add_binding(game, enhancement);
-        enhancement.set_source_1(game, &mut ItemProps::NAME.value_source(item.props()));
-        enhancement.set_source_2(game, &mut ItemProps::ENHANCEMENT.change_source(item.props()));
+        item.add_binding::<ItemProps, _>(game, enhancement);
+        enhancement.set_source_1(game, &mut ItemProps::NAME.value_source(item));
+        enhancement.set_source_2(game, &mut ItemProps::ENHANCEMENT.change_source(item));
     }
-    NpcProps::EQUIPPED_ITEMS.push(game, npc.props(), sword).immediate();
-    NpcProps::EQUIPPED_ITEMS.push(game, npc.props(), shield).immediate();
-    NpcProps::ITEMS_ENHANCEMENT.set(game, npc.props(), 4).immediate();
-    NpcProps::EQUIPPED_ITEMS.remove(game, npc.props(), DepVecItemPos::FirstItem).immediate();
-    NpcProps::ITEMS_ENHANCEMENT.set(game, npc.props(), 5).immediate();
+    NpcProps::EQUIPPED_ITEMS.push(game, npc, sword).immediate();
+    NpcProps::EQUIPPED_ITEMS.push(game, npc, shield).immediate();
+    NpcProps::ITEMS_ENHANCEMENT.set(game, npc, 4).immediate();
+    NpcProps::EQUIPPED_ITEMS.remove(game, npc, DepVecItemPos::FirstItem).immediate();
+    NpcProps::ITEMS_ENHANCEMENT.set(game, npc, 5).immediate();
     npc.drop_npc(game);
     sword.drop_item(game);
     shield.drop_item(game);

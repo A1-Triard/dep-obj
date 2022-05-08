@@ -231,7 +231,7 @@ macro_rules! dep_type_with_builder_impl {
         $crate::std_compile_error!("\
             invalid dep type definition; allowed form is \
             '$(#[$attr])* $vis struct $name $(<$generics> $(where $where_clause)?)? \
-            become $obj in $Id as $Dyn { ... }'\
+            in $Id as $Dyn { ... }'\
         ");
     };
     (
@@ -261,14 +261,14 @@ macro_rules! dep_type_with_builder_impl {
         [[$BaseBuilder:ty] [$($bc_g:tt)*] [$($bc_r:tt)*] [$($bc_w:tt)*]]
         [$([$attr:meta])*] [$vis:vis] [$name:ident]
         [$($g:tt)*] [$($r:tt)*] [$($w:tt)*]
-        become $obj:ident in $Id:ty as $Dyn:ty
+        in $Id:ty as $Dyn:ty
         {
             $($($(#[$inherits:tt])* $field:ident $delim:tt $($field_ty:ty $(= $field_val:expr)?)?),+ $(,)?)?
         }
     ) => {
         $crate::dep_type_with_builder_impl! {
             @concat_generics
-            [$([$attr])*] [$vis] [$name] [$obj] [$Id] [$Dyn]
+            [$([$attr])*] [$vis] [$name] [id] [$Id] [$Dyn]
             [$($g)*] [$($r)*] [$($w)*]
             [[$BaseBuilder] [$($bc_g)*] [$($bc_r)*] [$($bc_w)*]]
             [$($([[$($inherits)*] $field $delim $($field_ty $(= $field_val)?)?])+)?]
@@ -279,7 +279,7 @@ macro_rules! dep_type_with_builder_impl {
         [[$BaseBuilder:ty] [$($bc_g:tt)*] [$($bc_r:tt)*] [$($bc_w:tt)*]]
         [$([$attr:meta])*] [$vis:vis] [$name:ident]
         [$($g:tt)*] [$($r:tt)*] [$($w:tt)*]
-        become $obj:ident in $Id:ty as $Dyn:ty
+        in $Id:ty as $Dyn:ty
         {
             $($($(#[$inherits:tt])* $field:ident $delim:tt $($field_ty:ty $(= $field_val:expr)?)?),+ $(,)?)?
         }
@@ -292,7 +292,7 @@ macro_rules! dep_type_with_builder_impl {
         []
         [$([$attr:meta])*] [$vis:vis] [$name:ident]
         [$($g:tt)*] [$($r:tt)*] [$($w:tt)*]
-        become $obj:ident in $Id:ty as $Dyn:ty
+        in $Id:ty as $Dyn:ty
         {
             $($($(#[$inherits:tt])* $field:ident $delim:tt $($field_ty:ty $(= $field_val:expr)?)?),+ $(,)?)?
         }
@@ -302,7 +302,7 @@ macro_rules! dep_type_with_builder_impl {
         $crate::generics_parse! {
             $crate::dep_type_with_builder_impl {
                 @type BaseBuilder after
-                [$([$attr])*] [$vis] [$name] [$obj] [$Id] [$Dyn]
+                [$([$attr])*] [$vis] [$name] [id] [$Id] [$Dyn]
                 [$($g)*] [$($r)*] [$($w)*]
                 [$($([[$($inherits)*] $field $delim $($field_ty $(= $field_val)?)?])+)?]
             }
@@ -314,7 +314,7 @@ macro_rules! dep_type_with_builder_impl {
         []
         [$([$attr:meta])*] [$vis:vis] [$name:ident]
         [$($g:tt)*] [$($r:tt)*] [$($w:tt)*]
-        become $obj:ident in $Id:ty as $Dyn:ty
+        in $Id:ty as $Dyn:ty
         {
             $($($(#[$inherits:tt])* $field:ident $delim:tt $($field_ty:ty $(= $field_val:expr)?)?),+ $(,)?)?
         }
@@ -330,7 +330,7 @@ macro_rules! dep_type_with_builder_impl {
         []
         [$([$attr:meta])*] [$vis:vis] [$name:ident]
         [$($g:tt)*] [$($r:tt)*] [$($w:tt)*]
-        become $obj:ident in $Id:ty as $Dyn:ty
+        in $Id:ty as $Dyn:ty
         {
             $($($(#[$inherits:tt])* $field:ident $delim:tt $($field_ty:ty $(= $field_val:expr)?)?),+ $(,)?)?
         }
@@ -352,7 +352,7 @@ macro_rules! dep_type_with_builder_impl {
         $crate::std_compile_error!("\
             invalid dep type definition, allowed form is\n\
             \n\
-            $(#[$attr])* $vis struct $name $(<$generics> $(where $where_clause)?)? become $obj in $Id as $Dyn {\n\
+            $(#[$attr])* $vis struct $name $(<$generics> $(where $where_clause)?)? in $Id as $Dyn {\n\
                 $(#[$field_1_attr])* $field_1_name $(: $field_1_type = $field_1_value | [$field_1_type] | yield $field_1_type),\n\
                 $(#[$field_2_attr])* $field_2_name $(: $field_2_type = $field_2_value | [$field_2_type] | yield $field_2_type),\n\
                 ...\n\
@@ -362,7 +362,7 @@ macro_rules! dep_type_with_builder_impl {
     };
     (
         @type BaseBuilder after
-        [$([$attr:meta])*] [$vis:vis] [$name:ident] [$obj:ident] [$Id:ty] [$Dyn:ty]
+        [$([$attr:meta])*] [$vis:vis] [$name:ident] [$id:ident] [$Id:ty] [$Dyn:ty]
         [$($g:tt)*] [$($r:tt)*] [$($w:tt)*]
         [$($([[$($inherits:tt)*] $field:ident $delim:tt $($field_ty:ty $(= $field_val:expr)?)?])+)?]
         [$($bc_g:tt)*] [$($bc_r:tt)*] [$($bc_w:tt)*]
@@ -370,7 +370,7 @@ macro_rules! dep_type_with_builder_impl {
     ) => {
         $crate::dep_type_with_builder_impl! {
             @concat_generics
-            [$([$attr])*] [$vis] [$name] [$obj] [$Id] [$Dyn]
+            [$([$attr])*] [$vis] [$name] [$id] [$Id] [$Dyn]
             [$($g)*] [$($r)*] [$($w)*]
             [[$BaseBuilder] [$($bc_g)*] [$($bc_r)*] [$($bc_w)*]]
             [$($([[$($inherits)*] $field $delim $($field_ty $(= $field_val)?)?])+)?]
@@ -378,7 +378,7 @@ macro_rules! dep_type_with_builder_impl {
     };
     (
         @type BaseBuilder after
-        [$([$attr:meta])*] [$vis:vis] [$name:ident] [$obj:ident] [$Id:ty] [$Dyn:ty]
+        [$([$attr:meta])*] [$vis:vis] [$name:ident] [$id:ident] [$Id:ty] [$Dyn:ty]
         [$($g:tt)*] [$($r:tt)*] [$($w:tt)*]
         [$($([[$($inherits:tt)*] $field:ident $delim:tt $($field_ty:ty $(= $field_val:expr)?)?])+)?]
         [$($bc_g:tt)*] [$($bc_r:tt)*] [$($bc_w:tt)*]
@@ -390,7 +390,7 @@ macro_rules! dep_type_with_builder_impl {
     };
     (
         @type BaseBuilder after
-        [$([$attr:meta])*] [$vis:vis] [$name:ident] [$obj:ident] [$Id:ty] [$Dyn:ty]
+        [$([$attr:meta])*] [$vis:vis] [$name:ident] [$id:ident] [$Id:ty] [$Dyn:ty]
         [$($g:tt)*] [$($r:tt)*] [$($w:tt)*]
         [$($([[$($inherits:tt)*] $field:ident $delim:tt $($field_ty:ty $(= $field_val:expr)?)?])+)?]
         [$($bc_g:tt)*] [$($bc_r:tt)*] [$($bc_w:tt)*]
@@ -403,7 +403,7 @@ macro_rules! dep_type_with_builder_impl {
     };
     (
         @concat_generics
-        [$([$attr:meta])*] [$vis:vis] [$name:ident] [$obj:ident] [$Id:ty] [$Dyn:ty]
+        [$([$attr:meta])*] [$vis:vis] [$name:ident] [$id:ident] [$Id:ty] [$Dyn:ty]
         [$($g:tt)*] [$($r:tt)*] [$($w:tt)*]
         [[$BaseBuilder:ty] [$($bc_g:tt)*] [$($bc_r:tt)*] [$($bc_w:tt)*]]
         [$([[$($inherits:tt)*] $field:ident $delim:tt $($field_ty:ty $(= $field_val:expr)?)?])*]
@@ -412,7 +412,7 @@ macro_rules! dep_type_with_builder_impl {
             $crate::dep_type_with_builder_impl {
                 @concat_generics_done
                 [$BaseBuilder]
-                [$([$attr])*] [$vis] [$name] [$obj] [$Id] [$Dyn]
+                [$([$attr])*] [$vis] [$name] [$id] [$Id] [$Dyn]
                 [$($g)*] [$($r)*] [$($w)*]
                 [$([[$($inherits)*] $field $delim $($field_ty $(= $field_val)?)?])*]
             }
@@ -423,14 +423,14 @@ macro_rules! dep_type_with_builder_impl {
     (
         @concat_generics_done
         [$BaseBuilder:ty]
-        [$([$attr:meta])*] [$vis:vis] [$name:ident] [$obj:ident] [$Id:ty] [$Dyn:ty]
+        [$([$attr:meta])*] [$vis:vis] [$name:ident] [$id:ident] [$Id:ty] [$Dyn:ty]
         [$($g:tt)*] [$($r:tt)*] [$($w:tt)*]
         [$([[$($inherits:tt)*] $field:ident $delim:tt $($field_ty:ty $(= $field_val:expr)?)?])*]
         [$($bc_g:tt)*] [$($bc_r:tt)*] [$($bc_w:tt)*]
     ) => {
         $crate::dep_type_impl_raw! {
             @unroll_fields
-            [$([$attr])*] [$vis] [$name] [$obj] [$Id] [$Dyn] [state] [this] [bindings] [handlers]
+            [$([$attr])*] [$vis] [$name] [$id] [$Id] [$Dyn] [state] [this] [bindings] [handlers]
             [$($g)*] [$($r)*] [$($w)*]
             [] [] [] [] [] [] []
             [[$BaseBuilder] [$($bc_g)*] [$($bc_r)*] [$($bc_w)*] []]
@@ -443,7 +443,7 @@ macro_rules! dep_type_with_builder_impl {
         $crate::std_compile_error!("\
             invalid dep type definition, allowed form is\n\
             \n\
-            $(#[$attr])* $vis struct $name $(<$generics> $(where $where_clause)?)? become $obj in $Id as $Dyn {\n\
+            $(#[$attr])* $vis struct $name $(<$generics> $(where $where_clause)?)? in $Id as $Dyn {\n\
                 $(#[$field_1_attr])* $field_1_name $(: $field_1_type = $field_1_value | [$field_1_type] | yield $field_1_type),\n\
                 $(#[$field_2_attr])* $field_2_name $(: $field_2_type = $field_2_value | [$field_2_type] | yield $field_2_type),\n\
                 ...\n\
@@ -489,7 +489,7 @@ macro_rules! dep_type_impl {
     ) => {
         $crate::dep_type_impl_raw! {
             @unroll_fields
-            [$([$attr])*] [$vis] [$name] [obj] [$Id] [$Dyn] [state] [this] [bindings] [handlers]
+            [$([$attr])*] [$vis] [$name] [id] [$Id] [$Dyn] [state] [this] [bindings] [handlers]
             [$($g)*] [$($r)*] [$($w)*]
             [] [] [] [] [] [] []
             []
@@ -548,7 +548,7 @@ macro_rules! dep_type_impl {
 macro_rules! dep_type_impl_raw {
     (
         @unroll_fields
-        [$([$attr:meta])*] [$vis:vis] [$name:ident] [$obj:ident] [$Id:ty] [$Dyn:ty]
+        [$([$attr:meta])*] [$vis:vis] [$name:ident] [$id:ident] [$Id:ty] [$Dyn:ty]
         [$state:ident] [$this:ident] [$bindings:ident] [$handlers:ident]
         [$($g:tt)*] [$($r:tt)*] [$($w:tt)*]
         [$($core_fields:tt)*]
@@ -566,7 +566,7 @@ macro_rules! dep_type_impl_raw {
     ) => {
         $crate::dep_type_impl_raw! {
             @unroll_fields
-            [$([$attr])*] [$vis] [$name] [$obj] [$Id] [$Dyn]
+            [$([$attr])*] [$vis] [$name] [$id] [$Id] [$Dyn]
             [$state] [$this] [$bindings] [$handlers]
             [$($g)*] [$($r)*] [$($w)*]
             [
@@ -603,7 +603,7 @@ macro_rules! dep_type_impl_raw {
             ]
             [
                 $($update_handlers)*
-                $name:: [< $field:upper >] .update_parent_children_has_handlers($state, $obj);
+                $name:: [< $field:upper >] .update_parent_children_has_handlers($state, $id);
             ]
             [$(
                 [$BaseBuilder] [$($bc_g)*] [$($bc_r)*] [$($bc_w)*]
@@ -613,7 +613,7 @@ macro_rules! dep_type_impl_raw {
                     $vis fn [< $field _ref >] (mut self, value: $field_ty) -> Self {
                         let id = <$BaseBuilder as $crate::DepObjBaseBuilder<$Id>>::id(&self.base);
                         let state = <$BaseBuilder as $crate::DepObjBaseBuilder<$Id>>::state_mut(&mut self.base);
-                        $name:: [< $field:upper >] .set(state, id.$obj(), value).immediate();
+                        $name:: [< $field:upper >] .set(state, id, value).immediate();
                         self
                     }
                 ]
@@ -623,7 +623,7 @@ macro_rules! dep_type_impl_raw {
     };
     (
         @unroll_fields
-        [$([$attr:meta])*] [$vis:vis] [$name:ident] [$obj:ident] [$Id:ty] [$Dyn:ty]
+        [$([$attr:meta])*] [$vis:vis] [$name:ident] [$id:ident] [$Id:ty] [$Dyn:ty]
         [$state:ident] [$this:ident] [$bindings:ident] [$handlers:ident]
         [$($g:tt)*] [$($r:tt)*] [$($w:tt)*]
         [$($core_fields:tt)*]
@@ -641,7 +641,7 @@ macro_rules! dep_type_impl_raw {
     ) => {
         $crate::dep_type_impl_raw! {
             @unroll_fields
-            [$([$attr])*] [$vis] [$name] [$obj] [$Id] [$Dyn] [$state] [$this] [$bindings] [$handlers]
+            [$([$attr])*] [$vis] [$name] [$id] [$Id] [$Dyn] [$state] [$this] [$bindings] [$handlers]
             [$($g)*] [$($r)*] [$($w)*]
             [
                 $($core_fields)*
@@ -677,7 +677,7 @@ macro_rules! dep_type_impl_raw {
             ]
             [
                 $($update_handlers)*
-                $name:: [< $field:upper >] .update_parent_children_has_handlers($state, $obj);
+                $name:: [< $field:upper >] .update_parent_children_has_handlers($state, $id);
             ]
             [$(
                 [$BaseBuilder] [$($bc_g)*] [$($bc_r)*] [$($bc_w)*]
@@ -687,7 +687,7 @@ macro_rules! dep_type_impl_raw {
                     $vis fn [< $field _ref >] (mut self, value: $field_ty) -> Self {
                         let id = <$BaseBuilder as $crate::DepObjBaseBuilder<$Id>>::id(&self.base);
                         let state = <$BaseBuilder as $crate::DepObjBaseBuilder<$Id>>::state_mut(&mut self.base);
-                        $name:: [< $field:upper >] .set(state, id.$obj(), value).immediate();
+                        $name:: [< $field:upper >] .set(state, id, value).immediate();
                         self
                     }
                 ]
@@ -697,7 +697,7 @@ macro_rules! dep_type_impl_raw {
     };
     (
         @unroll_fields
-        [$([$attr:meta])*] [$vis:vis] [$name:ident] [$obj:ident] [$Id:ty] [$Dyn:ty]
+        [$([$attr:meta])*] [$vis:vis] [$name:ident] [$id:ident] [$Id:ty] [$Dyn:ty]
         [$state:ident] [$this:ident] [$bindings:ident] [$handlers:ident]
         [$($g:tt)*] [$($r:tt)*] [$($w:tt)*]
         [$($core_fields:tt)*]
@@ -715,7 +715,7 @@ macro_rules! dep_type_impl_raw {
     ) => {
         $crate::dep_type_impl_raw! {
             @unroll_fields
-            [$([$attr])*] [$vis] [$name] [$obj] [$Id] [$Dyn] [$state] [$this] [$bindings] [$handlers]
+            [$([$attr])*] [$vis] [$name] [$id] [$Id] [$Dyn] [$state] [$this] [$bindings] [$handlers]
             [$($g)*] [$($r)*] [$($w)*]
             [
                 $($core_fields)*
@@ -751,7 +751,7 @@ macro_rules! dep_type_impl_raw {
             ]
             [
                 $($update_handlers)*
-                $name:: [< $field:upper >] .update_parent_children_has_handlers($state, $obj);
+                $name:: [< $field:upper >] .update_parent_children_has_handlers($state, $id);
             ]
             [$(
                 [$BaseBuilder] [$($bc_g)*] [$($bc_r)*] [$($bc_w)*]
@@ -761,7 +761,7 @@ macro_rules! dep_type_impl_raw {
                     $vis fn $field(mut self, value: $field_ty) -> Self {
                         let id = <$BaseBuilder as $crate::DepObjBaseBuilder<$Id>>::id(&self.base);
                         let state = <$BaseBuilder as $crate::DepObjBaseBuilder<$Id>>::state_mut(&mut self.base);
-                        $name:: [< $field:upper >] .set(state, id.$obj(), value).immediate();
+                        $name:: [< $field:upper >] .set(state, id, value).immediate();
                         self
                     }
                 ]
@@ -771,7 +771,7 @@ macro_rules! dep_type_impl_raw {
     };
     (
         @unroll_fields
-        [$([$attr:meta])*] [$vis:vis] [$name:ident] [$obj:ident] [$Id:ty] [$Dyn:ty]
+        [$([$attr:meta])*] [$vis:vis] [$name:ident] [$id:ident] [$Id:ty] [$Dyn:ty]
         [$state:ident] [$this:ident] [$bindings:ident] [$handlers:ident]
         [$($g:tt)*] [$($r:tt)*] [$($w:tt)*]
         [$($core_fields:tt)*]
@@ -789,7 +789,7 @@ macro_rules! dep_type_impl_raw {
     ) => {
         $crate::dep_type_impl_raw! {
             @unroll_fields
-            [$([$attr])*] [$vis] [$name] [$obj] [$Id] [$Dyn] [$state] [$this] [$bindings] [$handlers]
+            [$([$attr])*] [$vis] [$name] [$id] [$Id] [$Dyn] [$state] [$this] [$bindings] [$handlers]
             [$($g)*] [$($r)*] [$($w)*]
             [
                 $($core_fields)*
@@ -834,7 +834,7 @@ macro_rules! dep_type_impl_raw {
                     $vis fn [< $field _ref >] (mut self, value: $field_ty) -> Self {
                         let id = <$BaseBuilder as $crate::DepObjBaseBuilder<$Id>>::id(&self.base);
                         let state = <$BaseBuilder as $crate::DepObjBaseBuilder<$Id>>::state_mut(&mut self.base);
-                        $name:: [< $field:upper >] .set(state, id.$obj(), value).immediate();
+                        $name:: [< $field:upper >] .set(state, id, value).immediate();
                         self
                     }
                 ]
@@ -844,7 +844,7 @@ macro_rules! dep_type_impl_raw {
     };
     (
         @unroll_fields
-        [$([$attr:meta])*] [$vis:vis] [$name:ident] [$obj:ident] [$Id:ty] [$Dyn:ty]
+        [$([$attr:meta])*] [$vis:vis] [$name:ident] [$id:ident] [$Id:ty] [$Dyn:ty]
         [$state:ident] [$this:ident] [$bindings:ident] [$handlers:ident]
         [$($g:tt)*] [$($r:tt)*] [$($w:tt)*]
         [$($core_fields:tt)*]
@@ -862,7 +862,7 @@ macro_rules! dep_type_impl_raw {
     ) => {
         $crate::dep_type_impl_raw! {
             @unroll_fields
-            [$([$attr])*] [$vis] [$name] [$obj] [$Id] [$Dyn] [$state] [$this] [$bindings] [$handlers]
+            [$([$attr])*] [$vis] [$name] [$id] [$Id] [$Dyn] [$state] [$this] [$bindings] [$handlers]
             [$($g)*] [$($r)*] [$($w)*]
             [
                 $($core_fields)*
@@ -907,7 +907,7 @@ macro_rules! dep_type_impl_raw {
                     $vis fn $field(mut self, value: $field_ty) -> Self {
                         let id = <$BaseBuilder as $crate::DepObjBaseBuilder<$Id>>::id(&self.base);
                         let state = <$BaseBuilder as $crate::DepObjBaseBuilder<$Id>>::state_mut(&mut self.base);
-                        $name:: [< $field:upper >] .set(state, id.$obj(), value).immediate();
+                        $name:: [< $field:upper >] .set(state, id, value).immediate();
                         self
                     }
                 ]
@@ -917,7 +917,7 @@ macro_rules! dep_type_impl_raw {
     };
     (
         @unroll_fields
-        [$([$attr:meta])*] [$vis:vis] [$name:ident] [$obj:ident] [$Id:ty] [$Dyn:ty]
+        [$([$attr:meta])*] [$vis:vis] [$name:ident] [$id:ident] [$Id:ty] [$Dyn:ty]
         [$state:ident] [$this:ident] [$bindings:ident] [$handlers:ident]
         [$($g:tt)*] [$($r:tt)*] [$($w:tt)*]
         [$($core_fields:tt)*]
@@ -941,7 +941,7 @@ macro_rules! dep_type_impl_raw {
     };
     (
         @unroll_fields
-        [$([$attr:meta])*] [$vis:vis] [$name:ident] [$obj:ident] [$Id:ty] [$Dyn:ty]
+        [$([$attr:meta])*] [$vis:vis] [$name:ident] [$id:ident] [$Id:ty] [$Dyn:ty]
         [$state:ident] [$this:ident] [$bindings:ident] [$handlers:ident]
         [$($g:tt)*] [$($r:tt)*] [$($w:tt)*]
         [$($core_fields:tt)*]
@@ -959,7 +959,7 @@ macro_rules! dep_type_impl_raw {
     ) => {
         $crate::dep_type_impl_raw! {
             @unroll_fields
-            [$([$attr])*] [$vis] [$name] [$obj] [$Id] [$Dyn] [$state] [$this] [$bindings] [$handlers]
+            [$([$attr])*] [$vis] [$name] [$id] [$Id] [$Dyn] [$state] [$this] [$bindings] [$handlers]
             [$($g)*] [$($r)*] [$($w)*]
             [
                 $($core_fields)*
@@ -1003,7 +1003,7 @@ macro_rules! dep_type_impl_raw {
     };
     (
         @unroll_fields
-        [$([$attr:meta])*] [$vis:vis] [$name:ident] [$obj:ident] [$Id:ty] [$Dyn:ty]
+        [$([$attr:meta])*] [$vis:vis] [$name:ident] [$id:ident] [$Id:ty] [$Dyn:ty]
         [$state:ident] [$this:ident] [$bindings:ident] [$handlers:ident]
         [$($g:tt)*] [$($r:tt)*] [$($w:tt)*]
         [$($core_fields:tt)*]
@@ -1021,7 +1021,7 @@ macro_rules! dep_type_impl_raw {
     ) => {
         $crate::dep_type_impl_raw! {
             @unroll_fields
-            [$([$attr])*] [$vis] [$name] [$obj] [$Id] [$Dyn] [$state] [$this] [$bindings] [$handlers]
+            [$([$attr])*] [$vis] [$name] [$id] [$Id] [$Dyn] [$state] [$this] [$bindings] [$handlers]
             [$($g)*] [$($r)*] [$($w)*]
             [
                 $($core_fields)*
@@ -1065,7 +1065,7 @@ macro_rules! dep_type_impl_raw {
     };
     (
         @unroll_fields
-        [$([$attr:meta])*] [$vis:vis] [$name:ident] [$obj:ident] [$Id:ty] [$Dyn:ty]
+        [$([$attr:meta])*] [$vis:vis] [$name:ident] [$id:ident] [$Id:ty] [$Dyn:ty]
         [$state:ident] [$this:ident] [$bindings:ident] [$handlers:ident]
         [$($g:tt)*] [$($r:tt)*] [$($w:tt)*]
         [$($core_fields:tt)*]
@@ -1089,7 +1089,7 @@ macro_rules! dep_type_impl_raw {
     };
     (
         @unroll_fields
-        [$([$attr:meta])*] [$vis:vis] [$name:ident] [$obj:ident] [$Id:ty] [$Dyn:ty]
+        [$([$attr:meta])*] [$vis:vis] [$name:ident] [$id:ident] [$Id:ty] [$Dyn:ty]
         [$state:ident] [$this:ident] [$bindings:ident] [$handlers:ident]
         [$($g:tt)*] [$($r:tt)*] [$($w:tt)*]
         [$($core_fields:tt)*]
@@ -1107,7 +1107,7 @@ macro_rules! dep_type_impl_raw {
     ) => {
         $crate::dep_type_impl_raw! {
             @unroll_fields
-            [$([$attr])*] [$vis] [$name] [$obj] [$Id] [$Dyn] [$state] [$this] [$bindings] [$handlers]
+            [$([$attr])*] [$vis] [$name] [$id] [$Id] [$Dyn] [$state] [$this] [$bindings] [$handlers]
             [$($g)*] [$($r)*] [$($w)*]
             [
                 $($core_fields)*
@@ -1152,7 +1152,7 @@ macro_rules! dep_type_impl_raw {
     };
     (
         @unroll_fields
-        [$([$attr:meta])*] [$vis:vis] [$name:ident] [$obj:ident] [$Id:ty] [$Dyn:ty]
+        [$([$attr:meta])*] [$vis:vis] [$name:ident] [$id:ident] [$Id:ty] [$Dyn:ty]
         [$state:ident] [$this:ident] [$bindings:ident] [$handlers:ident]
         [$($g:tt)*] [$($r:tt)*] [$($w:tt)*]
         [$($core_fields:tt)*]
@@ -1176,7 +1176,7 @@ macro_rules! dep_type_impl_raw {
     };
     (
         @unroll_fields
-        [$([$attr:meta])*] [$vis:vis] [$name:ident] [$obj:ident] [$Id:ty] [$Dyn:ty]
+        [$([$attr:meta])*] [$vis:vis] [$name:ident] [$id:ident] [$Id:ty] [$Dyn:ty]
         [$state:ident] [$this:ident] [$bindings:ident] [$handlers:ident]
         [$($g:tt)*] [$($r:tt)*] [$($w:tt)*]
         [$($core_fields:tt)*]
@@ -1207,7 +1207,7 @@ macro_rules! dep_type_impl_raw {
     };
     (
         @unroll_fields
-        [$([$attr:meta])*] [$vis:vis] [$name:ident] [$obj:ident] [$Id:ty] [$Dyn:ty]
+        [$([$attr:meta])*] [$vis:vis] [$name:ident] [$id:ident] [$Id:ty] [$Dyn:ty]
         [$state:ident] [$this:ident] [$bindings:ident] [$handlers:ident]
         [$($g:tt)*] [$($r:tt)*] [$($w:tt)*]
         [$($core_fields:tt)*]
@@ -1300,7 +1300,7 @@ macro_rules! dep_type_impl_raw {
 
                 #[doc(hidden)]
                 #[allow(unused_variables)]
-                fn update_parent_children_has_handlers($state: &mut dyn $crate::dyn_context_state_State, $obj: $crate::Glob < $name $($r)* >) where Self: Sized {
+                fn update_parent_children_has_handlers($state: &mut dyn $crate::dyn_context_state_State, $id: $crate::components_arena_RawId) where Self: Sized {
                     $($update_handlers)*
                 }
             }
@@ -1402,7 +1402,7 @@ macro_rules! dep_obj_drop_bindings {
                     $(
                         let handlers = <$ty as $crate::DepType>::take_all_handlers($field_mut);
                         if !handlers.is_empty() {
-                            <$ty as $crate::DepType>::update_parent_children_has_handlers(state, self.$name());
+                            <$ty as $crate::DepType>::update_parent_children_has_handlers(state, <Self as $crate::components_arena_ComponentId>::into_raw(self));
                         }
                     )?
                     $(
