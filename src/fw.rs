@@ -467,6 +467,7 @@ impl<T: DetachedDepObjId> DepObjId for T {
 ///
 /// ```rust
 /// # #![feature(const_ptr_offset_from)]
+/// # #![feature(const_type_id)]
 /// use components_arena::{Arena, Component, NewtypeComponentId, Id};
 /// use dep_obj::{DetachedDepObjId, dep_obj, dep_type};
 /// use dep_obj::binding::{Bindings, Binding, Binding1};
@@ -1266,7 +1267,7 @@ impl<Owner: DepType + 'static, PropType: Convenient> AnySetter<Owner> for Setter
 
 /// A dictionary mapping a subset of target type properties to the values.
 /// Every dependency object can have an applied style at every moment.
-/// To switch an applied style, use the [`Glob::apply_style`] function.
+/// To switch an applied style, use the [`DepObj::apply_style`] function.
 #[derive(Educe)]
 #[educe(Debug, Clone, Default)]
 pub struct Style<Owner: DepType> {
@@ -1910,38 +1911,38 @@ pub trait NewPriv {
     fn new_priv() -> Self;
 }
 
-pub struct GlobRef<'a, Obj> {
+pub struct DepObjRef<'a, Obj> {
     arena: &'a dyn Any,
     id: RawId,
-    field_ref: fn(arena: &dyn Any, id: RawId) -> &Obj,
+    get_raw: fn(arena: &dyn Any, id: RawId) -> &Obj,
 }
 
-impl<'a, Obj> Deref for GlobRef<'a, Obj> {
+impl<'a, Obj> Deref for DepObjRef<'a, Obj> {
     type Target = Obj;
 
     fn deref(&self) -> &Obj {
-        (self.field_ref)(self.arena, self.id)
+        (self.get_raw)(self.arena, self.id)
     }
 }
 
-pub struct GlobMut<'a, Obj> {
+pub struct DepObjMut<'a, Obj> {
     arena: &'a mut dyn Any,
     id: RawId,
-    field_ref: fn(arena: &dyn Any, id: RawId) -> &Obj,
-    field_mut: fn(arena: &mut dyn Any, id: RawId) -> &mut Obj,
+    get_raw: fn(arena: &dyn Any, id: RawId) -> &Obj,
+    get_raw_mut: fn(arena: &mut dyn Any, id: RawId) -> &mut Obj,
 }
 
-impl<'a, Obj> Deref for GlobMut<'a, Obj> {
+impl<'a, Obj> Deref for DepObjMut<'a, Obj> {
     type Target = Obj;
 
     fn deref(&self) -> &Obj {
-        (self.field_ref)(self.arena, self.id)
+        (self.get_raw)(self.arena, self.id)
     }
 }
 
-impl<'a, Obj> DerefMut for GlobMut<'a, Obj> {
+impl<'a, Obj> DerefMut for DepObjMut<'a, Obj> {
     fn deref_mut(&mut self) -> &mut Obj {
-        (self.field_mut)(self.arena, self.id)
+        (self.get_raw_mut)(self.arena, self.id)
     }
 }
 
@@ -1951,20 +1952,20 @@ pub trait DepObj<Dyn: ?Sized, Type: DepType> {
     fn get_raw(arena: &dyn Any, id: RawId) -> &Type;
     fn get_raw_mut(arena: &mut dyn Any, id: RawId) -> &mut Type;
 
-    fn get(state: &dyn State, id: RawId) -> GlobRef<Type> {
-        GlobRef {
+    fn get(state: &dyn State, id: RawId) -> DepObjRef<Type> {
+        DepObjRef {
             id,
             arena: state.get_raw(Self::ARENA).unwrap_or_else(|| panic!("{:?} required", Self::ARENA)),
-            field_ref: Self::get_raw,
+            get_raw: Self::get_raw,
         }
     }
 
-    fn get_mut(state: &mut dyn State, id: RawId) -> GlobMut<Type> {
-        GlobMut {
+    fn get_mut(state: &mut dyn State, id: RawId) -> DepObjMut<Type> {
+        DepObjMut {
             id,
             arena: state.get_mut_raw(Self::ARENA).unwrap_or_else(|| panic!("{:?} required", Self::ARENA)),
-            field_ref: Self::get_raw,
-            field_mut: Self::get_raw_mut,
+            get_raw: Self::get_raw,
+            get_raw_mut: Self::get_raw_mut,
         }
     }
 }
