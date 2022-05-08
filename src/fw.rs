@@ -460,8 +460,7 @@ impl<T: DetachedDepObjId> DepObjId for T {
 }
 
 /// A dependency type.
-/// Use the [`dep_type`] or the [`dep_type_with_builder`] macro
-/// to create a type implementing this trait.
+/// Use the [`dep_type`] macro to create a type implementing this trait.
 ///
 /// # Examples
 ///
@@ -604,8 +603,7 @@ impl<Owner: DepType, ArgsType: DepEventArgs> DepEvent<Owner, ArgsType> {
     /// # Safety
     ///
     /// The function is not intended for direct use.
-    /// Using the [`dep_type!`](dep_type) or the [`dep_type_with_builder!`](dep_type_with_builder)
-    /// macros garantees the function safe use.
+    /// Using the [`dep_type`] macro garantees the function safe use.
     pub const unsafe fn new(offset: usize) -> Self {
         DepEvent { offset, _phantom: PhantomType::new() }
     }
@@ -676,8 +674,7 @@ impl<Owner: DepType, PropType: Convenient> DepProp<Owner, PropType> {
     /// # Safety
     ///
     /// The function is not intended for direct use.
-    /// Using the [`dep_type!`](dep_type) or the [`dep_type_with_builder!`](dep_type_with_builder)
-    /// macros garantees the function safe use.
+    /// Using the [`dep_type`] macro garantees the function safe use.
     pub const unsafe fn new(offset: usize) -> Self {
         DepProp { offset, _phantom: PhantomType::new() }
     }
@@ -1010,8 +1007,7 @@ impl<Owner: DepType, ItemType: Convenient> DepVec<Owner, ItemType> {
     /// # Safety
     ///
     /// The function is not intended for direct use.
-    /// Using the [`dep_type!`](dep_type) or the [`dep_type_with_builder!`](dep_type_with_builder)
-    /// macros garantees the function safe use.
+    /// Using the [`dep_type`] macro garantees the function safe use.
     pub const unsafe fn new(offset: usize) -> Self {
         DepVec { offset, _phantom: PhantomType::new() }
     }
