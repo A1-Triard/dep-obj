@@ -358,14 +358,14 @@ macro_rules! dep_type_impl {
         $($token:tt)*
     ) => {
         $crate::std_compile_error!("\
-            invalid dep type definition, allowed form is\n\
-            \n\
-            $(#[$attr])* $vis struct $name $(<$generics> $(where $where_clause)?)? in $Id as $Dyn {\n\
-                $(#[$field_1_attr])* $field_1_name $(: $field_1_type = $field_1_value | [$field_1_type] | yield $field_1_type),\n\
-                $(#[$field_2_attr])* $field_2_name $(: $field_2_type = $field_2_value | [$field_2_type] | yield $field_2_type),\n\
-                ...\n\
-            }\n\
-            \n\
+            invalid dep type definition, allowed form is
+
+            $(#[$attr])* $vis struct $name $(<$generics> $(where $where_clause)?)? in $Id as $Dyn {
+                $(#[$field_1_attr])* $field_1_name $(: $field_1_type = $field_1_value | [$field_1_type] | yield $field_1_type),
+                $(#[$field_2_attr])* $field_2_name $(: $field_2_type = $field_2_value | [$field_2_type] | yield $field_2_type),
+                ...
+            }
+
         ");
     };
     (
@@ -1231,15 +1231,15 @@ macro_rules! dep_type_impl {
     (
         $($token:tt)*
     ) => {
-        $crate::std_compile_error!("\
-            invalid dep type definition, allowed form is\n\
-            \n\
-            $(#[$attr])* $vis struct $name $(<$generics> $(where $where_clause)?)? in $Id as $Dyn {\n\
-                $(#[$field_1_attr])* $field_1_name $(: $field_1_type = $field_1_value | [$field_1_type] | yield $field_1_type),\n\
-                $(#[$field_2_attr])* $field_2_name $(: $field_2_type = $field_2_value | [$field_2_type] | yield $field_2_type),\n\
-                ...\n\
-            }\n\
-            \n\
+        $crate::std_compile_error!("
+            invalid dep type definition, allowed form is
+
+            $(#[$attr])* $vis struct $name $(<$generics> $(where $where_clause)?)? in $Id as $Dyn {
+                $(#[$field_1_attr])* $field_1_name $(: $field_1_type = $field_1_value | [$field_1_type] | yield $field_1_type),
+                $(#[$field_2_attr])* $field_2_name $(: $field_2_type = $field_2_value | [$field_2_type] | yield $field_2_type),
+                ...
+            }
+
         ");
     };
 }
@@ -1294,16 +1294,17 @@ macro_rules! dep_obj_impl {
         @generics_parsed
         [$($g:tt)*] [$($r:tt)*] [$($w:tt)*] $($body:tt)*
     ) => {
-        $crate::std_compile_error!($crate::std_concat!("\
-            invalid dep obj implementation, allowed form is\n\
-            \n\
-            impl $generics $name $(where $where_clause)? {\n\
-                $(\n\
-                    $Dyn:ty => fn (self as $this:ident, $arena:ident : $Arena:ty) -> $(optional(trait $opt_tr:tt))? $((trait $tr:tt))? $(optional($opt_ty:ty))? $(($ty:ty))? {\n\
-                        if mut { $field_mut:expr } else { $field:expr }\n\
-                    }\n\
-                )*\n\
-            }\n\
+        $crate::std_compile_error!($crate::std_concat!("
+            invalid dep obj implementation, allowed form is
+
+            impl $generics $name $(where $where_clause)? {
+                $(
+                    $Dyn:ty => fn (self as $this:ident, $arena:ident : $Arena:ty) -> $(optional(trait $opt_tr:tt))? $((trait $tr:tt))? $(optional($opt_ty:ty))? $(($ty:ty))? {
+                        if mut { $field_mut:expr } else { $field:expr }
+                    }
+                )*
+            }
+
         "));
     };
     (
