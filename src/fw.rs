@@ -558,9 +558,9 @@ impl<T: DetachedDepObjId> DepObjId for T {
 ///         res: res.into(),
 ///     };
 ///     let id = MyDepTypeId::new(app);
-///     res.set_source_1(app, &mut MyDepType::PROP_2.value_source(id.obj()));
+///     res.set_source_1(app, &mut MyDepType::PROP_2.value_source(id));
 ///     assert_eq!(app.res.get_value(app), Some(10));
-///     MyDepType::PROP_2.set(app, id.obj(), 5).immediate();
+///     MyDepType::PROP_2.set(app, id, 5).immediate();
 ///     assert_eq!(app.res.get_value(app), Some(5));
 ///     id.drop_my_dep_type(app);
 ///     res.drop_self(app);
