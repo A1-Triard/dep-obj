@@ -12,65 +12,69 @@ use macro_attr_2018::macro_attr;
 use panicking::panicking;
 use phantom_type::PhantomType;
 
-pub struct GlobBDescriptor<Obj> {
-    pub arena: TypeId,
-    pub field_ref: fn(arena: &dyn Any, id: RawId) -> &Obj,
-    pub field_mut: fn(arena: &mut dyn Any, id: RawId) -> &mut Obj
+#[derive(Educe)]
+#[educe(Debug)]
+struct ParamDescriptor<Obj> {
+    arena: TypeId,
+    #[educe(Debug(ignore))]
+    get_raw: fn(arena: &dyn Any, id: RawId) -> &Obj,
+    #[educe(Debug(ignore))]
+    get_raw_mut: fn(arena: &mut dyn Any, id: RawId) -> &mut Obj
 }
 
 #[derive(Educe)]
 #[educe(Debug, Clone, Copy)]
-pub struct GlobB<Obj> {
-    pub id: RawId,
-    pub descriptor: fn() -> GlobBDescriptor<Obj>,
+pub struct Param<Obj: 'static> {
+    id: RawId,
+    descriptor: &'static ParamDescriptor<Obj>,
 }
 
-pub struct GlobBRef<'a, Obj> {
+pub struct ParamRef<'a, Obj: 'static> {
     arena: &'a dyn Any,
-    glob: GlobB<Obj>,
+    param: Param<Obj>,
 }
 
-impl<'a, Obj> Deref for GlobBRef<'a, Obj> {
+impl<'a, Obj> Deref for ParamRef<'a, Obj> {
     type Target = Obj;
 
     fn deref(&self) -> &Obj {
-        ((self.glob.descriptor)().field_ref)(self.arena.deref(), self.glob.id)
+        (self.param.descriptor.get_raw)(self.arena.deref(), self.param.id)
     }
 }
 
-pub struct GlobBMut<'a, Obj> {
+pub struct ParamMut<'a, Obj: 'static> {
     arena: &'a mut dyn Any,
-    glob: GlobB<Obj>,
+    param: Param<Obj>,
 }
 
-impl<'a, Obj> Deref for GlobBMut<'a, Obj> {
+impl<'a, Obj> Deref for ParamMut<'a, Obj> {
     type Target = Obj;
 
     fn deref(&self) -> &Obj {
-        ((self.glob.descriptor)().field_ref)(self.arena.deref(), self.glob.id)
+        (self.param.descriptor.get_raw)(self.arena.deref(), self.param.id)
     }
 }
 
-impl<'a, Obj> DerefMut for GlobBMut<'a, Obj> {
+impl<'a, Obj> DerefMut for ParamMut<'a, Obj> {
     fn deref_mut(&mut self) -> &mut Obj {
-        ((self.glob.descriptor)().field_mut)(self.arena.deref_mut(), self.glob.id)
+        (self.param.descriptor.get_raw_mut)(self.arena.deref_mut(), self.param.id)
     }
 }
 
-impl<Obj> GlobB<Obj> {
-    pub fn get(self, state: &dyn State) -> GlobBRef<Obj> {
-        let arena = (self.descriptor)().arena;
-        GlobBRef {
+impl<Obj> Param<Obj> {
+    pub fn get(self, state: &dyn State) -> ParamRef<Obj> {
+        let arena = self.descriptor.arena;
+        ParamRef {
             arena: state.get_raw(arena).unwrap_or_else(|| panic!("{:?} required", arena)),
-            glob: self
+            param: self
         }
     }
 
-    pub fn get_mut(self, state: &mut dyn State) -> GlobBMut<Obj> {
-        let arena = (self.descriptor)().arena;
-        GlobBMut {
+    pub fn get_mut(self, state: &mut dyn State) -> ParamMut<Obj> {
+        let arena = self.descriptor.arena;
+        ParamMut {
             arena: state.get_mut_raw(arena).unwrap_or_else(|| panic!("{:?} required", arena)),
-            glob: self
+            param: self
         }
     }
 }
@@ -434,7 +438,7 @@ macro_rules! binding_n {
         $crate::paste_paste! {
             #[derive(Educe)]
             #[educe(Debug)]
-            struct [< BindingExt $n NodeSources >] <P: Debug, $( [< S $i >] : Source, )* T: Convenient> {
+            struct [< BindingExt $n NodeSources >] <P: Debug + 'static, $( [< S $i >] : Source, )* T: Convenient> {
                 param: P,
                 $(
                     [< source_ $i >] : Option<(Box<dyn HandlerId>, [< S $i >] ::Cache )>,
@@ -443,7 +447,7 @@ macro_rules! binding_n {
                 #[educe(Debug(ignore))]
                 dispatch: fn(
                     &mut dyn State,
-                    GlobB <  P >,
+                    Param <  P >,
                     $( < < [< S $i >] as Source > ::Cache as SourceCache< [< S $i >] ::Value > >::Value ),*
                 ) -> Re<T>,
             }
@@ -497,7 +501,7 @@ macro_rules! binding_n {
                     param: P,
                     dispatch: fn(
                         &mut dyn State,
-                        GlobB < P >,
+                        Param < P >,
                         $( < < [< S $i >] as Source > ::Cache as SourceCache< [< S $i >] ::Value > >::Value ),*
                     ) -> Re<T>,
                 ) -> Self {
@@ -535,13 +539,11 @@ macro_rules! binding_n {
                 }
 
                 #[allow(dead_code)]
-                fn param_descriptor() -> GlobBDescriptor<P> {
-                    GlobBDescriptor {
-                        arena: TypeId::of::<Bindings>(),
-                        field_ref: Self::param_ref,
-                        field_mut: Self::param_mut,
-                    }
-                }
+                const PARAM_DESCRIPTOR: ParamDescriptor<P> = ParamDescriptor {
+                    arena: TypeId::of::<Bindings>(),
+                    get_raw: Self::param_ref,
+                    get_raw_mut: Self::param_mut,
+                };
 
                 pub fn set_target(self, state: &mut dyn State, target: Box<dyn Target<T>>) {
                     BindingBase::from(self).set_target(state, target);
@@ -672,9 +674,9 @@ macro_rules! binding_n {
                         )*
 
                         let target = node.target.clone();
-                        let param = GlobB {
+                        let param = Param {
                             id: self.binding.into_raw(),
-                            descriptor: < [< BindingExt $n >] <P, $( [< S $j >] ,)* T> > ::param_descriptor
+                            descriptor: & < [< BindingExt $n >] <P, $( [< S $j >] ,)* T> > ::PARAM_DESCRIPTOR
                         };
                         if let Re(Some(value)) = (sources.dispatch)(state, param, $( [< value_ $j >] ),*) {
                             target.map(|x| x.execute(state, value));
