@@ -48,7 +48,7 @@ mod objs {
 
     dep_type! {
         #[derive(Debug)]
-        pub struct ItemProps in Item as ItemProps {
+        pub struct ItemProps in Item as detached_static_dep_type::Obj {
             name: Cow<'static, str> = Cow::Borrowed(""),
             base_weight: f32 = 0.0,
             weight: f32 = 0.0,
@@ -66,8 +66,7 @@ mod behavior {
     use dyn_context::state::State;
     use crate::objs::*;
 
-    pub fn new_item(state: &mut dyn State) -> Item {
-        let item = Item::new(state);
+    pub fn item(state: &mut dyn State, item: Item) {
         let weight = Binding3::new(state, (), |(), base_weight, cursed, equipped| Some(
             if equipped && cursed { base_weight + 100.0 } else { base_weight }
         ));
@@ -75,17 +74,15 @@ mod behavior {
         weight.set_source_1(state, &mut ItemProps::BASE_WEIGHT.value_source(item));
         weight.set_source_2(state, &mut ItemProps::CURSED.value_source(item));
         weight.set_source_3(state, &mut ItemProps::EQUIPPED.value_source(item));
-        return item;
     }
 }
 
 use dep_obj::binding::{Bindings};
 use dyn_context::state::{State, StateRefMut};
 use objs::*;
-use behavior::*;
 
 fn run(state: &mut dyn State) {
-    let item = new_item(state);
+    let item = Item::new(state, behavior::item);
     ItemProps::BASE_WEIGHT.set(state, item, 5.0).immediate();
     ItemProps::CURSED.set(state, item, true).immediate();
     ItemProps::EQUIPPED.set(state, item, true).immediate();

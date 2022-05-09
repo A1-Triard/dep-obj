@@ -428,3 +428,9 @@ fn main() {
     }, &mut Bindings::new());
 }
 ```
+
+## Example: dynamicly typed dependency object
+
+Lets add some properties, which are not universal for all `Item`s.
+
+To do it we need to use another library: `downcast-rs`.
