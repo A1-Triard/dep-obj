@@ -9,7 +9,7 @@ mod objs {
 
     dep_type! {
         #[derive(Debug)]
-        pub struct ItemProps in Item as ItemProps {
+        pub struct ItemProps in Item as detached_static_dep_type::Obj {
             name: Cow<'static, str> = Cow::Borrowed(""),
             base_weight: f32 = 0.0,
             weight: f32 = 0.0,

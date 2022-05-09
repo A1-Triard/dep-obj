@@ -1266,31 +1266,34 @@ macro_rules! dep_obj_impl {
     (
         @generics_parsed
         $g:tt $r:tt $w:tt $Id:ty {
-            $(
-                $Key:ty => fn(self as $this:ident, $arena:ident : $Arena:ty) -> $(optional(trait $opt_tr:tt))? $((trait $tr:tt))? $(optional($opt_ty:ty))? $(($ty:ty))? {
+            $($(
+                $Key:ty => fn(
+                    self as $this:ident,
+                    $arena:ident : $Arena:ty
+                ) -> $(optional(trait $opt_tr:tt))? $((trait $tr:tt))? $(optional($opt_ty:ty))? $(($ty:ty))? {
                     if mut { $field_mut:expr } else { $field:expr }
                 }
-            )*
+            ),+ $(,)?)?
         }
     ) => {
         $crate::dep_obj_impl! {
             @drop_bindings
             $g $r $w [$Id]
             [
-                $(
+                $($(
                     [$this] [$arena] [$Arena] [$($opt_tr)?] [$($tr)?] [$($opt_ty)?] [$($ty)?]
                     [$field_mut] [$field]
-                )*
+                )+)?
             ]
         }
-        $(
+        $($(
             $crate::dep_obj_impl! {
                 @impl
                 $g $w [$Id]
                 [$this] [$arena] [$Arena] [$($opt_tr)?] [$($tr)?] [$($opt_ty)?] [$($ty)?] [$Key]
                 [$field_mut] [$field]
             }
-        )*
+        )+)?
     };
     (
         @generics_parsed
@@ -1300,11 +1303,11 @@ macro_rules! dep_obj_impl {
             invalid dep obj implementation, allowed form is
 
             impl $generics $Id:ty $(where $where_clause)? {
-                $(
+                $($(
                     $Key:ty => fn (self as $this:ident, $arena:ident : $Arena:ty) -> $(optional(trait $opt_tr:tt))? $((trait $tr:tt))? $(optional($opt_ty:ty))? $(($ty:ty))? {
                         if mut { $field_mut:expr } else { $field:expr }
                     }
-                )*
+                ),+ $(,)?)?
             }
 
         "));
