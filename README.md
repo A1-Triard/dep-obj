@@ -354,17 +354,30 @@ code can be encapsulated inside `Item` (actually in `Item::new`). In the other o
 behavior are separated from data description. Lets stick to the second
 approach and keep the behavior outside of `mod objs`.
 
+Allow to pass an external initializer to the `Item` constructor:
+
 ```rust
-pub fn new_item(state: &mut dyn State) -> Item {
-    let item = Item::new(state);
-    let weight = Binding3::new(state, (), |(), base_weight, cursed, equipped| Some(
-        if equipped && cursed { base_weight + 100.0 } else { base_weight }
-    ));
-    ItemProps::WEIGHT.bind(state, item, weight);
-    weight.set_source_1(state, &mut ItemProps::BASE_WEIGHT.value_source(item));
-    weight.set_source_2(state, &mut ItemProps::CURSED.value_source(item));
-    weight.set_source_3(state, &mut ItemProps::EQUIPPED.value_source(item));
-    return item;
+pub fn new(state: &mut dyn State, init: impl FnOnce(&mut dyn State, Item)) -> Item {
+    let objs: &mut Objs = state.get_mut();
+    let item = objs.0.get_mut().items.insert(|id| (ItemData { props: ItemProps::new_priv() }, Item(id)));
+    init(state, item);
+    item
+}
+```
+
+`Item` behavior:
+
+```rust
+mod behavior {
+    pub fn item(state: &mut dyn State, item: Item) {
+        let weight = Binding3::new(state, (), |(), base_weight, cursed, equipped| Some(
+            if equipped && cursed { base_weight + 100.0 } else { base_weight }
+        ));
+        ItemProps::WEIGHT.bind(state, item, weight);
+        weight.set_source_1(state, &mut ItemProps::BASE_WEIGHT.value_source(item));
+        weight.set_source_2(state, &mut ItemProps::CURSED.value_source(item));
+        weight.set_source_3(state, &mut ItemProps::EQUIPPED.value_source(item));
+    }
 }
 ```
 
@@ -376,7 +389,7 @@ Finally, lets write some test code to make our just builded game system work:
 
 ```
 fn run(state: &mut dyn State) {
-    let item = new_item(state);
+    let item = Item::new(state, behavior::item);
 
     let weight = Binding1::new(state, (), |(), weight| Some(weight));
     weight.set_target_fn(state, (), |_state, (), weight| {

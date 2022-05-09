@@ -76,9 +76,11 @@ mod objs {
     }
 
     impl Item {
-        pub fn new(state: &mut dyn State) -> Item {
+        pub fn new(state: &mut dyn State, init: impl FnOnce(&mut dyn State, Item)) -> Item {
             let objs: &mut Objs = state.get_mut();
-            objs.0.get_mut().items.insert(|id| (ItemData { props: ItemProps::new_priv() }, Item(id)))
+            let item = objs.0.get_mut().items.insert(|id| (ItemData { props: ItemProps::new_priv() }, Item(id)));
+            init(state, item);
+            item
         }
 
         pub fn drop_self(self, state: &mut dyn State) {
@@ -106,8 +108,7 @@ mod behavior {
     use dyn_context::state::State;
     use crate::objs::*;
 
-    pub fn new_item(state: &mut dyn State) -> Item {
-        let item = Item::new(state);
+    pub fn item(state: &mut dyn State, item: Item) {
         let weight = Binding3::new(state, (), |(), base_weight, cursed, equipped| Some(
             if equipped && cursed { base_weight + 100.0 } else { base_weight }
         ));
@@ -115,17 +116,15 @@ mod behavior {
         weight.set_source_1(state, &mut ItemProps::BASE_WEIGHT.value_source(item));
         weight.set_source_2(state, &mut ItemProps::CURSED.value_source(item));
         weight.set_source_3(state, &mut ItemProps::EQUIPPED.value_source(item));
-        return item;
     }
 }
 
 use dep_obj::binding::{Binding1, Bindings};
 use dyn_context::state::{State, StateRefMut};
 use objs::*;
-use behavior::*;
 
 fn run(state: &mut dyn State) {
-    let item = new_item(state);
+    let item = Item::new(state, behavior::item);
 
     let weight = Binding1::new(state, (), |(), weight| Some(weight));
     weight.set_target_fn(state, (), |_state, (), weight| {
