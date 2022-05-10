@@ -1179,27 +1179,22 @@ macro_rules! dep_type_impl {
                 type Id = $Id;
                 type DepObjKey = $DepObjKey;
 
-                #[doc(hidden)]
                 fn core_base_priv(&self) -> &$crate::BaseDepObjCore<$name $($r)*> {
                     &self.core.dep_type_core_base
                 }
 
-                #[doc(hidden)]
                 fn core_base_priv_mut(&mut self) -> &mut $crate::BaseDepObjCore<$name $($r)*> {
                     &mut self.core.dep_type_core_base
                 }
 
-                #[doc(hidden)]
                 fn take_all_handlers(&mut self) -> $crate::std_vec_Vec<$crate::std_boxed_Box<dyn $crate::binding::AnyHandler>> {
                     self.core.dep_type_core_take_all_handlers()
                 }
 
-                #[doc(hidden)]
                 fn collect_all_bindings(&self) -> $crate::std_vec_Vec<$crate::binding::AnyBindingBase> {
                     self.core.dep_type_core_collect_all_bindings()
                 }
 
-                #[doc(hidden)]
                 #[allow(unused_variables)]
                 fn update_parent_children_has_handlers($state: &mut dyn $crate::dyn_context_state_State, $id: $crate::components_arena_RawId) where Self: Sized {
                     $($update_handlers)*
