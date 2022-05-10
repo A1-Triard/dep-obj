@@ -54,9 +54,7 @@ impl<P: SizedDepType + 'static> Arena<P> {
 
 macro_attr! {
     #[derive(Debug, components_arena_Component!(class=ComponentClass))]
-    struct Component<P> {
-        props: P,
-    }
+    struct Component<P>(P);
 }
 
 macro_attr! {
@@ -70,7 +68,7 @@ impl<P> DetachedDepObjId for Id<P> { }
 impl<P: SizedDepType + 'static> Id<P> {
     pub fn new(state: &mut dyn State, init: impl FnOnce(&mut dyn State, Id<P>)) -> Self {
         let arena: &mut Arena<P> = state.get_mut();
-        let id = arena.0.get_mut().0.insert(|id| (Component { props: P::new_priv() }, Id(id)));
+        let id = arena.0.get_mut().0.insert(|id| (Component(P::new_priv()), Id(id)));
         init(state, id);
         id
     }
@@ -86,9 +84,9 @@ dep_obj! {
     impl<P: SizedDepType + 'static> Id<P> {
         Obj => fn(self as this, arena: Arena<P>) -> (P) {
             if mut {
-                &mut arena.0.get_mut().0[this.0].props
+                &mut arena.0.get_mut().0[this.0].0
             } else {
-                &arena.0.get().0[this.0].props
+                &arena.0.get().0[this.0].0
             }
         }
     }
