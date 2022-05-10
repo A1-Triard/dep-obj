@@ -3,29 +3,29 @@
 
 #![deny(warnings)]
 
-mod objs {
+mod items {
     use components_arena::{Arena, Component, NewtypeComponentId, Id};
     use debug_panic::debug_panic;
-    use dep_obj::{DepObjBaseBuilder, DetachedDepObjId, dep_obj, dep_type};
+    use dep_obj::{DetachedDepObjId, dep_obj, dep_type};
     use dyn_context::state::{RequiresStateDrop, SelfState, State, StateExt, StateDrop};
     use macro_attr_2018::macro_attr;
     use std::borrow::Cow;
 
-    pub struct Objs(StateDrop<Objs_>);
+    pub struct Items(StateDrop<Items_>);
 
-    impl SelfState for Objs { }
+    impl SelfState for Items { }
 
-    struct Objs_ {
+    struct Items_ {
         items: Arena<ItemData>,
     }
 
-    impl RequiresStateDrop for Objs_ {
+    impl RequiresStateDrop for Items_ {
         fn get(state: &dyn State) -> &StateDrop<Self> {
-            &state.get::<Objs>().0
+            &state.get::<Items>().0
         }
 
         fn get_mut(state: &mut dyn State) -> &mut StateDrop<Self> {
-            &mut state.get_mut::<Objs>().0
+            &mut state.get_mut::<Items>().0
         }
 
         fn before_drop(state: &mut dyn State) {
@@ -36,17 +36,17 @@ mod objs {
         }
 
         fn drop_incorrectly(self) {
-            debug_panic!("Objs should be dropped with the drop_self method");
+            debug_panic!("Items should be dropped with the drop_self method");
         }
     }
 
-    impl Objs {
-        pub fn new() -> Objs {
-            Objs(StateDrop::new(Objs_ { items: Arena::new() }))
+    impl Items {
+        pub fn new() -> Items {
+            Items(StateDrop::new(Items_ { items: Arena::new() }))
         }
 
         pub fn drop_self(state: &mut dyn State) {
-            <StateDrop<Objs_>>::drop_self(state);
+            <StateDrop<Items_>>::drop_self(state);
         }
     }
 
@@ -73,56 +73,30 @@ mod objs {
             equipped: bool = false,
             cursed: bool = false,
         }
-
-        type BaseBuilder<'a> = ItemBuilder<'a>;
-    }
-
-    pub struct ItemBuilder<'a> {
-        item: Item,
-        state: &'a mut dyn State,
-    }
-
-    impl<'a> DepObjBaseBuilder<Item> for ItemBuilder<'a> {
-        fn id(&self) -> Item { self.item }
-        fn state(&self) -> &dyn State { self.state }
-        fn state_mut(&mut self) -> &mut dyn State { self.state }
-    }
-
-    impl<'a> ItemBuilder<'a> {
-        pub fn props(
-            self,
-            f: impl for<'b> FnOnce(ItemPropsBuilder<'b>) -> ItemPropsBuilder<'b>
-        ) -> Self {
-            f(ItemPropsBuilder::new_priv(self)).base_priv()
-        }
     }
 
     impl Item {
         pub fn new(state: &mut dyn State, init: impl FnOnce(&mut dyn State, Item)) -> Item {
-            let objs: &mut Objs = state.get_mut();
-            let item = objs.0.get_mut().items.insert(|id| (ItemData { props: ItemProps::new_priv() }, Item(id)));
+            let items: &mut Items = state.get_mut();
+            let item = items.0.get_mut().items.insert(|id| (ItemData { props: ItemProps::new_priv() }, Item(id)));
             init(state, item);
             item
         }
 
         pub fn drop_self(self, state: &mut dyn State) {
             self.drop_bindings_priv(state);
-            let objs: &mut Objs = state.get_mut();
-            objs.0.get_mut().items.remove(self.0);
-        }
-
-        pub fn build(self, state: &mut dyn State) -> ItemBuilder {
-            ItemBuilder { item: self, state }
+            let items: &mut Items = state.get_mut();
+            items.0.get_mut().items.remove(self.0);
         }
     }
 
     dep_obj! {
         impl Item {
-            ItemProps => fn(self as this, objs: Objs) -> (ItemProps) {
+            ItemProps => fn(self as this, items: Items) -> (ItemProps) {
                 if mut {
-                    &mut objs.0.get_mut().items[this.0].props
+                    &mut items.0.get_mut().items[this.0].props
                 } else {
-                    &objs.0.get().items[this.0].props
+                    &items.0.get().items[this.0].props
                 }
             }
         }
@@ -132,7 +106,7 @@ mod objs {
 mod behavior {
     use dep_obj::binding::Binding3;
     use dyn_context::state::State;
-    use crate::objs::*;
+    use crate::items::*;
 
     pub fn item(state: &mut dyn State, item: Item) {
         let weight = Binding3::new(state, (), |(), base_weight, cursed, equipped| Some(
@@ -147,21 +121,22 @@ mod behavior {
 
 use dep_obj::binding::{Binding1, Bindings};
 use dyn_context::state::{State, StateRefMut};
-use objs::*;
+use items::*;
 
 fn run(state: &mut dyn State) {
     let item = Item::new(state, behavior::item);
-
-    item.build(state).props(|props| props
-        .base_weight(5.0)
-        .cursed(true)
-    );
 
     let weight = Binding1::new(state, (), |(), weight| Some(weight));
     weight.set_target_fn(state, (), |_state, (), weight| {
         println!("Item weight changed, new weight: {}", weight);
     });
     weight.set_source_1(state, &mut ItemProps::WEIGHT.value_source(item));
+
+    println!("> item.base_weight = 5.0");
+    ItemProps::BASE_WEIGHT.set(state, item, 5.0).immediate();
+
+    println!("> item.cursed = true");
+    ItemProps::CURSED.set(state, item, true).immediate();
 
     println!("> item.equipped = true");
     ItemProps::EQUIPPED.set(state, item, true).immediate();
@@ -174,8 +149,8 @@ fn run(state: &mut dyn State) {
 }
 
 fn main() {
-    (&mut Objs::new()).merge_mut_and_then(|state| {
+    (&mut Items::new()).merge_mut_and_then(|state| {
         run(state);
-        Objs::drop_self(state);
+        Items::drop_self(state);
     }, &mut Bindings::new());
 }
