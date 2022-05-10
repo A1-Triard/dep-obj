@@ -15,9 +15,7 @@ mod items {
 
     impl SelfState for Items { }
 
-    struct Items_ {
-        items: Arena<ItemComponent>,
-    }
+    struct Items_(Arena<ItemComponent>);
 
     impl RequiresStateDrop for Items_ {
         fn get(state: &dyn State) -> &StateDrop<Self> {
@@ -29,7 +27,7 @@ mod items {
         }
 
         fn before_drop(state: &mut dyn State) {
-            let items = Self::get(state).get().items.items().ids().map(Item).collect::<Vec<_>>();
+            let items = Self::get(state).get().0.items().ids().map(Item).collect::<Vec<_>>();
             for item in items {
                 item.drop_bindings_priv(state);
             }
@@ -42,7 +40,7 @@ mod items {
 
     impl Items {
         pub fn new() -> Items {
-            Items(StateDrop::new(Items_ { items: Arena::new() }))
+            Items(StateDrop::new(Items_(Arena::new())))
         }
 
         pub fn drop_self(state: &mut dyn State) {
@@ -76,7 +74,7 @@ mod items {
     impl Item {
         pub fn new(state: &mut dyn State, init: impl FnOnce(&mut dyn State, Item)) -> Item {
             let items: &mut Items = state.get_mut();
-            let item = items.0.get_mut().items.insert(|id| (ItemComponent(ItemProps::new_priv()), Item(id)));
+            let item = items.0.get_mut().0.insert(|id| (ItemComponent(ItemProps::new_priv()), Item(id)));
             init(state, item);
             item
         }
@@ -84,7 +82,7 @@ mod items {
         pub fn drop_self(self, state: &mut dyn State) {
             self.drop_bindings_priv(state);
             let items: &mut Items = state.get_mut();
-            items.0.get_mut().items.remove(self.0);
+            items.0.get_mut().0.remove(self.0);
         }
     }
 
@@ -92,9 +90,9 @@ mod items {
         impl Item {
             ItemProps => fn(self as this, items: Items) -> (ItemProps) {
                 if mut {
-                    &mut items.0.get_mut().items[this.0].0
+                    &mut items.0.get_mut().0[this.0].0
                 } else {
-                    &items.0.get().items[this.0].0
+                    &items.0.get().0[this.0].0
                 }
             }
         }
