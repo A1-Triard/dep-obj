@@ -16,7 +16,7 @@ mod items {
     impl SelfState for Items { }
 
     struct Items_ {
-        items: Arena<ItemData>,
+        items: Arena<ItemComponent>,
     }
 
     impl RequiresStateDrop for Items_ {
@@ -52,14 +52,12 @@ mod items {
 
     macro_attr! {
         #[derive(Debug, Component!)]
-        struct ItemData {
-            props: ItemProps,
-        }
+        struct ItemComponent(ItemProps);
     }
 
     macro_attr! {
         #[derive(Debug, Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash, NewtypeComponentId!)]
-        pub struct Item(Id<ItemData>);
+        pub struct Item(Id<ItemComponent>);
     }
 
     impl DetachedDepObjId for Item { }
@@ -78,7 +76,7 @@ mod items {
     impl Item {
         pub fn new(state: &mut dyn State, init: impl FnOnce(&mut dyn State, Item)) -> Item {
             let items: &mut Items = state.get_mut();
-            let item = items.0.get_mut().items.insert(|id| (ItemData { props: ItemProps::new_priv() }, Item(id)));
+            let item = items.0.get_mut().items.insert(|id| (ItemComponent(ItemProps::new_priv()), Item(id)));
             init(state, item);
             item
         }
@@ -94,9 +92,9 @@ mod items {
         impl Item {
             ItemProps => fn(self as this, items: Items) -> (ItemProps) {
                 if mut {
-                    &mut items.0.get_mut().items[this.0].props
+                    &mut items.0.get_mut().items[this.0].0
                 } else {
-                    &items.0.get().items[this.0].props
+                    &items.0.get().items[this.0].0
                 }
             }
         }
