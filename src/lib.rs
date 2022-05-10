@@ -2100,8 +2100,12 @@ impl<Owner: DepType + 'static, ItemType: Convenient> Source for DepVecItemInitia
 
 #[doc(hidden)]
 pub trait NewPriv {
-    fn new_priv() -> Self where Self: Sized;
+    fn new_priv() -> Self;
 }
+
+pub trait SizedDepType: NewPriv + DepType where Self: Sized { }
+
+impl<T: NewPriv + DepType> SizedDepType for T { }
 
 pub struct DepObjRef<'a, Obj> {
     arena: &'a dyn Any,

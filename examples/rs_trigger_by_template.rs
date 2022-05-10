@@ -8,10 +8,10 @@ mod circuit {
     use dep_obj::templates::detached_dynamic_dep_type;
 
     pub enum ChipLegs { }
-    pub type ChipLegsKey = detached_dynamic_dep_type::ObjKey;
+    pub type ChipLegsKey = detached_dynamic_dep_type::DynObjKey;
     pub type Chip = detached_dynamic_dep_type::Id<ChipLegs>;
     pub type Circuit = detached_dynamic_dep_type::Arena<ChipLegs>;
-    pub use detached_dynamic_dep_type::Obj as ChipObj;
+    pub use detached_dynamic_dep_type::DynObj as ChipObj;
 }
 
 mod or_chip {

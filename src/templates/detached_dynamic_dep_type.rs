@@ -11,11 +11,11 @@ use educe::Educe;
 use macro_attr_2018::macro_attr;
 use crate::{DepType, DetachedDepObjId, dep_obj};
 
-pub enum ObjKey { }
+pub enum DynObjKey { }
 
-pub trait Obj<P>: Downcast + DepType<Id=Id<P>, DepObjKey=ObjKey> { }
+pub trait DynObj<P>: Downcast + DepType<Id=Id<P>, DepObjKey=DynObjKey> { }
 
-impl_downcast!(Obj<P>);
+impl_downcast!(DynObj<P>);
 
 #[derive(Educe)]
 #[educe(Default)]
@@ -60,7 +60,7 @@ impl<P: 'static> Arena<P> {
 
 macro_attr! {
     #[derive(Debug, components_arena_Component!(class=ComponentClass))]
-    struct Component<P>(Box<dyn Obj<P>>);
+    struct Component<P>(Box<dyn DynObj<P>>);
 }
 
 macro_attr! {
@@ -75,7 +75,7 @@ impl<P: 'static> Id<P> {
     #[allow(clippy::new_ret_no_self)]
     pub fn new<T>(
         state: &mut dyn State,
-        obj: impl FnOnce(Id<P>) -> (Box<dyn Obj<P>>, T),
+        obj: impl FnOnce(Id<P>) -> (Box<dyn DynObj<P>>, T),
         init: impl FnOnce(&mut dyn State, Id<P>)
     ) -> T {
         let arena: &mut Arena<P> = state.get_mut();
@@ -96,7 +96,7 @@ impl<P: 'static> Id<P> {
 
 dep_obj! {
     impl<P: 'static> Id<P> {
-        ObjKey => fn(self as this, arena: Arena<P>) -> (trait Obj<P>) {
+        DynObjKey => fn(self as this, arena: Arena<P>) -> (trait DynObj<P>) {
             if mut {
                 arena.0.get_mut().0[this.0].0.as_mut()
             } else {
