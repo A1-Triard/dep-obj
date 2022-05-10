@@ -73,7 +73,7 @@ mod items {
         type BaseBuilder<'a> = ItemBuilder<'a>;
     }
 
-    pub struct ItemBuilder<'a> {
+    struct ItemBuilder<'a> {
         item: Item,
         state: &'a mut dyn State,
     }
@@ -82,15 +82,6 @@ mod items {
         fn id(&self) -> Item { self.item }
         fn state(&self) -> &dyn State { self.state }
         fn state_mut(&mut self) -> &mut dyn State { self.state }
-    }
-
-    impl<'a> ItemBuilder<'a> {
-        pub fn props(
-            self,
-            f: impl for<'b> FnOnce(ItemPropsBuilder<'b>) -> ItemPropsBuilder<'b>
-        ) -> Self {
-            f(ItemPropsBuilder::new_priv(self)).base_priv()
-        }
     }
 
     impl Item {
@@ -107,8 +98,14 @@ mod items {
             items.0.get_mut().0.remove(self.0);
         }
 
-        pub fn build(self, state: &mut dyn State) -> ItemBuilder {
-            ItemBuilder { item: self, state }
+        pub fn build(
+            self,
+            state: &mut dyn State,
+            f: impl for<'b> FnOnce(ItemPropsBuilder<'b>) -> ItemPropsBuilder<'b>
+        ) -> Self {
+            let base_builder = ItemBuilder { item: self, state };
+            f(ItemPropsBuilder::new_priv(base_builder));
+            self
         }
     }
 
@@ -148,7 +145,7 @@ use items::*;
 fn run(state: &mut dyn State) {
     let item = Item::new(state, behavior::item);
 
-    item.build(state).props(|props| props
+    item.build(state, |props| props
         .base_weight(5.0)
         .cursed(true)
     );
