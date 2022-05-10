@@ -2,7 +2,7 @@
 
 #![deny(warnings)]
 
-mod objs {
+mod items {
     use dep_obj::dep_type;
     use dep_obj::templates::detached_static_dep_type;
     use std::borrow::Cow;
@@ -19,13 +19,13 @@ mod objs {
     }
 
     pub type Item = detached_static_dep_type::Id<ItemProps>;
-    pub type Objs = detached_static_dep_type::Arena<ItemProps>;
+    pub type Items = detached_static_dep_type::Arena<ItemProps>;
 }
 
 mod behavior {
     use dep_obj::binding::Binding3;
     use dyn_context::state::State;
-    use crate::objs::*;
+    use crate::items::*;
 
     pub fn item(state: &mut dyn State, item: Item) {
         let weight = Binding3::new(state, (), |(), base_weight, cursed, equipped| Some(
@@ -40,7 +40,7 @@ mod behavior {
 
 use dep_obj::binding::{Binding1, Bindings};
 use dyn_context::state::{State, StateRefMut};
-use objs::*;
+use items::*;
 
 fn run(state: &mut dyn State) {
     let item = Item::new(state, behavior::item);
@@ -68,8 +68,8 @@ fn run(state: &mut dyn State) {
 }
 
 fn main() {
-    (&mut Objs::new()).merge_mut_and_then(|state| {
+    (&mut Items::new()).merge_mut_and_then(|state| {
         run(state);
-        Objs::drop_self(state);
+        Items::drop_self(state);
     }, &mut Bindings::new());
 }
