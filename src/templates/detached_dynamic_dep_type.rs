@@ -9,8 +9,7 @@ use downcast_rs::{Downcast, impl_downcast};
 use dyn_context::state::{RequiresStateDrop, SelfState, State, StateExt, StateDrop};
 use educe::Educe;
 use macro_attr_2018::macro_attr;
-use crate::fw::{DepType, DetachedDepObjId};
-use crate::dep_obj;
+use crate::{DepType, DetachedDepObjId, dep_obj};
 
 pub enum ObjKey { }
 
@@ -73,6 +72,7 @@ macro_attr! {
 impl<P> DetachedDepObjId for Id<P> { }
 
 impl<P: 'static> Id<P> {
+    #[allow(clippy::new_ret_no_self)]
     pub fn new<T>(
         state: &mut dyn State,
         obj: impl FnOnce(Id<P>) -> (Box<dyn Obj<P>>, T),

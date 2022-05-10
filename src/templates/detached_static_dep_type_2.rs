@@ -7,8 +7,7 @@ use debug_panic::debug_panic;
 use dyn_context::state::{RequiresStateDrop, SelfState, State, StateExt, StateDrop};
 use educe::Educe;
 use macro_attr_2018::macro_attr;
-use crate::fw::{DepType, DetachedDepObjId, NewPriv};
-use crate::dep_obj;
+use crate::{DepType, DetachedDepObjId, NewPriv, dep_obj};
 
 pub enum Obj1 { }
 
