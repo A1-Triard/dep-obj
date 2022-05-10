@@ -9,7 +9,7 @@ use downcast_rs::{Downcast, impl_downcast};
 use dyn_context::state::{RequiresStateDrop, SelfState, State, StateExt, StateDrop};
 use educe::Educe;
 use macro_attr_2018::macro_attr;
-use crate::fw::{DepType, DetachedDepObjId, NewPriv};
+use crate::fw::{DepType, DetachedDepObjId};
 use crate::dep_obj;
 
 pub enum ObjKey { }
@@ -18,21 +18,17 @@ pub trait Obj<P>: Downcast + DepType<Id=Id<P>, DepObjKey=ObjKey> { }
 
 impl_downcast!(Obj<P>);
 
-pub trait NewDepType: NewPriv + DepType { }
-
-impl<T: NewPriv + DepType> NewDepType for T { }
-
 #[derive(Educe)]
 #[educe(Default)]
-pub struct Arena<P: NewDepType + 'static>(StateDrop<ArenaImpl<P>>);
+pub struct Arena<P: 'static>(StateDrop<ArenaImpl<P>>);
 
-impl<P: NewDepType + 'static> SelfState for Arena<P> { }
+impl<P: 'static> SelfState for Arena<P> { }
 
 #[derive(Educe)]
 #[educe(Default)]
 struct ArenaImpl<P>(components_arena_Arena<Component<P>>);
 
-impl<P: NewDepType + 'static> RequiresStateDrop for ArenaImpl<P> {
+impl<P: 'static> RequiresStateDrop for ArenaImpl<P> {
     fn get(state: &dyn State) -> &StateDrop<Self> {
         &state.get::<Arena<P>>().0
     }
@@ -53,7 +49,7 @@ impl<P: NewDepType + 'static> RequiresStateDrop for ArenaImpl<P> {
     }
 }
 
-impl<P: NewDepType + 'static> Arena<P> {
+impl<P: 'static> Arena<P> {
     pub fn new() -> Self {
         Arena(StateDrop::new(ArenaImpl(components_arena_Arena::new())))
     }
@@ -76,7 +72,7 @@ macro_attr! {
 
 impl<P> DetachedDepObjId for Id<P> { }
 
-impl<P: NewDepType + 'static> Id<P> {
+impl<P: 'static> Id<P> {
     pub fn new<T>(
         state: &mut dyn State,
         obj: impl FnOnce(Id<P>) -> (Box<dyn Obj<P>>, T),
@@ -99,7 +95,7 @@ impl<P: NewDepType + 'static> Id<P> {
 }
 
 dep_obj! {
-    impl<P: NewDepType + 'static> Id<P> {
+    impl<P: 'static> Id<P> {
         ObjKey => fn(self as this, arena: Arena<P>) -> (trait Obj<P>) {
             if mut {
                 arena.0.get_mut().0[this.0].0.as_mut()

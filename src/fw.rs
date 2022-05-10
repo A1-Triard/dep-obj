@@ -1912,7 +1912,7 @@ impl<Owner: DepType + 'static, ItemType: Convenient> Source for DepVecItemInitia
 
 #[doc(hidden)]
 pub trait NewPriv {
-    fn new_priv() -> Self;
+    fn new_priv() -> Self where Self: Sized;
 }
 
 pub struct DepObjRef<'a, Obj> {
