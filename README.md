@@ -48,6 +48,7 @@ impl DetachedDepObjId for Item { }
 All components need be emplaced in an appropriate arena. Lets create it:
 
 ```rust
+#[derive(Debug)]
 pub struct Items {
     items: Arena<ItemComponent>,
 }

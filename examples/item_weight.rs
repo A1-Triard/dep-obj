@@ -46,7 +46,7 @@ mod items {
     });
 
     macro_attr! {
-        #[derive(NewtypeStop!)]
+        #[derive(Debug, NewtypeStop!)]
         pub struct Items(Arena<ItemComponent>);
     }
 

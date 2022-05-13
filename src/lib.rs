@@ -3810,27 +3810,27 @@ macro_rules! impl_dep_obj_impl {
                 $(
                     $opt_ty_Key => fn(self as this, arena: $opt_ty_Arena) -> optional($opt_ty_Obj) {
                         if mut {
-                            &mut arena.0[this.0] $($opt_ty_access)* .as_mut()
+                            arena.0[this.0] $($opt_ty_access)* .as_mut()
                         } else {
-                            &arena.0[this.0] $($opt_ty_access)* .as_ref()
+                            arena.0[this.0] $($opt_ty_access)* .as_ref()
                         }
                     }
                 )*
                 $(
-                    $tr_Key => fn(self as this, arena: $tr_Arena) -> (trait $tr_Obj) {
+                    $tr_Key => fn(self as this, arena: $tr_Arena) -> dyn($tr_Obj) {
                         if mut {
                             arena.0[this.0] $($tr_access)* .as_mut()
                         } else {
-                            &arena.0[this.0] $($tr_access)* .as_ref()
+                            arena.0[this.0] $($tr_access)* .as_ref()
                         }
                     }
                 )*
                 $(
-                    $opt_tr_Key => fn(self as this, arena: $opt_tr_Arena) -> ($opt_tr_Obj) {
+                    $opt_tr_Key => fn(self as this, arena: $opt_tr_Arena) -> optional dyn($opt_tr_Obj) {
                         if mut {
-                            &mut arena.0[this.0] $($opt_tr_access)* .as_mut().as_mut()
+                            arena.0[this.0] $($opt_tr_access)* .as_mut().as_mut()
                         } else {
-                            &arena.0[this.0] $($opt_tr_access)* .as_ref().as_ref()
+                            arena.0[this.0] $($opt_tr_access)* .as_ref().as_ref()
                         }
                     }
                 )*

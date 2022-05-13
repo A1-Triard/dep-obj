@@ -7,7 +7,7 @@
 
 mod circuit {
     use components_arena::{Arena, Component, ComponentStop, Id, NewtypeComponentId, with_arena_newtype};
-    use dep_obj::{DetachedDepObjId, DepType, dep_obj};
+    use dep_obj::{DetachedDepObjId, DepType, impl_dep_obj};
     use downcast_rs::{Downcast, impl_downcast};
     use dyn_context::NewtypeStop;
     use dyn_context::state::{SelfState, State, StateExt};
@@ -58,17 +58,9 @@ mod circuit {
         }
     }
 
-    dep_obj! {
-        impl Chip {
-            ChipLegsKey => fn(self as this, circuit: Circuit) -> dyn(ChipLegs) {
-                if mut {
-                    circuit.0[this.0].legs.as_mut()
-                } else {
-                    circuit.0[this.0].legs.as_ref()
-                }
-            }
-        }
-    }
+    impl_dep_obj!(Chip {
+        trait ChipLegs as ChipLegsKey { Circuit | .legs }
+    });
 
     impl DetachedDepObjId for Chip { }
 
