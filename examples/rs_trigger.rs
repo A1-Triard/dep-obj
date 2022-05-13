@@ -6,7 +6,7 @@
 #![allow(dead_code)]
 
 mod circuit {
-    use components_arena::{Arena, Component, ComponentStop, Id, NewtypeComponentId, arena_newtype};
+    use components_arena::{Arena, Component, ComponentStop, Id, NewtypeComponentId, with_arena_newtype};
     use dep_obj::{DetachedDepObjId, DepType, dep_obj};
     use downcast_rs::{Downcast, impl_downcast};
     use dyn_context::NewtypeStop;
@@ -27,7 +27,7 @@ mod circuit {
     }
 
     impl ComponentStop for ChipStop {
-        arena_newtype!(Circuit);
+        with_arena_newtype!(Circuit);
 
         fn stop(&self, state: &mut dyn State, id: Id<ChipNode>) {
             Chip(id).drop_bindings_priv(state);

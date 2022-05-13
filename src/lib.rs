@@ -2247,12 +2247,12 @@ macro_rules! split_by_in {
 }
 
 #[macro_export]
-macro_rules! generic_build {
+macro_rules! with_builder {
     (
         $builder:ident < $lt:lifetime $($builder_tail:tt)+
     ) => {
         $crate::split_by_in! {
-            $crate::generic_build_impl {
+            $crate::with_builder_impl {
                 [$builder] [$lt]
             }
             $($builder_tail)+
@@ -2262,7 +2262,7 @@ macro_rules! generic_build {
 
 #[doc(hidden)]
 #[macro_export]
-macro_rules! generic_build_impl {
+macro_rules! with_builder_impl {
     (
         [$builder:ident] [$lt:lifetime] [$($builder_tail:tt)+] [$($($builder_path:tt)+)?]
     ) => {

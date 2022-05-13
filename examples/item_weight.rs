@@ -1,10 +1,11 @@
 #![feature(const_ptr_offset_from)]
 #![feature(const_type_id)]
+#![feature(explicit_generic_args_with_impl_trait)]
 
 #![deny(warnings)]
 
 mod items {
-    use components_arena::{Arena, Component, ComponentStop, NewtypeComponentId, Id, arena_newtype};
+    use components_arena::{Arena, Component, ComponentStop, NewtypeComponentId, Id, with_arena_newtype};
     use dep_obj::{DetachedDepObjId, dep_obj, dep_type};
     use dyn_context::NewtypeStop;
     use dyn_context::state::{SelfState, State, StateExt};
@@ -30,7 +31,7 @@ mod items {
     }
 
     impl ComponentStop for ItemStop {
-        arena_newtype!(Items);
+        with_arena_newtype!(Items);
 
         fn stop(&self, state: &mut dyn State, id: Id<ItemComponent>) {
             Item(id).drop_bindings_priv(state);
@@ -99,6 +100,7 @@ mod behavior {
     }
 }
 
+use dep_obj::DepObjId;
 use dep_obj::binding::{Binding1, Bindings};
 use dyn_context::state::{Stop, State, StateRefMut};
 use items::*;
@@ -110,6 +112,7 @@ fn run(state: &mut dyn State) {
     weight.set_target_fn(state, (), |_state, (), weight| {
         println!("Item weight changed, new weight: {}", weight);
     });
+    item.add_binding::<ItemProps, _>(state, weight);
     weight.set_source_1(state, &mut ItemProps::WEIGHT.value_source(item));
 
     println!("> item.base_weight = 5.0");
@@ -124,7 +127,6 @@ fn run(state: &mut dyn State) {
     println!("> item.cursed = false");
     ItemProps::CURSED.set(state, item, false).immediate();
 
-    weight.drop_self(state);
     item.drop_self(state);
 }
 
