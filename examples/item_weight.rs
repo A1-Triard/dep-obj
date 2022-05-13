@@ -6,35 +6,16 @@
 
 mod items {
     use components_arena::{Arena, Component, ComponentStop, NewtypeComponentId, Id, with_arena_newtype};
-    use dep_obj::{DetachedDepObjId, dep_obj, dep_type};
+    use dep_obj::{DetachedDepObjId, dep_type, impl_dep_obj_for};
     use dyn_context::NewtypeStop;
     use dyn_context::state::{SelfState, State, StateExt};
     use macro_attr_2018::macro_attr;
     use std::borrow::Cow;
 
     macro_attr! {
-        #[derive(NewtypeStop!)]
-        pub struct Items(Arena<ItemComponent>);
-    }
-
-    impl SelfState for Items { }
-
-    impl Items {
-        pub fn new() -> Items {
-            Items(Arena::new())
-        }
-    }
-
-    macro_attr! {
         #[derive(Debug, Component!(stop=ItemStop))]
-        struct ItemComponent(ItemProps);
-    }
-
-    impl ComponentStop for ItemStop {
-        with_arena_newtype!(Items);
-
-        fn stop(&self, state: &mut dyn State, id: Id<ItemComponent>) {
-            Item(id).drop_bindings_priv(state);
+        struct ItemComponent {
+            props: ItemProps,
         }
     }
 
@@ -44,6 +25,32 @@ mod items {
     }
 
     impl DetachedDepObjId for Item { }
+
+    impl Item {
+        pub fn new(state: &mut dyn State, init: impl FnOnce(&mut dyn State, Item)) -> Item {
+            let items: &mut Items = state.get_mut();
+            let item = items.0.insert(|id| (ItemComponent { props: ItemProps::new_priv() }, Item(id)));
+            init(state, item);
+            item
+        }
+
+        pub fn drop_self(self, state: &mut dyn State) {
+            self.drop_bindings_priv(state);
+            let items: &mut Items = state.get_mut();
+            items.0.remove(self.0);
+        }
+    }
+
+    impl_dep_obj_for!(Item {
+        type ItemProps as ItemProps { Items | .props },
+    });
+
+    macro_attr! {
+        #[derive(NewtypeStop!)]
+        pub struct Items(Arena<ItemComponent>);
+    }
+
+    impl SelfState for Items { }
 
     dep_type! {
         #[derive(Debug)]
@@ -56,32 +63,20 @@ mod items {
         }
     }
 
-    impl Item {
-        pub fn new(state: &mut dyn State, init: impl FnOnce(&mut dyn State, Item)) -> Item {
-            let items: &mut Items = state.get_mut();
-            let item = items.0.insert(|id| (ItemComponent(ItemProps::new_priv()), Item(id)));
-            init(state, item);
-            item
-        }
-
-        pub fn drop_self(self, state: &mut dyn State) {
-            self.drop_bindings_priv(state);
-            let items: &mut Items = state.get_mut();
-            items.0.remove(self.0);
+    impl Items {
+        pub fn new() -> Items {
+            Items(Arena::new())
         }
     }
 
-    dep_obj! {
-        impl Item {
-            ItemProps => fn(self as this, items: Items) -> (ItemProps) {
-                if mut {
-                    &mut items.0[this.0].0
-                } else {
-                    &items.0[this.0].0
-                }
-            }
+    impl ComponentStop for ItemStop {
+        with_arena_newtype!(Items);
+
+        fn stop(&self, state: &mut dyn State, id: Id<ItemComponent>) {
+            Item(id).drop_bindings_priv(state);
         }
     }
+
 }
 
 mod behavior {

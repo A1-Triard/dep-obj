@@ -13,6 +13,13 @@ mod items {
     use std::borrow::Cow;
 
     macro_attr! {
+        #[derive(Debug, Component!(stop=ItemStop))]
+        struct ItemComponent {
+            props: ItemProps,
+        }
+    }
+
+    macro_attr! {
         #[derive(NewtypeStop!)]
         pub struct Items(Arena<ItemComponent>);
     }
@@ -23,11 +30,6 @@ mod items {
         pub fn new() -> Items {
             Items(Arena::new())
         }
-    }
-
-    macro_attr! {
-        #[derive(Debug, Component!(stop=ItemStop))]
-        struct ItemComponent(ItemProps);
     }
 
     impl ComponentStop for ItemStop {
@@ -61,7 +63,7 @@ mod items {
     impl Item {
         pub fn new(state: &mut dyn State, init: impl FnOnce(&mut dyn State, Item)) -> Item {
             let items: &mut Items = state.get_mut();
-            let item = items.0.insert(|id| (ItemComponent(ItemProps::new_priv()), Item(id)));
+            let item = items.0.insert(|id| (ItemComponent { props: ItemProps::new_priv() }, Item(id)));
             init(state, item);
             item
         }
@@ -79,9 +81,9 @@ mod items {
         impl Item {
             ItemProps => fn(self as this, items: Items) -> (ItemProps) {
                 if mut {
-                    &mut items.0[this.0].0
+                    &mut items.0[this.0].props
                 } else {
-                    &items.0[this.0].0
+                    &items.0[this.0].props
                 }
             }
         }

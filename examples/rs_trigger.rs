@@ -60,7 +60,7 @@ mod circuit {
 
     dep_obj! {
         impl Chip {
-            ChipLegsKey => fn(self as this, circuit: Circuit) -> (trait ChipLegs) {
+            ChipLegsKey => fn(self as this, circuit: Circuit) -> dyn(ChipLegs) {
                 if mut {
                     circuit.0[this.0].legs.as_mut()
                 } else {
