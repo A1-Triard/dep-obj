@@ -431,9 +431,6 @@ macro_rules! binding_n {
     (@unwrap [$($r:tt)*] [$n:tt] [$i0:tt $($i:tt)*] [$($j:tt)*]) => {
         binding_n! { @unwrap [$($r)* [$i0 $($j)+]] [$n] [$($i)*] [$($j)*] }
     };
-    (@unwrap $($x:tt)*) => {
-        compile_error!(stringify! { $($x)* });
-    };
     (@done [$n:tt] $([$i:tt $($j:tt)*])*) => {
         $crate::paste_paste! {
             #[derive(Educe)]
