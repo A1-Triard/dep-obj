@@ -1,5 +1,5 @@
 use alloc::vec::Vec;
-use components_arena::NewtypeComponentId;
+use components_arena::{ComponentId, NewtypeComponentId};
 use components_arena::Component as components_arena_Component;
 use components_arena::Arena as components_arena_Arena;
 use components_arena::Id as components_arena_Id;
@@ -7,7 +7,7 @@ use debug_panic::debug_panic;
 use dyn_context::state::{RequiresStateDrop, SelfState, State, StateExt, StateDrop};
 use educe::Educe;
 use macro_attr_2018::macro_attr;
-use crate::{DetachedDepObjId, SizedDepType, dep_obj};
+use crate::{DepObjBaseBuilder, DetachedDepObjId, NewPrivParam, SizedDepType, dep_obj};
 
 pub enum Obj { }
 
@@ -65,6 +65,17 @@ macro_attr! {
 
 impl<P> DetachedDepObjId for Id<P> { }
 
+pub struct BaseBuilder<'a, Id> {
+    id: Id,
+    state: &'a mut dyn State,
+}
+
+impl<'a, Id: ComponentId> DepObjBaseBuilder<Id> for BaseBuilder<'a, Id> {
+    fn id(&self) -> Id { self.id }
+    fn state(&self) -> &dyn State { self.state }
+    fn state_mut(&mut self) -> &mut dyn State { self.state }
+}
+
 impl<P: SizedDepType + 'static> Id<P> {
     pub fn new(state: &mut dyn State, init: impl FnOnce(&mut dyn State, Id<P>)) -> Self {
         let arena: &mut Arena<P> = state.get_mut();
@@ -77,6 +88,16 @@ impl<P: SizedDepType + 'static> Id<P> {
         self.drop_bindings_priv(state);
         let arena: &mut Arena<P> = state.get_mut();
         arena.0.get_mut().0.remove(self.0);
+    }
+
+    pub fn build<'a, Builder: NewPrivParam<BaseBuilder<'a, Self>>>(
+        self,
+        state: &'a mut dyn State,
+        f: impl FnOnce(Builder) -> Builder
+    ) -> Self {
+        let base_builder = BaseBuilder { id: self, state };
+        f(Builder::new_priv(base_builder));
+        self
     }
 }
 

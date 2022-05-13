@@ -1,4 +1,5 @@
 #![feature(const_ptr_offset_from)]
+#![feature(trait_alias)]
 
 #![deny(warnings)]
 
@@ -16,6 +17,8 @@ mod items {
             equipped: bool = false,
             cursed: bool = false,
         }
+
+        type BaseBuilder<'a> = detached_static_dep_type::BaseBuilder<'a, Item>;
     }
 
     pub type Item = detached_static_dep_type::Id<ItemProps>;
@@ -45,17 +48,16 @@ use items::*;
 fn run(state: &mut dyn State) {
     let item = Item::new(state, behavior::item);
 
+    item.build(state, |props: ItemPropsBuilder| props
+        .base_weight(5.0)
+        .cursed(true)
+    );
+
     let weight = Binding1::new(state, (), |(), weight| Some(weight));
     weight.set_target_fn(state, (), |_state, (), weight| {
         println!("Item weight changed, new weight: {}", weight);
     });
     weight.set_source_1(state, &mut ItemProps::WEIGHT.value_source(item));
-
-    println!("> item.base_weight = 5.0");
-    ItemProps::BASE_WEIGHT.set(state, item, 5.0).immediate();
-
-    println!("> item.cursed = true");
-    ItemProps::CURSED.set(state, item, true).immediate();
 
     println!("> item.equipped = true");
     ItemProps::EQUIPPED.set(state, item, true).immediate();

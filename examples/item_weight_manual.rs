@@ -4,53 +4,37 @@
 #![deny(warnings)]
 
 mod items {
-    use components_arena::{Arena, Component, NewtypeComponentId, Id};
-    use debug_panic::debug_panic;
+    use components_arena::{Arena, Component, ComponentStop, NewtypeComponentId, Id, arena_newtype};
     use dep_obj::{DetachedDepObjId, dep_obj, dep_type};
-    use dyn_context::state::{RequiresStateDrop, SelfState, State, StateExt, StateDrop};
+    use dyn_context::NewtypeStop;
+    use dyn_context::state::{SelfState, State, StateExt};
     use macro_attr_2018::macro_attr;
     use std::borrow::Cow;
 
-    pub struct Items(StateDrop<Items_>);
+    macro_attr! {
+        #[derive(NewtypeStop!)]
+        pub struct Items(Arena<ItemComponent>);
+    }
 
     impl SelfState for Items { }
 
-    struct Items_(Arena<ItemComponent>);
-
-    impl RequiresStateDrop for Items_ {
-        fn get(state: &dyn State) -> &StateDrop<Self> {
-            &state.get::<Items>().0
-        }
-
-        fn get_mut(state: &mut dyn State) -> &mut StateDrop<Self> {
-            &mut state.get_mut::<Items>().0
-        }
-
-        fn before_drop(state: &mut dyn State) {
-            let items = Self::get(state).get().0.items().ids().map(Item).collect::<Vec<_>>();
-            for item in items {
-                item.drop_bindings_priv(state);
-            }
-        }
-
-        fn drop_incorrectly(self) {
-            debug_panic!("Items should be dropped with the drop_self method");
-        }
-    }
-
     impl Items {
         pub fn new() -> Items {
-            Items(StateDrop::new(Items_(Arena::new())))
-        }
-
-        pub fn drop_self(state: &mut dyn State) {
-            <StateDrop<Items_>>::drop_self(state);
+            Items(Arena::new())
         }
     }
 
     macro_attr! {
-        #[derive(Debug, Component!)]
+        #[derive(Debug, Component!(stop=ItemStop))]
         struct ItemComponent(ItemProps);
+    }
+
+    impl ComponentStop for ItemStop {
+        arena_newtype!(Items);
+
+        fn stop(&self, state: &mut dyn State, id: Id<ItemComponent>) {
+            Item(id).drop_bindings_priv(state);
+        }
     }
 
     macro_attr! {
@@ -74,7 +58,7 @@ mod items {
     impl Item {
         pub fn new(state: &mut dyn State, init: impl FnOnce(&mut dyn State, Item)) -> Item {
             let items: &mut Items = state.get_mut();
-            let item = items.0.get_mut().0.insert(|id| (ItemComponent(ItemProps::new_priv()), Item(id)));
+            let item = items.0.insert(|id| (ItemComponent(ItemProps::new_priv()), Item(id)));
             init(state, item);
             item
         }
@@ -82,7 +66,7 @@ mod items {
         pub fn drop_self(self, state: &mut dyn State) {
             self.drop_bindings_priv(state);
             let items: &mut Items = state.get_mut();
-            items.0.get_mut().0.remove(self.0);
+            items.0.remove(self.0);
         }
     }
 
@@ -90,9 +74,9 @@ mod items {
         impl Item {
             ItemProps => fn(self as this, items: Items) -> (ItemProps) {
                 if mut {
-                    &mut items.0.get_mut().0[this.0].0
+                    &mut items.0[this.0].0
                 } else {
-                    &items.0.get().0[this.0].0
+                    &items.0[this.0].0
                 }
             }
         }
@@ -116,7 +100,7 @@ mod behavior {
 }
 
 use dep_obj::binding::{Binding1, Bindings};
-use dyn_context::state::{State, StateRefMut};
+use dyn_context::state::{Stop, State, StateRefMut};
 use items::*;
 
 fn run(state: &mut dyn State) {
@@ -147,6 +131,6 @@ fn run(state: &mut dyn State) {
 fn main() {
     (&mut Items::new()).merge_mut_and_then(|state| {
         run(state);
-        Items::drop_self(state);
+        Items::stop(state);
     }, &mut Bindings::new());
 }

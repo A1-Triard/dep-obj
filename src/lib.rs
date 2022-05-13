@@ -20,7 +20,7 @@ mod base;
 pub use base::*;
 
 pub mod binding;
-pub mod templates;
+//pub mod templates;
 
 #[cfg(docsrs)]
 pub mod example {
@@ -2098,7 +2098,6 @@ impl<Owner: DepType + 'static, ItemType: Convenient> Source for DepVecItemInitia
     }
 }
 
-#[doc(hidden)]
 pub trait NewPriv {
     fn new_priv() -> Self;
 }
@@ -2106,6 +2105,10 @@ pub trait NewPriv {
 pub trait SizedDepType: NewPriv + DepType where Self: Sized { }
 
 impl<T: NewPriv + DepType> SizedDepType for T { }
+
+pub trait NewPrivParam<T> {
+    fn new_priv(t: T) -> Self;
+}
 
 pub struct DepObjRef<'a, Obj> {
     arena: &'a dyn Any,
@@ -3197,6 +3200,12 @@ macro_rules! dep_type_impl {
                     fn base_priv_mut(&mut self) -> &mut $BaseBuilder { &mut self.base }
 
                     $($builder_methods)*
+                }
+
+                impl $($bc_g)* $crate::NewPrivParam<$BaseBuilder> for [< $name Builder >] $($bc_r)* $($bc_w)* {
+                    fn new_priv(base: $BaseBuilder) -> Self {
+                        Self::new_priv(base)
+                    }
                 }
             )?
         }
