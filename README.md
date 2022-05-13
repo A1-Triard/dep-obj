@@ -119,16 +119,10 @@ Lets take a look at our `mod items` as a whole:
 ```rust
 mod items {
     use components_arena::{Arena, Component, NewtypeComponentId, Id};
-    use dep_obj::{DetachedDepObjId, dep_obj, dep_type};
+    use dep_obj::{DetachedDepObjId, dep_type, impl_dep_obj};
     use dyn_context::state::{SelfState, State, StateExt};
     use macro_attr_2018::macro_attr;
     use std::borrow::Cow;
-
-    pub struct Items {
-        items: Arena<ItemComponent>,
-    }
-
-    impl SelfState for Items { }
 
     macro_attr! {
         #[derive(Debug, Component!)]
@@ -144,6 +138,28 @@ mod items {
 
     impl DetachedDepObjId for Item { }
 
+    impl Item {
+        pub fn new(state: &mut dyn State) -> Item {
+            let items: &mut Items = state.get_mut();
+            items.0.insert(|id| (ItemComponent { props: ItemProps::new_priv() }, Item(id)))
+        }
+
+        pub fn drop_self(self, state: &mut dyn State) {
+            self.drop_bindings_priv(state);
+            let items: &mut Items = state.get_mut();
+            items.0.remove(self.0);
+        }
+    }
+
+    impl_dep_obj!(Item {
+        type ItemProps as ItemProps { Items | .props },
+    });
+
+    #[derive(Debug)]
+    pub struct Items(Arena<ItemComponent>);
+
+    impl SelfState for Items { }
+
     dep_type! {
         #[derive(Debug)]
         pub struct ItemProps in Item as ItemProps {
@@ -154,37 +170,21 @@ mod items {
             cursed: bool = false,
         }
     }
-
-    impl Item {
-        pub fn new(state: &mut dyn State) -> Item {
-            let items: &mut Items = state.get_mut();
-            items.items.insert(|id| (ItemComponent { props: ItemProps::new_priv() }, Item(id)))
-        }
-
-        pub fn drop_self(self, state: &mut dyn State) {
-            self.drop_bindings_priv(state);
-            let items: &mut Items = state.get_mut();
-            items.items.remove(self.0);
-        }
-    }
-
-    dep_obj! {
-        impl Item {
-            ItemProps => fn(self as this, items: Items) -> (ItemProps) {
-                if mut {
-                    &mut items.items[this.0].props
-                } else {
-                    &items.items[this.0].props
-                }
-            }
-        }
-    }
 }
 ```
 
 The things we lack here are `Items` constructor, and, unfortunatly, destructor.
-Adding constructor is straightforward. The destructor however is tricky.
-The `Item::drop_self` method do two things:
+Adding constructor is straightforward:
+
+```rust
+impl Items {
+    pub fn new() -> Items {
+        Items(Arena::new())
+    }
+}
+```
+
+The destructor however is tricky. The `Item::drop_self` method do two things:
 first, it drops all bindings item owes, and, second, it removes items from arena.
 The second thing would do automatically, but bindings require manual destroying.
 Thus we need explicit `Items` destructor to correctly drop all `Item`s' bindings.
@@ -192,111 +192,71 @@ Thus we need explicit `Items` destructor to correctly drop all `Item`s' bindings
 But we cannot just implement `Drop` for `Items` because we need `State` parameter
 to call `Item::drop_bindings_priv`. Unfortunatly, Rust does not support a
 linear types concept, which would allow to have parameters in `drop` method.
-But `dyn-context` crate contains some helpful things, allowing to express
-such type properties as good as it is possible in Rust for now.
+But `dyn-context` and `components-arena` crates contain some helpful things,
+allowing to express such type properties as good as it is possible in Rust for now.
 
-First, we need to introduce new intermediate private structure `Items_`, and
-move `items` from `Items` to `Items_`. The `Items` itself is becoming now
-a wrap around `Items_`:
+The `Arena` implements special trait, `Stop`, that is an analogue of `Drop` with
+`State` parameter. Out wrap `Items`, however, does not implement it. Lets fix it:
 
 ```rust
-pub struct Items(StateDrop<Items_>);
+macro_attr! {
+    #[derive(Debug, NewtypeStop!)]
+    pub struct Items(Arena<ItemComponent>);
+}
 ```
 
-To make this code compiles, we need to implement `RequresStateSrop` for `Items_`:
+A thing, we want `Item::stop` function to do, is call `drop_bindings_priv` for
+every `Item`. To tell it, we need to define some struct (lets call it `ItemStop`),
+and let `ItemComponent` uses it to properly «stop» our `Item`s. It is easily achived
+with the `Component` derive macro `stop` parameter:
 
 ```rust
-impl RequiresStateDrop for Items_ {
-    fn get(state: &dyn State) -> &StateDrop<Self> {
-        &state.get::<Items>().0
-    }
+#[derive(Debug, Component!(stop=ItemStop)]
+struct ItemComponent {
+    props: ItemProps,
+}
+```
 
-    fn get_mut(state: &mut dyn State) -> &mut StateDrop<Self> {
-        &mut state.get_mut::<Items>().0
-    }
+If we try to compile, we would get an error pointing to the fact, that
+the trait `ComponentStop` is not implemented for `ItemStop`.
+So lets implement it:
 
-    fn before_drop(state: &mut dyn State) {
-        let items: &Items = state.get();
-        let items = items.0.items.items().ids().collect::<Vec<_>>();
-        for item in items {
-            item.drop_bindings_priv(state);
-        }
-    }
+```rust
+impl ComponentStop for ItemStop {
+    with_arena_newtype!(Items);
 
-    fn drop_incorrectly(self) {
-        debug_panic!("Items should be dropped with the drop_self method");
+    fn stop(&self, state: &mut dyn State, id: Id<ItemComponent>) {
+        Item(id).drop_bindings_priv(state);
     }
 }
 ```
 
-And now we can write public constructor and destructor for `Items`:
-
-```rust
-impl Items {
-    pub fn new() -> Items {
-        Items(StateDrop::new(Items_ { items: Arena::new() }))
-    }
-
-    pub fn drop_self(state: &mut dyn State) {
-        Items_::drop_self(state);
-    }
-}
-```
+Thanks to the `with_arena_newtype` macro, the only function we were need
+to implement manually is `stop`.
 
 The final version of `mod items`:
 
 ```rust
 mod items {
-    use components_arena::{Arena, Component, NewtypeComponentId, Id};
-    use debug_panic::debug_panic;
-    use dep_obj::{DetachedDepObjId, dep_obj, dep_type};
-    use dyn_context::state::{RequiresStateDrop, SelfState, State, StateDrop, StateExt};
+    use components_arena::{Arena, Component, ComponentStop, NewtypeComponentId, Id, with_arena_newtype};
+    use dep_obj::{DetachedDepObjId, dep_type, impl_dep_obj};
+    use dyn_context::NewtypeStop;
+    use dyn_context::state::{SelfState, State, StateExt};
     use macro_attr_2018::macro_attr;
     use std::borrow::Cow;
 
-    pub struct Items(StateDrop<Items_>);
-
-    impl SelfState for Items { }
-
-    struct Items_ {
-        items: Arena<ItemComponent>,
-    }
-
-    impl RequiresStateDrop for Items_ {
-        fn get(state: &dyn State) -> &StateDrop<Self> {
-            &state.get::<Items>().0
-        }
-
-        fn get_mut(state: &mut dyn State) -> &mut StateDrop<Self> {
-            &mut state.get_mut::<Items>().0
-        }
-
-        fn before_drop(state: &mut dyn State) {
-            let items = Self::get(state).get().items.items().ids().map(Item).collect::<Vec<_>>();
-            for item in items {
-                item.drop_bindings_priv(state);
-            }
-        }
-
-        fn drop_incorrectly(self) {
-            debug_panic!("Items should be dropped with the drop_self method");
-        }
-    }
-
-    impl Items {
-        pub fn new() -> Items {
-            Items(StateDrop::new(Items_ { items: Arena::new() }))
-        }
-
-        pub fn drop_self(state: &mut dyn State) {
-            <StateDrop<Items_>>::drop_self(state);
-        }
-    }
-
     macro_attr! {
-        #[derive(Debug, Component!)]
+        #[derive(Debug, Component!(stop=ItemStop))]
         struct ItemComponent {
             props: ItemProps,
+        }
+    }
+
+    impl ComponentStop for ItemStop {
+        with_arena_newtype!(Items);
+
+        fn stop(&self, state: &mut dyn State, id: Id<ItemComponent>) {
+            Item(id).drop_bindings_priv(state);
         }
     }
 
@@ -306,6 +266,36 @@ mod items {
     }
 
     impl DetachedDepObjId for Item { }
+
+    impl Item {
+        pub fn new(state: &mut dyn State) -> Item {
+            let items: &mut Items = state.get_mut();
+            items.0.insert(|id| (ItemComponent { props: ItemProps::new_priv() }, Item(id)))
+        }
+
+        pub fn drop_self(self, state: &mut dyn State) {
+            self.drop_bindings_priv(state);
+            let items: &mut Items = state.get_mut();
+            items.0.remove(self.0);
+        }
+    }
+
+    impl_dep_obj!(Item {
+        type ItemProps as ItemProps { Items | .props },
+    });
+
+    macro_attr! {
+        #[derive(Debug, NewtypeStop!)]
+        pub struct Items(Arena<ItemComponent>);
+    }
+
+    impl SelfState for Items { }
+
+    impl Items {
+        pub fn new() -> Items {
+            Items(Arena::new())
+        }
+    }
 
     dep_type! {
         #[derive(Debug)]
@@ -317,37 +307,13 @@ mod items {
             cursed: bool = false,
         }
     }
-
-    impl Item {
-        pub fn new(state: &mut dyn State) -> Item {
-            let items: &mut Items = state.get_mut();
-            items.0.get_mut().items.insert(|id| (ItemComponent { props: ItemProps::new_priv() }, Item(id)))
-        }
-
-        pub fn drop_self(self, state: &mut dyn State) {
-            self.drop_bindings_priv(state);
-            let items: &mut Items = state.get_mut();
-            items.0.get_mut().items.remove(self.0);
-        }
-    }
-
-    dep_obj! {
-        impl Item {
-            ItemProps => fn(self as this, items: Items) -> (ItemProps) {
-                if mut {
-                    &mut items.0.get_mut().items[this.0].props
-                } else {
-                    &items.0.get().items[this.0].props
-                }
-            }
-        }
-    }
 }
 ```
 
-For now out `Item` does not have any meaningful behavior. Lets create some.
-There are thow different concepts where to place this code. In the first one,
-code can be encapsulated inside `Item` (actually in `Item::new`). In the other one
+For now our `Item` does not have any meaningful behavior. Lets create some.
+
+There are thow different concepts where to place bevaior code. In the first one,
+code is encapsulated inside `Item` (actually in `Item::new`). In the other one
 behavior are separated from data description. Lets stick to the second
 approach and keep the behavior outside of `mod items`.
 
@@ -356,7 +322,7 @@ Allow to pass an external initializer to the `Item` constructor:
 ```rust
 pub fn new(state: &mut dyn State, init: impl FnOnce(&mut dyn State, Item)) -> Item {
     let items: &mut Items = state.get_mut();
-    let item = items.0.get_mut().items.insert(|id| (ItemComponent { props: ItemProps::new_priv() }, Item(id)));
+    let item = items.0.insert(|id| (ItemComponent { props: ItemProps::new_priv() }, Item(id)));
     init(state, item);
     item
 }
@@ -366,6 +332,10 @@ pub fn new(state: &mut dyn State, init: impl FnOnce(&mut dyn State, Item)) -> It
 
 ```rust
 mod behavior {
+    use dep_obj::binding::Binding3;
+    use dyn_context::state::State;
+    use crate::items::*;
+
     pub fn item(state: &mut dyn State, item: Item) {
         let weight = Binding3::new(state, (), |(), base_weight, cursed, equipped| Some(
             if equipped && cursed { base_weight + 100.0 } else { base_weight }
@@ -379,8 +349,8 @@ mod behavior {
 ```
 
 With the code above we have created functional dependency between four `Item`
-properties: `weight` now is a function of other three properties, and will be
-updated automatically when any of the them changes.
+properties, and now `weight` beeing a function of other three properties
+will be updated automatically when any of them changes.
 
 Finally, lets write some test code to make our just builded game system work:
 
@@ -392,6 +362,7 @@ fn run(state: &mut dyn State) {
     weight.set_target_fn(state, (), |_state, (), weight| {
         println!("Item weight changed, new weight: {}", weight);
     });
+    item.add_binding::<ItemProps, _>(state, weight);
     weight.set_source_1(state, &mut ItemProps::WEIGHT.value_source(item));
 
     println!("> item.base_weight = 5.0");
@@ -406,7 +377,6 @@ fn run(state: &mut dyn State) {
     println!("> item.cursed = false");
     ItemProps::CURSED.set(state, item, false).immediate();
 
-    weight.drop_self(state);
     item.drop_self(state);
 }
 ```
@@ -415,13 +385,13 @@ And the really last thing to do: construct `State` instance and call `run`.
 Our system requires `State` containing `Items` and special arena for bindings.
 It can be easily reached with `merge_mut_and_then` method, combining two
 state objects into a single one. And, of course, we should not forget to
-call `Items::drop_self` at the end:
+call `Items::stop` at the end:
 
 ```rust
 fn main() {
     (&mut Items::new()).merge_mut_and_then(|state| {
         run(state);
-        Items::drop_self(state);
+        Items::stop(state);
     }, &mut Bindings::new());
 }
 ```

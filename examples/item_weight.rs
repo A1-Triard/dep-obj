@@ -19,6 +19,14 @@ mod items {
         }
     }
 
+    impl ComponentStop for ItemStop {
+        with_arena_newtype!(Items);
+
+        fn stop(&self, state: &mut dyn State, id: Id<ItemComponent>) {
+            Item(id).drop_bindings_priv(state);
+        }
+    }
+
     macro_attr! {
         #[derive(Debug, Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash, NewtypeComponentId!)]
         pub struct Item(Id<ItemComponent>);
@@ -52,6 +60,12 @@ mod items {
 
     impl SelfState for Items { }
 
+    impl Items {
+        pub fn new() -> Items {
+            Items(Arena::new())
+        }
+    }
+
     dep_type! {
         #[derive(Debug)]
         pub struct ItemProps in Item as ItemProps {
@@ -62,21 +76,6 @@ mod items {
             cursed: bool = false,
         }
     }
-
-    impl Items {
-        pub fn new() -> Items {
-            Items(Arena::new())
-        }
-    }
-
-    impl ComponentStop for ItemStop {
-        with_arena_newtype!(Items);
-
-        fn stop(&self, state: &mut dyn State, id: Id<ItemComponent>) {
-            Item(id).drop_bindings_priv(state);
-        }
-    }
-
 }
 
 mod behavior {
