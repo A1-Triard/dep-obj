@@ -3729,7 +3729,7 @@ macro_rules! impl_dep_obj_impl {
 
             $generics $Id:ty $(where $where_clause)? {
                 $($(
-                    $(optional)? $(type $ty:ty | trait $tr:path) as $Key:ty { $Arena:ty | $($access:tt)* }
+                    $(optional)? $(type $ty:ty | trait $tr:path) as $Key:ty { $Arena:ty $({ . $arena_field:ident)? } | $($access:tt)* }
                 ),+ $(,)?)?
             }
 
@@ -3744,7 +3744,20 @@ macro_rules! impl_dep_obj_impl {
         $crate::impl_dep_obj_impl! {
             @objs
             [$($g)*] [$($r)*] [$($w)*] [$Id]
-            [$($ty:tt)* [[$Obj] [$Key] [$Arena] [$($access)*]]] [$($opt_ty:tt)*] [$($tr:tt)*] [$($opt_tr:tt)*]
+            [$($ty:tt)* [[$Obj] [$Key] [$Arena] [.0] [$($access)*]]] [$($opt_ty:tt)*] [$($tr:tt)*] [$($opt_tr:tt)*]
+            [$($tail)*]
+        }
+    };
+    (
+        @objs
+        [$($g:tt)*] [$($r:tt)*] [$($w:tt)*] [$Id:ty]
+        [$($ty:tt)*] [$($opt_ty:tt)*] [$($tr:tt)*] [$($opt_tr:tt)*]
+        [, type $Obj:ty as $Key:ty { $Arena:ty { . $arena_field:ident } | $($access:tt)* } $($tail:tt)* ]
+    ) => {
+        $crate::impl_dep_obj_impl! {
+            @objs
+            [$($g)*] [$($r)*] [$($w)*] [$Id]
+            [$($ty:tt)* [[$Obj] [$Key] [$Arena] [. $arena_field] [$($access)*]]] [$($opt_ty:tt)*] [$($tr:tt)*] [$($opt_tr:tt)*]
             [$($tail)*]
         }
     };
@@ -3757,7 +3770,20 @@ macro_rules! impl_dep_obj_impl {
         $crate::impl_dep_obj_impl! {
             @objs
             [$($g)*] [$($r)*] [$($w)*] [$Id]
-            [$($ty:tt)*] [$($opt_ty:tt)* [[$Obj] [$Key] [$Arena] [$($access)*]]] [$($tr:tt)*] [$($opt_tr:tt)*]
+            [$($ty:tt)*] [$($opt_ty:tt)* [[$Obj] [$Key] [$Arena] [.0] [$($access)*]]] [$($tr:tt)*] [$($opt_tr:tt)*]
+            [$($tail)*]
+        }
+    };
+    (
+        @objs
+        [$($g:tt)*] [$($r:tt)*] [$($w:tt)*] [$Id:ty]
+        [$($ty:tt)*] [$($opt_ty:tt)*] [$($tr:tt)*] [$($opt_tr:tt)*]
+        [, optional type $Obj:ty as $Key:ty { $Arena:ty { . $arena_field:ident } | $($access:tt)* } $($tail:tt)* ]
+    ) => {
+        $crate::impl_dep_obj_impl! {
+            @objs
+            [$($g)*] [$($r)*] [$($w)*] [$Id]
+            [$($ty:tt)*] [$($opt_ty:tt)* [[$Obj] [$Key] [$Arena] [. $arena_field] [$($access)*]]] [$($tr:tt)*] [$($opt_tr:tt)*]
             [$($tail)*]
         }
     };
@@ -3770,7 +3796,20 @@ macro_rules! impl_dep_obj_impl {
         $crate::impl_dep_obj_impl! {
             @objs
             [$($g)*] [$($r)*] [$($w)*] [$Id]
-            [$($ty:tt)*] [$($opt_ty:tt)*] [$($tr:tt)* [[$Obj] [$Key] [$Arena] [$($access)*]]] [$($opt_tr:tt)*]
+            [$($ty:tt)*] [$($opt_ty:tt)*] [$($tr:tt)* [[$Obj] [$Key] [$Arena] [.0] [$($access)*]]] [$($opt_tr:tt)*]
+            [$($tail)*]
+        }
+    };
+    (
+        @objs
+        [$($g:tt)*] [$($r:tt)*] [$($w:tt)*] [$Id:ty]
+        [$($ty:tt)*] [$($opt_ty:tt)*] [$($tr:tt)*] [$($opt_tr:tt)*]
+        [, trait $Obj:path as $Key:ty { $Arena:ty { . $arena_field:ident } | $($access:tt)* } $($tail:tt)* ]
+    ) => {
+        $crate::impl_dep_obj_impl! {
+            @objs
+            [$($g)*] [$($r)*] [$($w)*] [$Id]
+            [$($ty:tt)*] [$($opt_ty:tt)*] [$($tr:tt)* [[$Obj] [$Key] [$Arena] [. $arena_field] [$($access)*]]] [$($opt_tr:tt)*]
             [$($tail)*]
         }
     };
@@ -3783,17 +3822,30 @@ macro_rules! impl_dep_obj_impl {
         $crate::impl_dep_obj_impl! {
             @objs
             [$($g)*] [$($r)*] [$($w)*] [$Id]
-            [$($ty:tt)*] [$($opt_ty:tt)*] [$($tr:tt)*] [$($opt_tr:tt)* [[$Obj] [$Key] [$Arena] [$($access)*]]]
+            [$($ty:tt)*] [$($opt_ty:tt)*] [$($tr:tt)*] [$($opt_tr:tt)* [[$Obj] [$Key] [$Arena] [.0] [$($access)*]]]
             [$($tail)*]
         }
     };
     (
         @objs
         [$($g:tt)*] [$($r:tt)*] [$($w:tt)*] [$Id:ty]
-        [$([[$ty_Obj:ty] [$ty_Key:ty] [$ty_Arena:ty] [$($ty_access:tt)*]])*]
-        [$([[$opt_ty_Obj:ty] [$opt_ty_Key:ty] [$opt_ty_Arena:ty] [$($opt_ty_access:tt)*]])*]
-        [$([[$tr_Obj:ty] [$tr_Key:ty] [$tr_Arena:ty] [$($tr_access:tt)*]])*]
-        [$([[$opt_tr_Obj:ty] [$opt_tr_Key:ty] [$opt_tr_Arena:ty] [$($opt_tr_access:tt)*]])*]
+        [$($ty:tt)*] [$($opt_ty:tt)*] [$($tr:tt)*] [$($opt_tr:tt)*]
+        [, optional trait $Obj:path as $Key:ty { $Arena:ty { . $arena_field:ident } | $($access:tt)* } $($tail:tt)* ]
+    ) => {
+        $crate::impl_dep_obj_impl! {
+            @objs
+            [$($g)*] [$($r)*] [$($w)*] [$Id]
+            [$($ty:tt)*] [$($opt_ty:tt)*] [$($tr:tt)*] [$($opt_tr:tt)* [[$Obj] [$Key] [$Arena] [. $arena_field] [$($access)*]]]
+            [$($tail)*]
+        }
+    };
+    (
+        @objs
+        [$($g:tt)*] [$($r:tt)*] [$($w:tt)*] [$Id:ty]
+        [$([[$ty_Obj:ty] [$ty_Key:ty] [$ty_Arena:ty] [$($ty_arena_field:tt)*] [$($ty_access:tt)*]])*]
+        [$([[$opt_ty_Obj:ty] [$opt_ty_Key:ty] [$opt_ty_Arena:ty] [$($opt_ty_arena_field:tt)*] [$($opt_ty_access:tt)*]])*]
+        [$([[$tr_Obj:ty] [$tr_Key:ty] [$tr_Arena:ty] [$($tr_arena_field:tt)*] [$($tr_access:tt)*]])*]
+        [$([[$opt_tr_Obj:ty] [$opt_tr_Key:ty] [$opt_tr_Arena:ty] [$($opt_tr_arena_field:tt)*] [$($opt_tr_access:tt)*]])*]
         [$(,)?]
     ) => {
         $crate::dep_obj! {
@@ -3801,36 +3853,36 @@ macro_rules! impl_dep_obj_impl {
                 $(
                     $ty_Key => fn(self as this, arena: $ty_Arena) -> ($ty_Obj) {
                         if mut {
-                            &mut arena.0[this.0] $($ty_access)*
+                            &mut arena $($ty_arena_field)* [this.0] $($ty_access)*
                         } else {
-                            &arena.0[this.0] $($ty_access)*
+                            &arena $($ty_arena_field)* [this.0] $($ty_access)*
                         }
                     }
                 )*
                 $(
                     $opt_ty_Key => fn(self as this, arena: $opt_ty_Arena) -> optional($opt_ty_Obj) {
                         if mut {
-                            arena.0[this.0] $($opt_ty_access)* .as_mut()
+                            arena $($opt_ty_arena_field)* [this.0] $($opt_ty_access)* .as_mut()
                         } else {
-                            arena.0[this.0] $($opt_ty_access)* .as_ref()
+                            arena $($opt_ty_arena_field)* [this.0] $($opt_ty_access)* .as_ref()
                         }
                     }
                 )*
                 $(
                     $tr_Key => fn(self as this, arena: $tr_Arena) -> dyn($tr_Obj) {
                         if mut {
-                            arena.0[this.0] $($tr_access)* .as_mut()
+                            arena $($tr_arena_field)* [this.0] $($tr_access)* .as_mut()
                         } else {
-                            arena.0[this.0] $($tr_access)* .as_ref()
+                            arena $($tr_arena_field)* [this.0] $($tr_access)* .as_ref()
                         }
                     }
                 )*
                 $(
                     $opt_tr_Key => fn(self as this, arena: $opt_tr_Arena) -> optional dyn($opt_tr_Obj) {
                         if mut {
-                            arena.0[this.0] $($opt_tr_access)* .as_mut().as_mut()
+                            arena $($opt_tr_arena_field)* [this.0] $($opt_tr_access)* .as_mut().as_mut()
                         } else {
-                            arena.0[this.0] $($opt_tr_access)* .as_ref().as_ref()
+                            arena $($opt_tr_arena_field)* [this.0] $($opt_tr_access)* .as_ref().as_ref()
                         }
                     }
                 )*
@@ -3846,7 +3898,7 @@ macro_rules! impl_dep_obj_impl {
         $crate::std_compile_error!($crate::indoc_indoc!("
             invalid dep obj accessing function definition, allowed form is
 
-            $(optional)? $(type $ty:ty | trait $tr:path) as $Key:ty { $Arena:ty | $($access:tt)* }
+            $(optional)? $(type $ty:ty | trait $tr:path) as $Key:ty { $Arena:ty $({ . $arena_field:ident })? | $($access:tt)* }
 
         "));
     };

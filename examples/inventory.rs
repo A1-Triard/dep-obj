@@ -6,8 +6,8 @@
 #![allow(dead_code)]
 
 use components_arena::{Arena, Component, NewtypeComponentId, Id};
-use dep_obj::{Change, DepObjBaseBuilder, DepObjId, DepVecItemPos, DetachedDepObjId, ItemChange};
-use dep_obj::{dep_obj, dep_type};
+use dep_obj::{Change, DepObjId, DepVecItemPos, DetachedDepObjId, GenericBuilder, ItemChange};
+use dep_obj::{dep_type, impl_dep_obj, with_builder};
 use macro_attr_2018::macro_attr;
 use dep_obj::binding::{Binding1, Binding2, BindingExt2, Bindings, Re};
 use dyn_context::state::{State, StateExt};
@@ -37,27 +37,7 @@ dep_type! {
         enhancement: i8 = 0,
     }
 
-    type BaseBuilder<'a> = ItemBuilder<'a>;
-}
-
-struct ItemBuilder<'a> {
-    item: Item,
-    state: &'a mut dyn State,
-}
-
-impl<'a> DepObjBaseBuilder<Item> for ItemBuilder<'a> {
-    fn id(&self) -> Item { self.item }
-    fn state(&self) -> &dyn State { self.state }
-    fn state_mut(&mut self) -> &mut dyn State { self.state }
-}
-
-impl<'a> ItemBuilder<'a> {
-    fn props(
-        self,
-        f: impl for<'b> FnOnce(ItemPropsBuilder<'b>) -> ItemPropsBuilder<'b>
-    ) -> Self {
-        f(ItemPropsBuilder::new_priv(self)).base_priv()
-    }
+    type BaseBuilder<'a> = GenericBuilder<'a, Item>;
 }
 
 impl Item {
@@ -72,26 +52,12 @@ impl Item {
         game.items.remove(self.0);
     }
 
-    fn build<'a>(
-        self,
-        state: &'a mut dyn State,
-        f: impl FnOnce(ItemBuilder<'a>) -> ItemBuilder<'a>
-    ) {
-        f(ItemBuilder { item: self, state });
-    }
+    with_builder!(ItemPropsBuilder<'a>);
 }
 
-dep_obj! {
-    impl Item {
-        ItemProps => fn(self as this, game: Game) -> (ItemProps) {
-            if mut {
-                &mut game.items[this.0].props
-            } else {
-                &game.items[this.0].props
-            }
-        }
-    }
-}
+impl_dep_obj!(Item {
+    type ItemProps as ItemProps { Game { .items } | .props }
+});
 
 macro_attr! {
     #[derive(Debug, Component!)]
@@ -153,17 +119,9 @@ impl Npc {
     }
 }
 
-dep_obj! {
-    impl Npc {
-        NpcProps => fn(self as this, game: Game) -> (NpcProps) {
-            if mut {
-                &mut game.npcs[this.0].props
-            } else {
-                &game.npcs[this.0].props
-            }
-        }
-    }
-}
+impl_dep_obj!(Npc {
+    type NpcProps as NpcProps { Game { .npcs } | .props }
+});
 
 struct Game {
     items: Arena<ItemData>,
@@ -211,9 +169,7 @@ fn main() {
     NpcProps::ITEMS_ENHANCEMENT.set(game, npc, 5).immediate();
     let sword = Item::new(game);
     sword.build(game, |sword| sword
-        .props(|props| props
-            .name(Cow::Borrowed("Sword"))
-        )
+        .name(Cow::Borrowed("Sword"))
     );
     let shield = Item::new(game);
     ItemProps::NAME.set(game, shield, Cow::Borrowed("Shield")).immediate();
