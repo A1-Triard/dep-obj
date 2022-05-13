@@ -1,13 +1,15 @@
 #![feature(const_ptr_offset_from)]
 #![feature(const_type_id)]
+#![feature(explicit_generic_args_with_impl_trait)]
 
 #![deny(warnings)]
 #![allow(dead_code)]
 
 mod circuit {
-    use components_arena::{Arena, Component, Id, NewtypeComponentId};
+    use components_arena::{Arena, Component, ComponentStop, Id, NewtypeComponentId, arena_newtype};
     use dep_obj::{DetachedDepObjId, DepType, dep_obj};
     use downcast_rs::{Downcast, impl_downcast};
+    use dyn_context::NewtypeStop;
     use dyn_context::state::{SelfState, State, StateExt};
     use macro_attr_2018::macro_attr;
 
@@ -18,9 +20,17 @@ mod circuit {
     impl_downcast!(ChipLegs);
 
     macro_attr! {
-        #[derive(Debug, Component!)]
+        #[derive(Debug, Component!(stop=ChipStop))]
         struct ChipNode {
             legs: Box<dyn ChipLegs>,
+        }
+    }
+
+    impl ComponentStop for ChipStop {
+        arena_newtype!(Circuit);
+
+        fn stop(&self, state: &mut dyn State, id: Id<ChipNode>) {
+            Chip(id).drop_bindings_priv(state);
         }
     }
 
@@ -35,7 +45,7 @@ mod circuit {
             legs: impl FnOnce(Chip) -> (Box<dyn ChipLegs>, T)
         ) -> T {
             let circuit: &mut Circuit = state.get_mut();
-            circuit.arena.insert(|chip| {
+            circuit.0.insert(|chip| {
                 let (legs,  result) = legs(Chip(chip));
                 (ChipNode { legs }, result)
             })
@@ -44,7 +54,7 @@ mod circuit {
         pub fn drop_self(self, state: &mut dyn State) {
             self.drop_bindings_priv(state);
             let circuit: &mut Circuit = state.get_mut();
-            circuit.arena.remove(self.0);
+            circuit.0.remove(self.0);
         }
     }
 
@@ -52,9 +62,9 @@ mod circuit {
         impl Chip {
             ChipLegsKey => fn(self as this, circuit: Circuit) -> (trait ChipLegs) {
                 if mut {
-                    circuit.arena[this.0].legs.as_mut()
+                    circuit.0[this.0].legs.as_mut()
                 } else {
-                    circuit.arena[this.0].legs.as_ref()
+                    circuit.0[this.0].legs.as_ref()
                 }
             }
         }
@@ -62,15 +72,15 @@ mod circuit {
 
     impl DetachedDepObjId for Chip { }
 
-    #[derive(Debug)]
-    pub struct Circuit {
-        arena: Arena<ChipNode>,
+    macro_attr! {
+        #[derive(Debug, NewtypeStop!)]
+        pub struct Circuit(Arena<ChipNode>);
     }
 
     impl SelfState for Circuit { }
 
     impl Circuit {
-        pub fn new() -> Self { Circuit { arena: Arena::new() } }
+        pub fn new() -> Self { Circuit(Arena::new()) }
     }
 }
 
@@ -131,13 +141,13 @@ mod not_chip {
 }
 
 use circuit::*;
+use dep_obj::{Change, DepObjId};
 use dep_obj::binding::{Binding1, Bindings};
-use dyn_context::state::{State, StateExt, StateRefMut};
+use dyn_context::state::{Stop, State, StateExt, StateRefMut};
 use not_chip::*;
 use or_chip::*;
 use std::any::{Any, TypeId};
 use std::fmt::Write;
-use dep_obj::Change;
 
 #[derive(Debug, Clone)]
 struct TriggerChips {
@@ -219,6 +229,7 @@ fn main() {
         let new = if change.new { "1" } else { "0" };
         writeln!(state.log, "{} -> {}", old, new).unwrap();
     });
+    chips.not_2.add_binding::<NotLegs, _>(state, print_out);
     print_out.set_source_1(state, &mut NotLegs::OUT.change_source(chips.not_2));
     OrLegs::IN_1.set(state, chips.or_1, true).immediate();
     OrLegs::IN_1.set(state, chips.or_1, false).immediate();
@@ -229,11 +240,7 @@ fn main() {
     OrLegs::IN_1.set(state, chips.or_2, true).immediate();
     OrLegs::IN_1.set(state, chips.or_2, false).immediate();
 
-    print_out.drop_self(state);
-    chips.or_1.drop_self(state);
-    chips.or_2.drop_self(state);
-    chips.not_2.drop_self(state);
-    chips.not_1.drop_self(state);
+    Circuit::stop(state);
 
     print!("{}", state.log);
     assert_eq!(state.log, "\
