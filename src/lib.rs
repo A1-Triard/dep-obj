@@ -2168,21 +2168,121 @@ pub trait DepObj<Key: ?Sized, Type: DepType> {
     }
 }
 
-pub struct RootBuilder<'a, T: ComponentId> {
+pub struct GenericBuilder<'a, T: ComponentId> {
     id: T,
     state: &'a mut dyn State,
 }
 
-impl<'a, T: ComponentId> DepObjBaseBuilder<T> for RootBuilder<'a, T> {
+impl<'a, T: ComponentId> DepObjBaseBuilder<T> for GenericBuilder<'a, T> {
     fn id(&self) -> T { self.id }
     fn state(&self) -> &dyn State { self.state }
     fn state_mut(&mut self) -> &mut dyn State { self.state }
 }
 
-impl<'a, T: ComponentId> RootBuilder<'a, T> {
+impl<'a, T: ComponentId> GenericBuilder<'a, T> {
     pub fn new(state: &'a mut dyn State, id: T) -> Self {
-        RootBuilder { id, state }
+        GenericBuilder { id, state }
     }
+}
+
+#[doc(hidden)]
+#[macro_export]
+macro_rules! split_by_in {
+    (
+        $callback:path {
+            $($callback_args:tt)*
+        }
+        $($token:tt)*
+    ) => {
+        $crate::split_by_in! {
+            @before [$callback] [$($callback_args)*]
+            [] [$($token)*]
+        }
+    };
+    (
+        @before [$callback:path] [$($callback_args:tt)*]
+        [$($before:tt)*] []
+    ) => {
+        $callback ! {
+            $($callback_args)*
+            [$($before)*] []
+        }
+    };
+    (
+        @before [$callback:path] [$($callback_args:tt)*]
+        [$($before:tt)*] [in $($tail:tt)*]
+    ) => {
+        $crate::split_by_in! {
+            @after [$callback] [$($callback_args)*] [$($before)*]
+            [] [$($tail)*]
+        }
+    };
+    (
+        @before [$callback:path] [$($callback_args:tt)*]
+        [$($before:tt)*] [$token:tt $($tail:tt)*]
+    ) => {
+        $crate::split_by_in! {
+            @before [$callback] [$($callback_args)*]
+            [$($before)* $token] [$($tail)*]
+        }
+    };
+    (
+        @after [$callback:path] [$($callback_args:tt)*] [$($before:tt)*]
+        [$($after:tt)*] []
+    ) => {
+        $callback ! {
+            $($callback_args)*
+            [$($before)*] [$($after)*]
+        }
+    };
+    (
+        @after [$callback:path] [$($callback_args:tt)*] [$($before:tt)*]
+        [$($after:tt)*] [$token:tt $($tail:tt)*]
+    ) => {
+        $crate::split_by_in! {
+            @after [$callback] [$($callback_args)*] [$($before)*]
+            [$($after)* $token] [$($tail)*]
+        }
+    };
+}
+
+#[macro_export]
+macro_rules! generic_build {
+    (
+        $builder:ident < $lt:lifetime $($builder_tail:tt)+
+    ) => {
+        $crate::split_by_in! {
+            $crate::generic_build_impl {
+                [$builder] [$lt]
+            }
+            $($builder_tail)+
+        }
+    };
+}
+
+#[doc(hidden)]
+#[macro_export]
+macro_rules! generic_build_impl {
+    (
+        [$builder:ident] [$lt:lifetime] [$($builder_tail:tt)+] [$($($builder_path:tt)+)?]
+    ) => {
+        pub fn build(
+            self,
+            state: &mut dyn $crate::dyn_context_state_State,
+            f: impl for<$lt> FnOnce(
+                $($($builder_path)+ ::)? $builder < $lt $($builder_tail)+
+            ) -> $($($builder_path)+ ::)? $builder < $lt $($builder_tail)+
+        ) -> Self {
+            let base_builder = $crate::GenericBuilder::new(state, self);
+            f(<$($($builder_path)+ ::)? $builder <'_ $($builder_tail)+>::new_priv(base_builder));
+            self
+        }
+    };
+    (
+        [$builder:ident] [$lt:lifetime] [] [$($($builder_path:tt)+)?]
+    ) => {
+        $crate::std_compile_error!("unclosed generics");
+    };
 }
 
 #[macro_export]

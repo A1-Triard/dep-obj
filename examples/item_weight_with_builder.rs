@@ -5,7 +5,7 @@
 
 mod items {
     use components_arena::{Arena, Component, ComponentStop, NewtypeComponentId, Id, arena_newtype};
-    use dep_obj::{DetachedDepObjId, RootBuilder, dep_obj, dep_type};
+    use dep_obj::{DetachedDepObjId, GenericBuilder, dep_obj, dep_type, generic_build};
     use dyn_context::NewtypeStop;
     use dyn_context::state::{SelfState, State, StateExt};
     use macro_attr_2018::macro_attr;
@@ -54,7 +54,7 @@ mod items {
             cursed: bool = false,
         }
 
-        type BaseBuilder<'a> = RootBuilder<'a, Item>;
+        type BaseBuilder<'a> = GenericBuilder<'a, Item>;
     }
 
     impl Item {
@@ -71,15 +71,7 @@ mod items {
             items.0.remove(self.0);
         }
 
-        pub fn build(
-            self,
-            state: &mut dyn State,
-            f: impl for<'b> FnOnce(ItemPropsBuilder<'b>) -> ItemPropsBuilder<'b>
-        ) -> Self {
-            let base_builder = RootBuilder::new(state, self);
-            f(ItemPropsBuilder::new_priv(base_builder));
-            self
-        }
+        generic_build!(ItemPropsBuilder<'b>);
     }
 
     dep_obj! {
