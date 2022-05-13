@@ -5,13 +5,73 @@
 #![allow(dead_code)]
 
 mod circuit {
-    use dep_obj::templates::detached_dynamic_dep_type;
+    use components_arena::{Arena, Component, Id, NewtypeComponentId};
+    use dep_obj::{DetachedDepObjId, DepType, dep_obj};
+    use downcast_rs::{Downcast, impl_downcast};
+    use dyn_context::state::{SelfState, State, StateExt};
+    use macro_attr_2018::macro_attr;
 
-    pub enum ChipLegs { }
-    pub type ChipLegsKey = detached_dynamic_dep_type::DynObjKey;
-    pub type Chip = detached_dynamic_dep_type::Id<ChipLegs>;
-    pub type Circuit = detached_dynamic_dep_type::Arena<ChipLegs>;
-    pub use detached_dynamic_dep_type::DynObj as ChipObj;
+    pub enum ChipLegsKey { }
+
+    pub trait ChipLegs: Downcast + DepType<Id=Chip, DepObjKey=ChipLegsKey> { }
+
+    impl_downcast!(ChipLegs);
+
+    macro_attr! {
+        #[derive(Debug, Component!)]
+        struct ChipNode {
+            legs: Box<dyn ChipLegs>,
+        }
+    }
+
+    macro_attr! {
+        #[derive(Debug, Copy, Clone, Eq, PartialEq, Hash, Ord, PartialOrd, NewtypeComponentId!)]
+        pub struct Chip(Id<ChipNode>);
+    }
+
+    impl Chip {
+        pub fn new<T>(
+            state: &mut dyn State,
+            legs: impl FnOnce(Chip) -> (Box<dyn ChipLegs>, T)
+        ) -> T {
+            let circuit: &mut Circuit = state.get_mut();
+            circuit.arena.insert(|chip| {
+                let (legs,  result) = legs(Chip(chip));
+                (ChipNode { legs }, result)
+            })
+        }
+
+        pub fn drop_self(self, state: &mut dyn State) {
+            self.drop_bindings_priv(state);
+            let circuit: &mut Circuit = state.get_mut();
+            circuit.arena.remove(self.0);
+        }
+    }
+
+    dep_obj! {
+        impl Chip {
+            ChipLegsKey => fn(self as this, circuit: Circuit) -> (trait ChipLegs) {
+                if mut {
+                    circuit.arena[this.0].legs.as_mut()
+                } else {
+                    circuit.arena[this.0].legs.as_ref()
+                }
+            }
+        }
+    }
+
+    impl DetachedDepObjId for Chip { }
+
+    #[derive(Debug)]
+    pub struct Circuit {
+        arena: Arena<ChipNode>,
+    }
+
+    impl SelfState for Circuit { }
+
+    impl Circuit {
+        pub fn new() -> Self { Circuit { arena: Arena::new() } }
+    }
 }
 
 mod or_chip {
@@ -31,16 +91,16 @@ mod or_chip {
 
     impl OrLegs {
         pub fn new(state: &mut dyn State) -> Chip {
-            Chip::new(state, |chip| (Box::new(Self::new_priv()) as _, chip), |state, chip| {
-                let binding = Binding2::new(state, (), |(), in_1, in_2| Some(in_1 | in_2));
-                OrLegs::OUT.bind(state, chip, binding);
-                binding.set_source_1(state, &mut OrLegs::IN_1.value_source(chip));
-                binding.set_source_2(state, &mut OrLegs::IN_2.value_source(chip));
-            })
+            let chip = Chip::new(state, |chip| (Box::new(Self::new_priv()) as _, chip));
+            let binding = Binding2::new(state, (), |(), in_1, in_2| Some(in_1 | in_2));
+            OrLegs::OUT.bind(state, chip, binding);
+            binding.set_source_1(state, &mut OrLegs::IN_1.value_source(chip));
+            binding.set_source_2(state, &mut OrLegs::IN_2.value_source(chip));
+            chip
         }
     }
 
-    impl ChipObj<ChipLegs> for OrLegs { }
+    impl ChipLegs for OrLegs { }
 }
 
 mod not_chip {
@@ -59,15 +119,15 @@ mod not_chip {
 
     impl NotLegs {
         pub fn new(state: &mut dyn State) -> Chip {
-            Chip::new(state, |chip| (Box::new(Self::new_priv()) as _, chip), |state, chip| {
-                let binding = Binding1::new(state, (), |(), in_1: bool| Some(!in_1));
-                NotLegs::OUT.bind(state, chip, binding);
-                binding.set_source_1(state, &mut NotLegs::IN_.value_source(chip));
-            })
+            let chip = Chip::new(state, |chip| (Box::new(Self::new_priv()) as _, chip));
+            let binding = Binding1::new(state, (), |(), in_1: bool| Some(!in_1));
+            NotLegs::OUT.bind(state, chip, binding);
+            binding.set_source_1(state, &mut NotLegs::IN_.value_source(chip));
+            chip
         }
     }
 
-    impl ChipObj<ChipLegs> for NotLegs { }
+    impl ChipLegs for NotLegs { }
 }
 
 use circuit::*;
@@ -181,5 +241,4 @@ fn main() {
         0 -> 1\n\
         1 -> 0\n\
     ");
-    Circuit::drop_self(state);
 }

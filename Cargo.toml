@@ -18,7 +18,6 @@ rustdoc-args = ["--cfg", "docsrs"]
 
 [dependencies]
 components-arena = { version = "3.0.0", git = "https://github.com/A1-Triard/components-arena.git", features = ["dyn-context"] }
-debug_panic = "0.2.1"
 downcast-rs = { version = "1.2.0", default-features = false }
 dyn-clone = "1.0.2"
 dyn-context = "0.14.1"

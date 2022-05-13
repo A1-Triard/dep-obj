@@ -20,7 +20,6 @@ mod base;
 pub use base::*;
 
 pub mod binding;
-//pub mod templates;
 
 #[cfg(docsrs)]
 pub mod example {

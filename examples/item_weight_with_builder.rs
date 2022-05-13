@@ -5,7 +5,7 @@
 
 mod items {
     use components_arena::{Arena, Component, ComponentStop, NewtypeComponentId, Id, arena_newtype};
-    use dep_obj::{DetachedDepObjId, dep_obj, dep_type};
+    use dep_obj::{DepObjBaseBuilder, DetachedDepObjId, dep_obj, dep_type};
     use dyn_context::NewtypeStop;
     use dyn_context::state::{SelfState, State, StateExt};
     use macro_attr_2018::macro_attr;
@@ -53,6 +53,19 @@ mod items {
             equipped: bool = false,
             cursed: bool = false,
         }
+
+        type BaseBuilder<'a> = ItemBuilder<'a>;
+    }
+
+    struct ItemBuilder<'a> {
+        item: Item,
+        state: &'a mut dyn State,
+    }
+
+    impl<'a> DepObjBaseBuilder<Item> for ItemBuilder<'a> {
+        fn id(&self) -> Item { self.item }
+        fn state(&self) -> &dyn State { self.state }
+        fn state_mut(&mut self) -> &mut dyn State { self.state }
     }
 
     impl Item {
@@ -67,6 +80,16 @@ mod items {
             self.drop_bindings_priv(state);
             let items: &mut Items = state.get_mut();
             items.0.remove(self.0);
+        }
+
+        pub fn build(
+            self,
+            state: &mut dyn State,
+            f: impl for<'b> FnOnce(ItemPropsBuilder<'b>) -> ItemPropsBuilder<'b>
+        ) -> Self {
+            let base_builder = ItemBuilder { item: self, state };
+            f(ItemPropsBuilder::new_priv(base_builder));
+            self
         }
     }
 
@@ -84,8 +107,8 @@ mod items {
 }
 
 mod behavior {
-    use dep_obj::binding::Binding3;
     use dyn_context::state::State;
+    use dep_obj::binding::Binding3;
     use crate::items::*;
 
     pub fn item(state: &mut dyn State, item: Item) {
@@ -106,17 +129,16 @@ use items::*;
 fn run(state: &mut dyn State) {
     let item = Item::new(state, behavior::item);
 
+    item.build(state, |props| props
+        .base_weight(5.0)
+        .cursed(true)
+    );
+
     let weight = Binding1::new(state, (), |(), weight| Some(weight));
     weight.set_target_fn(state, (), |_state, (), weight| {
         println!("Item weight changed, new weight: {}", weight);
     });
     weight.set_source_1(state, &mut ItemProps::WEIGHT.value_source(item));
-
-    println!("> item.base_weight = 5.0");
-    ItemProps::BASE_WEIGHT.set(state, item, 5.0).immediate();
-
-    println!("> item.cursed = true");
-    ItemProps::CURSED.set(state, item, true).immediate();
 
     println!("> item.equipped = true");
     ItemProps::EQUIPPED.set(state, item, true).immediate();
