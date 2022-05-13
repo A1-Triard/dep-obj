@@ -3693,12 +3693,12 @@ macro_rules! dep_obj_impl {
 }
 
 #[macro_export]
-macro_rules! impl_dep_obj_for {
+macro_rules! impl_dep_obj {
     (
         $($token:tt)+
     ) => {
         $crate::generics_parse! {
-            $crate::impl_dep_obj_for_impl {
+            $crate::impl_dep_obj_impl {
             }
             $($token)+
         }
@@ -3706,14 +3706,14 @@ macro_rules! impl_dep_obj_for {
 }
 
 #[macro_export]
-macro_rules! impl_dep_obj_for_impl {
+macro_rules! impl_dep_obj_impl {
     (
         [$($g:tt)*] [$($r:tt)*] [$($w:tt)*]
         $Id:ty {
             $($objs:tt)*
         }
     ) => {
-        $crate::impl_dep_obj_for_impl! {
+        $crate::impl_dep_obj_impl! {
             @objs
             [$($g)*] [$($r)*] [$($w)*] [$Id]
             [] [] [] []
@@ -3726,7 +3726,7 @@ macro_rules! impl_dep_obj_for_impl {
         [$($ty:tt)*] [$($opt_ty:tt)*] [$($tr:tt)*] [$($opt_tr:tt)*]
         [, type $Obj:ty as $Key:ty { $Arena:ty | $($access:tt)* } $($tail:tt)* ]
     ) => {
-        $crate::impl_dep_obj_for_impl! {
+        $crate::impl_dep_obj_impl! {
             @objs
             [$($g)*] [$($r)*] [$($w)*] [$Id]
             [$($ty:tt)* [[$Obj] [$Key] [$Arena] [$($access)*]]] [$($opt_ty:tt)*] [$($tr:tt)*] [$($opt_tr:tt)*]
@@ -3739,7 +3739,7 @@ macro_rules! impl_dep_obj_for_impl {
         [$($ty:tt)*] [$($opt_ty:tt)*] [$($tr:tt)*] [$($opt_tr:tt)*]
         [, optional type $Obj:ty as $Key:ty { $Arena:ty | $($access:tt)* } $($tail:tt)* ]
     ) => {
-        $crate::impl_dep_obj_for_impl! {
+        $crate::impl_dep_obj_impl! {
             @objs
             [$($g)*] [$($r)*] [$($w)*] [$Id]
             [$($ty:tt)*] [$($opt_ty:tt)* [[$Obj] [$Key] [$Arena] [$($access)*]]] [$($tr:tt)*] [$($opt_tr:tt)*]
@@ -3752,7 +3752,7 @@ macro_rules! impl_dep_obj_for_impl {
         [$($ty:tt)*] [$($opt_ty:tt)*] [$($tr:tt)*] [$($opt_tr:tt)*]
         [, trait $Obj:path as $Key:ty { $Arena:ty | $($access:tt)* } $($tail:tt)* ]
     ) => {
-        $crate::impl_dep_obj_for_impl! {
+        $crate::impl_dep_obj_impl! {
             @objs
             [$($g)*] [$($r)*] [$($w)*] [$Id]
             [$($ty:tt)*] [$($opt_ty:tt)*] [$($tr:tt)* [[$Obj] [$Key] [$Arena] [$($access)*]]] [$($opt_tr:tt)*]
@@ -3765,7 +3765,7 @@ macro_rules! impl_dep_obj_for_impl {
         [$($ty:tt)*] [$($opt_ty:tt)*] [$($tr:tt)*] [$($opt_tr:tt)*]
         [, optional trait $Obj:path as $Key:ty { $Arena:ty | $($access:tt)* } $($tail:tt)* ]
     ) => {
-        $crate::impl_dep_obj_for_impl! {
+        $crate::impl_dep_obj_impl! {
             @objs
             [$($g)*] [$($r)*] [$($w)*] [$Id]
             [$($ty:tt)*] [$($opt_ty:tt)*] [$($tr:tt)*] [$($opt_tr:tt)* [[$Obj] [$Key] [$Arena] [$($access)*]]]

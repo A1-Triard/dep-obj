@@ -6,7 +6,7 @@
 
 mod items {
     use components_arena::{Arena, Component, ComponentStop, NewtypeComponentId, Id, with_arena_newtype};
-    use dep_obj::{DetachedDepObjId, dep_type, impl_dep_obj_for};
+    use dep_obj::{DetachedDepObjId, dep_type, impl_dep_obj};
     use dyn_context::NewtypeStop;
     use dyn_context::state::{SelfState, State, StateExt};
     use macro_attr_2018::macro_attr;
@@ -41,7 +41,7 @@ mod items {
         }
     }
 
-    impl_dep_obj_for!(Item {
+    impl_dep_obj!(Item {
         type ItemProps as ItemProps { Items | .props },
     });
 

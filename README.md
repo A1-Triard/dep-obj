@@ -100,24 +100,18 @@ pub fn drop_self(self, state: &mut dyn State) {
 }
 ```
 
-And now the last, but not least: a function to access the depndency object in
+And now the last, but not least: an indirect definition
+of the function providing access to the dependency object in
 the `props` field:
 
 ```rust
-dep_obj! {
-    impl Item {
-        ItemProps => fn(self as this, items: Items) -> (ItemProps) {
-            if mut {
-                &mut items.0[this.0].props
-            } else {
-                &items.0[this.0].props
-            }
-        }
-    }
-}
+impl_dep_obj!(Item {
+    type ItemProps as ItemProps { Items | .props },
+});
 ```
 
-The `dep_obj` macro also generates the `drop_bindigs_priv` method we used in the `drop_self` method earlier.
+The `impl_dep_obj` macro also generates the `drop_bindigs_priv` method
+we used in the `drop_self` method earlier.
 
 Lets take a look at our `mod items` as a whole:
 
