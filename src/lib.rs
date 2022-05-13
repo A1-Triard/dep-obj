@@ -3721,6 +3721,21 @@ macro_rules! impl_dep_obj_impl {
         }
     };
     (
+        [$($g:tt)*] [$($r:tt)*] [$($w:tt)*]
+        $($token:tt)*
+    ) => {
+        $crate::std_compile_error!($crate::indoc_indoc!("
+            invalid dep obj implementation, allowed form is
+
+            $generics $Id:ty $(where $where_clause)? {
+                $($(
+                    $(optional)? $(type $ty:ty | trait $tr:path) as $Key:ty { $Arena:ty | $($access:tt)* }
+                ),+ $(,)?)?
+            }
+
+        "));
+    };
+    (
         @objs
         [$($g:tt)*] [$($r:tt)*] [$($w:tt)*] [$Id:ty]
         [$($ty:tt)*] [$($opt_ty:tt)*] [$($tr:tt)*] [$($opt_tr:tt)*]
@@ -3821,5 +3836,26 @@ macro_rules! impl_dep_obj_impl {
                 )*
             }
         }
+    };
+    (
+        @objs
+        [$($g:tt)*] [$($r:tt)*] [$($w:tt)*] [$Id:ty]
+        [$($ty:tt)*] [$($opt_ty:tt)*] [$($tr:tt)*] [$($opt_tr:tt)*]
+        [, $($token:tt)* ]
+    ) => {
+        $crate::std_compile_error!($crate::indoc_indoc!("
+            invalid dep obj accessing function definition, allowed form is
+
+            $(optional)? $(type $ty:ty | trait $tr:path) as $Key:ty { $Arena:ty | $($access:tt)* }
+
+        "));
+    };
+    (
+        @objs
+        [$($g:tt)*] [$($r:tt)*] [$($w:tt)*] [$Id:ty]
+        [$($ty:tt)*] [$($opt_ty:tt)*] [$($tr:tt)*] [$($opt_tr:tt)*]
+        [$($token:tt)+]
+    ) => {
+        $crate::std_compile_error!("missing comma");
     };
 }
