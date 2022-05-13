@@ -2168,6 +2168,23 @@ pub trait DepObj<Key: ?Sized, Type: DepType> {
     }
 }
 
+pub struct RootBuilder<'a, T: ComponentId> {
+    id: T,
+    state: &'a mut dyn State,
+}
+
+impl<'a, T: ComponentId> DepObjBaseBuilder<T> for RootBuilder<'a, T> {
+    fn id(&self) -> T { self.id }
+    fn state(&self) -> &dyn State { self.state }
+    fn state_mut(&mut self) -> &mut dyn State { self.state }
+}
+
+impl<'a, T: ComponentId> RootBuilder<'a, T> {
+    pub fn new(state: &'a mut dyn State, id: T) -> Self {
+        RootBuilder { id, state }
+    }
+}
+
 #[macro_export]
 macro_rules! dep_type {
     (

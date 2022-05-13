@@ -5,7 +5,7 @@
 
 mod items {
     use components_arena::{Arena, Component, ComponentStop, NewtypeComponentId, Id, arena_newtype};
-    use dep_obj::{DepObjBaseBuilder, DetachedDepObjId, dep_obj, dep_type};
+    use dep_obj::{DetachedDepObjId, RootBuilder, dep_obj, dep_type};
     use dyn_context::NewtypeStop;
     use dyn_context::state::{SelfState, State, StateExt};
     use macro_attr_2018::macro_attr;
@@ -54,18 +54,7 @@ mod items {
             cursed: bool = false,
         }
 
-        type BaseBuilder<'a> = ItemBuilder<'a>;
-    }
-
-    struct ItemBuilder<'a> {
-        item: Item,
-        state: &'a mut dyn State,
-    }
-
-    impl<'a> DepObjBaseBuilder<Item> for ItemBuilder<'a> {
-        fn id(&self) -> Item { self.item }
-        fn state(&self) -> &dyn State { self.state }
-        fn state_mut(&mut self) -> &mut dyn State { self.state }
+        type BaseBuilder<'a> = RootBuilder<'a, Item>;
     }
 
     impl Item {
@@ -87,7 +76,7 @@ mod items {
             state: &mut dyn State,
             f: impl for<'b> FnOnce(ItemPropsBuilder<'b>) -> ItemPropsBuilder<'b>
         ) -> Self {
-            let base_builder = ItemBuilder { item: self, state };
+            let base_builder = RootBuilder::new(state, self);
             f(ItemPropsBuilder::new_priv(base_builder));
             self
         }
