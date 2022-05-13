@@ -1,4 +1,5 @@
 #![feature(const_ptr_offset_from)]
+#![feature(const_type_id)]
 #![feature(default_alloc_error_handler)]
 #![feature(start)]
 
@@ -41,14 +42,72 @@ pub fn rust_oom(_layout: Layout) -> ! {
     unsafe { exit(98) }
 }
 
-mod objs {
-    use dep_obj::dep_type;
-    use dep_obj::templates::detached_static_dep_type;
+mod items {
     use alloc::borrow::Cow;
+    use components_arena::{Arena, Component, ComponentStop, NewtypeComponentId, Id, with_arena_newtype};
+    use dep_obj::{DetachedDepObjId, dep_type, impl_dep_obj};
+    use dyn_context::NewtypeStop;
+    use dyn_context::state::{SelfState, State, StateExt};
+    use macro_attr_2018::macro_attr;
+
+    macro_attr! {
+        #[derive(Debug, Component!(stop=ItemStop))]
+        struct ItemComponent {
+            props: ItemProps,
+        }
+    }
+
+    impl ComponentStop for ItemStop {
+        with_arena_newtype!(Items);
+
+        fn stop(&self, state: &mut dyn State, id: Id<ItemComponent>) {
+            Item(id).drop_bindings_priv(state);
+        }
+    }
+
+    macro_attr! {
+        #[derive(Debug, Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash, NewtypeComponentId!)]
+        pub struct Item(Id<ItemComponent>);
+    }
+
+    impl DetachedDepObjId for Item { }
+
+    impl Item {
+        pub fn new(state: &mut dyn State, init: impl FnOnce(&mut dyn State, Item)) -> Item {
+            let items: &mut Items = state.get_mut();
+            let item = items.0.insert(|id| (ItemComponent { props: ItemProps::new_priv() }, Item(id)));
+            init(state, item);
+            item
+        }
+
+        #[allow(dead_code)]
+        pub fn drop_self(self, state: &mut dyn State) {
+            self.drop_bindings_priv(state);
+            let items: &mut Items = state.get_mut();
+            items.0.remove(self.0);
+        }
+    }
+
+    impl_dep_obj!(Item {
+        type ItemProps as ItemProps { Items | .props },
+    });
+
+    macro_attr! {
+        #[derive(Debug, NewtypeStop!)]
+        pub struct Items(Arena<ItemComponent>);
+    }
+
+    impl SelfState for Items { }
+
+    impl Items {
+        pub fn new() -> Items {
+            Items(Arena::new())
+        }
+    }
 
     dep_type! {
         #[derive(Debug)]
-        pub struct ItemProps in Item as detached_static_dep_type::Obj {
+        pub struct ItemProps in Item as ItemProps {
             name: Cow<'static, str> = Cow::Borrowed(""),
             base_weight: f32 = 0.0,
             weight: f32 = 0.0,
@@ -56,15 +115,12 @@ mod objs {
             cursed: bool = false,
         }
     }
-
-    pub type Item = detached_static_dep_type::Id<ItemProps>;
-    pub type Objs = detached_static_dep_type::Arena<ItemProps>;
 }
 
 mod behavior {
     use dep_obj::binding::Binding3;
     use dyn_context::state::State;
-    use crate::objs::*;
+    use crate::items::*;
 
     pub fn item(state: &mut dyn State, item: Item) {
         let weight = Binding3::new(state, (), |(), base_weight, cursed, equipped| Some(
@@ -77,9 +133,9 @@ mod behavior {
     }
 }
 
-use dep_obj::binding::{Bindings};
-use dyn_context::state::{State, StateRefMut};
-use objs::*;
+use dep_obj::binding::Bindings;
+use dyn_context::state::{Stop, State, StateRefMut};
+use items::*;
 
 fn run(state: &mut dyn State) {
     let item = Item::new(state, behavior::item);
@@ -87,14 +143,13 @@ fn run(state: &mut dyn State) {
     ItemProps::CURSED.set(state, item, true).immediate();
     ItemProps::EQUIPPED.set(state, item, true).immediate();
     ItemProps::CURSED.set(state, item, false).immediate();
-    item.drop_self(state);
 }
 
 #[start]
 pub fn main(_argc: isize, _argv: *const *const u8) -> isize {
-    (&mut Objs::new()).merge_mut_and_then(|state| {
+    (&mut Items::new()).merge_mut_and_then(|state| {
         run(state);
-        Objs::drop_self(state);
+        Items::stop(state);
     }, &mut Bindings::new());
     0
 }
