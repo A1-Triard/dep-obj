@@ -6,7 +6,7 @@
 
 mod items {
     use components_arena::{Arena, Component, ComponentStop, NewtypeComponentId, Id, with_arena_newtype};
-    use dep_obj::{DetachedDepObjId, GenericBuilder, dep_obj, dep_type, with_builder};
+    use dep_obj::{DetachedDepObjId, GenericBuilder, dep_type, impl_dep_obj, with_builder};
     use dyn_context::NewtypeStop;
     use dyn_context::state::{SelfState, State, StateExt};
     use macro_attr_2018::macro_attr;
@@ -16,19 +16,6 @@ mod items {
         #[derive(Debug, Component!(stop=ItemStop))]
         struct ItemComponent {
             props: ItemProps,
-        }
-    }
-
-    macro_attr! {
-        #[derive(NewtypeStop!)]
-        pub struct Items(Arena<ItemComponent>);
-    }
-
-    impl SelfState for Items { }
-
-    impl Items {
-        pub fn new() -> Items {
-            Items(Arena::new())
         }
     }
 
@@ -47,19 +34,6 @@ mod items {
 
     impl DetachedDepObjId for Item { }
 
-    dep_type! {
-        #[derive(Debug)]
-        pub struct ItemProps in Item as ItemProps {
-            name: Cow<'static, str> = Cow::Borrowed(""),
-            base_weight: f32 = 0.0,
-            weight: f32 = 0.0,
-            equipped: bool = false,
-            cursed: bool = false,
-        }
-
-        type BaseBuilder<'a> = GenericBuilder<'a, Item>;
-    }
-
     impl Item {
         pub fn new(state: &mut dyn State, init: impl FnOnce(&mut dyn State, Item)) -> Item {
             let items: &mut Items = state.get_mut();
@@ -77,16 +51,34 @@ mod items {
         with_builder!(ItemPropsBuilder<'b>);
     }
 
-    dep_obj! {
-        impl Item {
-            ItemProps => fn(self as this, items: Items) -> (ItemProps) {
-                if mut {
-                    &mut items.0[this.0].props
-                } else {
-                    &items.0[this.0].props
-                }
-            }
+    impl_dep_obj!(Item {
+        type ItemProps as ItemProps { Items | .props },
+    });
+
+    macro_attr! {
+        #[derive(Debug, NewtypeStop!)]
+        pub struct Items(Arena<ItemComponent>);
+    }
+
+    impl SelfState for Items { }
+
+    impl Items {
+        pub fn new() -> Items {
+            Items(Arena::new())
         }
+    }
+
+    dep_type! {
+        #[derive(Debug)]
+        pub struct ItemProps in Item as ItemProps {
+            name: Cow<'static, str> = Cow::Borrowed(""),
+            base_weight: f32 = 0.0,
+            weight: f32 = 0.0,
+            equipped: bool = false,
+            cursed: bool = false,
+        }
+
+        type BaseBuilder<'a> = GenericBuilder<'a, Item>;
     }
 }
 
