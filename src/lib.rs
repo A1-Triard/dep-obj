@@ -24,7 +24,7 @@ pub mod binding;
 
 #[cfg(docsrs)]
 pub mod example {
-    //! The [`dep_type`], [`dep_obj`] / [`impl_dep_obj`], and [`with_builder`]
+    //! The [`dep_type`], [`dep_obj`](crate::dep_obj) / [`impl_dep_obj`], and [`with_builder`]
     //! macro expansion example.
     //!
     //! ```ignore
