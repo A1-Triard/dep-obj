@@ -7,7 +7,7 @@
 mod items {
     use components_arena::{Arena, Component, ComponentStop, NewtypeComponentId, Id, with_arena_in_state_part};
     use dep_obj::{DetachedDepObjId, dep_type, impl_dep_obj};
-    use dyn_context::NewtypeStop;
+    use dyn_context::Stop;
     use dyn_context::state::{SelfState, State, StateExt};
     use macro_attr_2018::macro_attr;
     use std::borrow::Cow;
@@ -53,10 +53,8 @@ mod items {
         type ItemProps as ItemProps { Items | .props },
     });
 
-    macro_attr! {
-        #[derive(Debug, NewtypeStop!)]
-        pub struct Items(Arena<ItemComponent>);
-    }
+    #[derive(Debug, Stop)]
+    pub struct Items(Arena<ItemComponent>);
 
     impl SelfState for Items { }
 

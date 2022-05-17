@@ -199,10 +199,8 @@ The `Arena` implements special trait, `Stop`, that is an analogue of `Drop` with
 `State` parameter. Out wrap `Items`, however, does not implement it. Lets fix it:
 
 ```rust
-macro_attr! {
-    #[derive(Debug, NewtypeStop!)]
-    pub struct Items(Arena<ItemComponent>);
-}
+#[derive(Debug, Stop)]
+pub struct Items(Arena<ItemComponent>);
 ```
 
 A thing, we want `Item::stop` function to do, is call `drop_bindings_priv` for
@@ -223,7 +221,7 @@ So lets implement it:
 
 ```rust
 impl ComponentStop for ItemStop {
-    with_arena_newtype!(Items);
+    with_arena_in_state_part!(Items);
 
     fn stop(&self, state: &mut dyn State, id: Id<ItemComponent>) {
         Item(id).drop_bindings_priv(state);
@@ -231,16 +229,16 @@ impl ComponentStop for ItemStop {
 }
 ```
 
-Thanks to the `with_arena_newtype` macro, the only function we were need
+Thanks to the `with_arena_in_state_part` macro, the only function we were need
 to implement manually is `stop`.
 
 The final version of `mod items`:
 
 ```rust
 mod items {
-    use components_arena::{Arena, Component, ComponentStop, NewtypeComponentId, Id, with_arena_newtype};
+    use components_arena::{Arena, Component, ComponentStop, NewtypeComponentId, Id, with_arena_in_state_part};
     use dep_obj::{DetachedDepObjId, dep_type, impl_dep_obj};
-    use dyn_context::NewtypeStop;
+    use dyn_context::Stop;
     use dyn_context::state::{SelfState, State, StateExt};
     use macro_attr_2018::macro_attr;
     use std::borrow::Cow;
@@ -253,7 +251,7 @@ mod items {
     }
 
     impl ComponentStop for ItemStop {
-        with_arena_newtype!(Items);
+        with_arena_in_state_part!(Items);
 
         fn stop(&self, state: &mut dyn State, id: Id<ItemComponent>) {
             Item(id).drop_bindings_priv(state);
@@ -284,10 +282,8 @@ mod items {
         type ItemProps as ItemProps { Items | .props },
     });
 
-    macro_attr! {
-        #[derive(Debug, NewtypeStop!)]
-        pub struct Items(Arena<ItemComponent>);
-    }
+    #[derive(Debug, Stop)]
+    pub struct Items(Arena<ItemComponent>);
 
     impl SelfState for Items { }
 
