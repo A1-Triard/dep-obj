@@ -379,7 +379,7 @@ fn run(state: &mut dyn State) {
 
 And the really last thing to do: construct `State` instance and call `run`.
 Our system requires `State` containing `Items` and special arena for bindings.
-It can be easily reached with `merge_mut_and_then` method, combining two
+It can be easily achieved with `merge_mut_and_then` method, combining two
 state objects into a single one. And, of course, we should not forget to
 call `Items::stop` at the end:
 
