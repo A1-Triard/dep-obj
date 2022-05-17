@@ -396,4 +396,39 @@ fn main() {
 
 Lets add some properties, which are not universal for all `Item`s.
 
-To do it we need to use another library: `downcast-rs`.
+To do it we need to use another library: [`downcast-rs`](https://crates.io/crates/downcast-rs).
+Using this crate, lets define base trait for extended properties dependency type:
+
+```rust
+pub enum ItemObjKey { }
+
+pub trait ItemObj: Downcast + DepType<Id=Item, DepObjKey=ItemObjKey> { }
+
+impl_downcast!(ItemObj);
+```
+
+We need a new field in the component:
+
+```rust
+macro_attr! {
+    #[derive(Debug, Component!(stop=ItemStop))]
+    struct ItemComponent {
+        props: ItemProps,
+        obj: Box<dyn ItemObj>,
+    }
+}
+```
+
+Modfied `Item` constructor:
+
+```rust
+pub fn new(state: &mut dyn State, obj: Box<dyn ItemObj>, init: impl FnOnce(&mut dyn State, Item)) -> Item {
+    let items: &mut Items = state.get_mut();
+    let item = items.0.insert(|id| (ItemComponent {
+        props: ItemProps::new_priv(),
+        obj
+    }, Item(id)));
+    init(state, item);
+    item
+}
+```

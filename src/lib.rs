@@ -3768,7 +3768,7 @@ macro_rules! impl_dep_obj_impl {
         $crate::impl_dep_obj_impl! {
             @objs
             [$($g)*] [$($r)*] [$($w)*] [$Id]
-            [$($ty:tt)* [[$Obj] [$Key] [$StatePart] [.0] [$($access)*]]] [$($opt_ty:tt)*] [$($tr:tt)*] [$($opt_tr:tt)*]
+            [$($ty)* [[$Obj] [$Key] [$StatePart] [.0] [$($access)*]]] [$($opt_ty)*] [$($tr)*] [$($opt_tr)*]
             [$($tail)*]
         }
     };
@@ -3781,7 +3781,7 @@ macro_rules! impl_dep_obj_impl {
         $crate::impl_dep_obj_impl! {
             @objs
             [$($g)*] [$($r)*] [$($w)*] [$Id]
-            [$($ty:tt)* [[$Obj] [$Key] [$StatePart] [. $state_part_field] [$($access)*]]] [$($opt_ty:tt)*] [$($tr:tt)*] [$($opt_tr:tt)*]
+            [$($ty)* [[$Obj] [$Key] [$StatePart] [. $state_part_field] [$($access)*]]] [$($opt_ty)*] [$($tr)*] [$($opt_tr)*]
             [$($tail)*]
         }
     };
@@ -3794,7 +3794,7 @@ macro_rules! impl_dep_obj_impl {
         $crate::impl_dep_obj_impl! {
             @objs
             [$($g)*] [$($r)*] [$($w)*] [$Id]
-            [$($ty:tt)*] [$($opt_ty:tt)* [[$Obj] [$Key] [$StatePart] [.0] [$($access)*]]] [$($tr:tt)*] [$($opt_tr:tt)*]
+            [$($ty)*] [$($opt_ty)* [[$Obj] [$Key] [$StatePart] [.0] [$($access)*]]] [$($tr)*] [$($opt_tr)*]
             [$($tail)*]
         }
     };
@@ -3807,7 +3807,7 @@ macro_rules! impl_dep_obj_impl {
         $crate::impl_dep_obj_impl! {
             @objs
             [$($g)*] [$($r)*] [$($w)*] [$Id]
-            [$($ty:tt)*] [$($opt_ty:tt)* [[$Obj] [$Key] [$StatePart] [. $state_part_field] [$($access)*]]] [$($tr:tt)*] [$($opt_tr:tt)*]
+            [$($ty)*] [$($opt_ty)* [[$Obj] [$Key] [$StatePart] [. $state_part_field] [$($access)*]]] [$($tr)*] [$($opt_tr)*]
             [$($tail)*]
         }
     };
@@ -3820,7 +3820,7 @@ macro_rules! impl_dep_obj_impl {
         $crate::impl_dep_obj_impl! {
             @objs
             [$($g)*] [$($r)*] [$($w)*] [$Id]
-            [$($ty:tt)*] [$($opt_ty:tt)*] [$($tr:tt)* [[$Obj] [$Key] [$StatePart] [.0] [$($access)*]]] [$($opt_tr:tt)*]
+            [$($ty)*] [$($opt_ty)*] [$($tr)* [[$Obj] [$Key] [$StatePart] [.0] [$($access)*]]] [$($opt_tr)*]
             [$($tail)*]
         }
     };
@@ -3833,7 +3833,7 @@ macro_rules! impl_dep_obj_impl {
         $crate::impl_dep_obj_impl! {
             @objs
             [$($g)*] [$($r)*] [$($w)*] [$Id]
-            [$($ty:tt)*] [$($opt_ty:tt)*] [$($tr:tt)* [[$Obj] [$Key] [$StatePart] [. $state_part_field] [$($access)*]]] [$($opt_tr:tt)*]
+            [$($ty)*] [$($opt_ty)*] [$($tr)* [[$Obj] [$Key] [$StatePart] [. $state_part_field] [$($access)*]]] [$($opt_tr)*]
             [$($tail)*]
         }
     };
@@ -3846,7 +3846,7 @@ macro_rules! impl_dep_obj_impl {
         $crate::impl_dep_obj_impl! {
             @objs
             [$($g)*] [$($r)*] [$($w)*] [$Id]
-            [$($ty:tt)*] [$($opt_ty:tt)*] [$($tr:tt)*] [$($opt_tr:tt)* [[$Obj] [$Key] [$StatePart] [.0] [$($access)*]]]
+            [$($ty)*] [$($opt_ty)*] [$($tr)*] [$($opt_tr)* [[$Obj] [$Key] [$StatePart] [.0] [$($access)*]]]
             [$($tail)*]
         }
     };
@@ -3859,7 +3859,7 @@ macro_rules! impl_dep_obj_impl {
         $crate::impl_dep_obj_impl! {
             @objs
             [$($g)*] [$($r)*] [$($w)*] [$Id]
-            [$($ty:tt)*] [$($opt_ty:tt)*] [$($tr:tt)*] [$($opt_tr:tt)* [[$Obj] [$Key] [$StatePart] [. $state_part_field] [$($access)*]]]
+            [$($ty)*] [$($opt_ty)*] [$($tr)*] [$($opt_tr)* [[$Obj] [$Key] [$StatePart] [. $state_part_field] [$($access)*]]]
             [$($tail)*]
         }
     };
@@ -3868,8 +3868,8 @@ macro_rules! impl_dep_obj_impl {
         [$($g:tt)*] [$($r:tt)*] [$($w:tt)*] [$Id:ty]
         [$([[$ty_Obj:ty] [$ty_Key:ty] [$ty_StatePart:ty] [$($ty_state_part_field:tt)*] [$($ty_access:tt)*]])*]
         [$([[$opt_ty_Obj:ty] [$opt_ty_Key:ty] [$opt_ty_StatePart:ty] [$($opt_ty_state_part_field:tt)*] [$($opt_ty_access:tt)*]])*]
-        [$([[$tr_Obj:ty] [$tr_Key:ty] [$tr_StatePart:ty] [$($tr_state_part_field:tt)*] [$($tr_access:tt)*]])*]
-        [$([[$opt_tr_Obj:ty] [$opt_tr_Key:ty] [$opt_tr_StatePart:ty] [$($opt_tr_state_part_field:tt)*] [$($opt_tr_access:tt)*]])*]
+        [$([[$tr_Obj:path] [$tr_Key:ty] [$tr_StatePart:ty] [$($tr_state_part_field:tt)*] [$($tr_access:tt)*]])*]
+        [$([[$opt_tr_Obj:path] [$opt_tr_Key:ty] [$opt_tr_StatePart:ty] [$($opt_tr_state_part_field:tt)*] [$($opt_tr_access:tt)*]])*]
         [$(,)?]
     ) => {
         $crate::dep_obj! {
@@ -3881,7 +3881,7 @@ macro_rules! impl_dep_obj_impl {
                         } else {
                             &state_part $($ty_state_part_field)* [this.0] $($ty_access)*
                         }
-                    }
+                    },
                 )*
                 $(
                     $opt_ty_Key => fn(self as this, state_part: $opt_ty_StatePart) -> optional($opt_ty_Obj) {
@@ -3890,7 +3890,7 @@ macro_rules! impl_dep_obj_impl {
                         } else {
                             state_part $($opt_ty_state_part_field)* [this.0] $($opt_ty_access)* .as_ref()
                         }
-                    }
+                    },
                 )*
                 $(
                     $tr_Key => fn(self as this, state_part: $tr_StatePart) -> dyn($tr_Obj) {
@@ -3899,7 +3899,7 @@ macro_rules! impl_dep_obj_impl {
                         } else {
                             state_part $($tr_state_part_field)* [this.0] $($tr_access)* .as_ref()
                         }
-                    }
+                    },
                 )*
                 $(
                     $opt_tr_Key => fn(self as this, state_part: $opt_tr_StatePart) -> optional dyn($opt_tr_Obj) {
@@ -3908,7 +3908,7 @@ macro_rules! impl_dep_obj_impl {
                         } else {
                             state_part $($opt_tr_state_part_field)* [this.0] $($opt_tr_access)* .as_ref().as_ref()
                         }
-                    }
+                    },
                 )*
             }
         }
@@ -3919,12 +3919,12 @@ macro_rules! impl_dep_obj_impl {
         [$($ty:tt)*] [$($opt_ty:tt)*] [$($tr:tt)*] [$($opt_tr:tt)*]
         [, $($token:tt)* ]
     ) => {
-        $crate::std_compile_error!($crate::indoc_indoc!("
+        $crate::std_compile_error!($crate::std_concat!($crate::indoc_indoc!("
             invalid dep obj accessing function definition, allowed form is
 
             $(optional)? $(type $ty:ty | trait $tr:path) as $Key:ty { $StatePart:ty $({ . $state_part_field:ident })? | $($access:tt)* }
 
-        "));
+        "), "but found '", $crate::std_stringify!($($token)*), "'."));
     };
     (
         @objs
