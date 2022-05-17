@@ -419,10 +419,14 @@ macro_attr! {
 }
 ```
 
-Modfied `Item` constructor:
+Modified `Item` constructor:
 
 ```rust
-pub fn new(state: &mut dyn State, obj: Box<dyn ItemObj>, init: impl FnOnce(&mut dyn State, Item)) -> Item {
+pub fn new(
+    state: &mut dyn State,
+    obj: Box<dyn ItemObj>,
+    init: impl FnOnce(&mut dyn State, Item)
+) -> Item {
     let items: &mut Items = state.get_mut();
     let item = items.0.insert(|id| (ItemComponent {
         props: ItemProps::new_priv(),
@@ -431,4 +435,14 @@ pub fn new(state: &mut dyn State, obj: Box<dyn ItemObj>, init: impl FnOnce(&mut 
     init(state, item);
     item
 }
+```
+
+And the way to access an object (`impl_dep_obj` handles
+all dirty work including downcasting):
+
+```rust
+impl_dep_obj!(Item {
+    type ItemProps as ItemProps { Items | .props },
+    trait ItemObj as ItemObjKey { Items | .obj },
+});
 ```
