@@ -10,9 +10,8 @@ use dep_obj::{Change, DepObjId, DepVecItemPos, DetachedDepObjId, GenericBuilder,
 use dep_obj::{dep_type, impl_dep_obj, with_builder};
 use macro_attr_2018::macro_attr;
 use dep_obj::binding::{Binding1, Binding2, BindingExt2, Bindings, Re};
-use dyn_context::Stop;
+use dyn_context::{State, Stop};
 use dyn_context::state::{State, StateExt, Stop};
-use std::any::{TypeId, Any};
 use std::borrow::Cow;
 use std::fmt::Write;
 
@@ -140,37 +139,16 @@ impl_dep_obj!(Npc {
     type NpcProps as NpcProps { Game { .npcs } | .props }
 });
 
-#[derive(Stop)]
-#[stop(explicit)]
+#[derive(State, Stop)]
+#[state(part)]
 struct Game {
     #[stop]
     items: Arena<ItemComponent>,
     #[stop]
     npcs: Arena<NpcComponent>,
+    #[state(part)]
     bindings: Bindings,
     log: String,
-}
-
-impl State for Game {
-    fn get_raw(&self, ty: TypeId) -> Option<&dyn Any> {
-        if ty == TypeId::of::<Game>() {
-            Some(self)
-        } else if ty == TypeId::of::<Bindings>() {
-            Some(&self.bindings)
-        } else {
-            None
-        }
-    }
-
-    fn get_mut_raw(&mut self, ty: TypeId) -> Option<&mut dyn Any> {
-        if ty == TypeId::of::<Game>() {
-            Some(self)
-        } else if ty == TypeId::of::<Bindings>() {
-            Some(&mut self.bindings)
-        } else {
-            None
-        }
-    }
 }
 
 impl Game {
