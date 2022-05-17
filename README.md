@@ -446,3 +446,29 @@ impl_dep_obj!(Item {
     trait ItemObj as ItemObjKey { Items | .obj },
 });
 ```
+
+Base part is done, and we are ready to code `ItemObj` specific variants:
+
+```rust
+mod weapon {
+    use dep_obj::dep_type;
+    use dyn_context::state::State;
+    use crate::items::*;
+
+    dep_type! {
+        #[derive(Debug)]
+        pub struct Weapon in Item as ItemObjKey {
+            base_damage: f32 = 0.0,
+            damage: f32 = 0.0,
+        }
+    }
+
+    impl ItemObj for Weapon { }
+
+    impl Weapon {
+        pub fn new(state: &mut dyn State, init: impl FnOnce(&mut dyn State, Item)) -> Item {
+            Item::new(state, Box::new(Self::new_priv()), init)
+        }
+    }
+}
+```
