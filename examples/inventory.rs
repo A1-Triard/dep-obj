@@ -5,11 +5,12 @@
 #![deny(warnings)]
 #![allow(dead_code)]
 
-use components_arena::{Arena, Component, NewtypeComponentId, Id};
+use components_arena::{Arena, Component, ComponentStop, NewtypeComponentId, Id, with_arena_in_state_part};
 use dep_obj::{Change, DepObjId, DepVecItemPos, DetachedDepObjId, GenericBuilder, ItemChange};
 use dep_obj::{dep_type, impl_dep_obj, with_builder};
 use macro_attr_2018::macro_attr;
 use dep_obj::binding::{Binding1, Binding2, BindingExt2, Bindings, Re};
+use dyn_context::Stop;
 use dyn_context::state::{State, StateExt, Stop};
 use std::any::{TypeId, Any};
 use std::borrow::Cow;
@@ -23,7 +24,11 @@ macro_attr! {
 }
 
 impl ComponentStop for ItemStop {
-    with_arena_n
+    with_arena_in_state_part!(Game { .items });
+
+    fn stop(&self, state: &mut dyn State, id: Id<ItemComponent>) {
+        Item(id).drop_bindings_priv(state);
+    }
 }
 
 macro_attr! {
@@ -64,9 +69,17 @@ impl_dep_obj!(Item {
 });
 
 macro_attr! {
-    #[derive(Debug, Component!)]
+    #[derive(Debug, Component!(stop=NpcStop))]
     struct NpcComponent {
         props: NpcProps,
+    }
+}
+
+impl ComponentStop for NpcStop {
+    with_arena_in_state_part!(Game { .npcs });
+
+    fn stop(&self, state: &mut dyn State, id: Id<NpcComponent>) {
+        Npc(id).drop_bindings_priv(state);
     }
 }
 
@@ -127,8 +140,12 @@ impl_dep_obj!(Npc {
     type NpcProps as NpcProps { Game { .npcs } | .props }
 });
 
+#[derive(Stop)]
+#[stop(explicit)]
 struct Game {
+    #[stop]
     items: Arena<ItemComponent>,
+    #[stop]
     npcs: Arena<NpcComponent>,
     bindings: Bindings,
     log: String,
@@ -153,17 +170,6 @@ impl State for Game {
         } else {
             None
         }
-    }
-}
-
-impl Stop for Game {
-    fn is_stopped(&self) -> bool {
-        self.items.is_stopped() && self.npcs.is_stopped()
-    }
-
-    fn stop(state: &mut dyn State) {
-        <Arena<ItemComponent>>::stop(state);
-        <Arena<NpcComponent>>::stop(state);
     }
 }
 
@@ -215,9 +221,9 @@ fn main() {
     NpcProps::ITEMS_ENHANCEMENT.set(game, npc, 4).immediate();
     NpcProps::EQUIPPED_ITEMS.remove(game, npc, DepVecItemPos::FirstItem).immediate();
     NpcProps::ITEMS_ENHANCEMENT.set(game, npc, 5).immediate();
-    npc.drop_self(game);
-    sword.drop_self(game);
-    shield.drop_self(game);
+
+    Game::stop(game);
+
     print!("{}", game.log);
     assert_eq!(game.log, "\
         Sword equipped.\n\
