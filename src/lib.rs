@@ -35,9 +35,17 @@ pub mod example {
     //! }
     //!
     //! macro_attr! {
-    //!     #[derive(Component!, Debug)]
+    //!     #[derive(Component!(stop=MyDepTypeStop), Debug)]
     //!     struct MyDepTypePrivateData {
     //!         dep_data: MyDepType,
+    //!     }
+    //! }
+    //!
+    //! impl ComponentStop for MyDepTypeStop {
+    //!     with_arena_in_state_part!(MyApp { .my_dep_types });
+    //!
+    //!     fn stop(&self, state: &mut dyn State, id: Id<MyDepTypePrivateData>) {
+    //!         MyDepTypeId(id).drop_bindings_priv(state);
     //!     }
     //! }
     //!
@@ -48,11 +56,9 @@ pub mod example {
     //!
     //! impl DetachedDepObjId for MyDepTypeId { }
     //!
-    //! macro_attr! {
-    //!     #[derive(State!, Debug)]
-    //!     pub struct MyApp {
-    //!         my_dep_types: Arena<MyDepTypePrivateData>,
-    //!     }
+    //! #[derive(Debug, Stop)]
+    //! pub struct MyApp {
+    //!     my_dep_types: Arena<MyDepTypePrivateData>,
     //! }
     //!
     //! impl MyDepTypeId {
@@ -70,6 +76,12 @@ pub mod example {
     //!     }
     //! }
     //!
+    //! impl_dep_obj!(MyDepTypeId {
+    //!     type MyDepType as MyDepType { MyApp { .my_dep_types } | .dep_data }
+    //! });
+    //!
+    //! // OR equvalent `dep_obj!` call:
+    //!
     //! dep_obj! {
     //!     impl MyDepTypeId {
     //!         pub fn obj(self as this, app: MyApp) -> (MyDepType) {
@@ -81,9 +93,11 @@ pub mod example {
     //!         }
     //!     }
     //! }
+    //! ```
 
-    use crate::{DetachedDepObjId, dep_obj, dep_type};
-    use components_arena::{Arena, Component, Id, NewtypeComponentId};
+    use crate::{DetachedDepObjId, impl_dep_obj, dep_type};
+    use components_arena::{Arena, Component, ComponentStop, Id, NewtypeComponentId, with_arena_in_state_part};
+    use dyn_context::Stop;
     use dyn_context::state::{SelfState, State, StateExt};
 
     dep_type! {
@@ -99,7 +113,15 @@ pub mod example {
         dep_data: MyDepType,
     }
 
-    Component!(() struct MyDepTypePrivateData { .. });
+    Component!((stop=MyDepTypeStop) struct MyDepTypePrivateData { .. });
+
+    impl ComponentStop for MyDepTypeStop {
+        with_arena_in_state_part!(MyApp { .my_dep_types });
+
+        fn stop(&self, state: &mut dyn State, id: Id<MyDepTypePrivateData>) {
+            MyDepTypeId(id).drop_bindings_priv(state);
+        }
+    }
 
     #[derive(Debug, Copy, Clone, Eq, PartialEq, Hash, Ord, PartialOrd)]
     pub struct MyDepTypeId(Id<MyDepTypePrivateData>);
@@ -108,7 +130,7 @@ pub mod example {
 
     impl DetachedDepObjId for MyDepTypeId { }
 
-    #[derive(Debug)]
+    #[derive(Debug, Stop)]
     pub struct MyApp {
         my_dep_types: Arena<MyDepTypePrivateData>,
     }
@@ -123,24 +145,16 @@ pub mod example {
             }, MyDepTypeId(id)))
         }
 
-        pub fn drop_my_dep_type(self, state: &mut dyn State) {
+        pub fn drop_self(self, state: &mut dyn State) {
             self.drop_bindings_priv(state);
             let app: &mut MyApp = state.get_mut();
             app.my_dep_types.remove(self.0);
         }
     }
 
-    dep_obj! {
-        impl MyDepTypeId {
-            MyDepType => fn(self as this, app: MyApp) -> (MyDepType) {
-                if mut {
-                    &mut app.my_dep_types[this.0].dep_data
-                } else {
-                    &app.my_dep_types[this.0].dep_data
-                }
-            }
-        }
-    }
+    impl_dep_obj!(MyDepTypeId {
+        type MyDepType as MyDepType { MyApp { .my_dep_types } | .dep_data }
+    });
 }
 
 #[doc(hidden)]
