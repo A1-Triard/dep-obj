@@ -8,6 +8,7 @@
 #![doc(test(attr(deny(warnings))))]
 #![doc(test(attr(allow(dead_code))))]
 #![doc(test(attr(allow(unused_variables))))]
+
 #![allow(clippy::collapsible_else_if)]
 #![allow(clippy::option_map_unit_fn)]
 #![allow(clippy::type_complexity)]
@@ -23,7 +24,8 @@ pub mod binding;
 
 #[cfg(docsrs)]
 pub mod example {
-    //! The [`dep_type`] and [`dep_obj`] macro expansion example.
+    //! The [`dep_type`], [`dep_obj`] / [`impl_dep_obj`], and [`with_builder`]
+    //! macro expansion example.
     //!
     //! ```ignore
     //! dep_type! {
@@ -32,6 +34,8 @@ pub mod example {
     //!         prop_1: bool = false,
     //!         prop_2: i32 = 10,
     //!     }
+    //!
+    //!     type BaseBuilder<'a> = GenericBuilder<'a, MyDepTypeId>;
     //! }
     //!
     //! macro_attr! {
@@ -69,11 +73,13 @@ pub mod example {
     //!         }, MyDepTypeId(id)))
     //!     }
     //!
-    //!     pub fn drop_my_dep_type(self, state: &mut dyn State) {
+    //!     pub fn drop_self(self, state: &mut dyn State) {
     //!         self.drop_bindings_priv(state);
     //!         let app: &mut MyApp = state.get_mut();
     //!         app.my_dep_types.remove(self.0);
     //!     }
+    //!
+    //!     with_builder!(MyDepTypeBuilder<'b>);
     //! }
     //!
     //! impl_dep_obj!(MyDepTypeId {
@@ -95,7 +101,7 @@ pub mod example {
     //! }
     //! ```
 
-    use crate::{DetachedDepObjId, impl_dep_obj, dep_type};
+    use crate::{DetachedDepObjId, GenericBuilder, impl_dep_obj, dep_type, with_builder};
     use components_arena::{Arena, Component, ComponentStop, Id, NewtypeComponentId, with_arena_in_state_part};
     use dyn_context::Stop;
     use dyn_context::state::{SelfState, State, StateExt};
@@ -106,6 +112,8 @@ pub mod example {
             prop_1: bool = false,
             prop_2: i32 = 10,
         }
+
+        type BaseBuilder<'a> = GenericBuilder<'a, MyDepTypeId>;
     }
 
     #[derive(Debug)]
@@ -150,6 +158,8 @@ pub mod example {
             let app: &mut MyApp = state.get_mut();
             app.my_dep_types.remove(self.0);
         }
+
+        with_builder!(MyDepTypeBuilder<'b>);
     }
 
     impl_dep_obj!(MyDepTypeId {
