@@ -15,11 +15,11 @@ use phantom_type::PhantomType;
 #[derive(Educe)]
 #[educe(Debug)]
 struct ParamDescriptor<Obj> {
-    arena: TypeId,
+    state_part: TypeId,
     #[educe(Debug(ignore))]
-    get_raw: fn(arena: &dyn Any, id: RawId) -> &Obj,
+    get_raw: fn(state_part: &dyn Any, id: RawId) -> &Obj,
     #[educe(Debug(ignore))]
-    get_raw_mut: fn(arena: &mut dyn Any, id: RawId) -> &mut Obj
+    get_raw_mut: fn(state_part: &mut dyn Any, id: RawId) -> &mut Obj
 }
 
 #[derive(Educe)]
@@ -30,7 +30,7 @@ pub struct Param<Obj: 'static> {
 }
 
 pub struct ParamRef<'a, Obj: 'static> {
-    arena: &'a dyn Any,
+    state_part: &'a dyn Any,
     param: Param<Obj>,
 }
 
@@ -38,12 +38,12 @@ impl<'a, Obj> Deref for ParamRef<'a, Obj> {
     type Target = Obj;
 
     fn deref(&self) -> &Obj {
-        (self.param.descriptor.get_raw)(self.arena.deref(), self.param.id)
+        (self.param.descriptor.get_raw)(self.state_part.deref(), self.param.id)
     }
 }
 
 pub struct ParamMut<'a, Obj: 'static> {
-    arena: &'a mut dyn Any,
+    state_part: &'a mut dyn Any,
     param: Param<Obj>,
 }
 
@@ -51,29 +51,29 @@ impl<'a, Obj> Deref for ParamMut<'a, Obj> {
     type Target = Obj;
 
     fn deref(&self) -> &Obj {
-        (self.param.descriptor.get_raw)(self.arena.deref(), self.param.id)
+        (self.param.descriptor.get_raw)(self.state_part.deref(), self.param.id)
     }
 }
 
 impl<'a, Obj> DerefMut for ParamMut<'a, Obj> {
     fn deref_mut(&mut self) -> &mut Obj {
-        (self.param.descriptor.get_raw_mut)(self.arena.deref_mut(), self.param.id)
+        (self.param.descriptor.get_raw_mut)(self.state_part.deref_mut(), self.param.id)
     }
 }
 
 impl<Obj> Param<Obj> {
     pub fn get(self, state: &dyn State) -> ParamRef<Obj> {
-        let arena = self.descriptor.arena;
+        let state_part = self.descriptor.state_part;
         ParamRef {
-            arena: state.get_raw(arena).unwrap_or_else(|| panic!("{:?} required", arena)),
+            state_part: state.get_raw(state_part).unwrap_or_else(|| panic!("{:?} required", state_part)),
             param: self
         }
     }
 
     pub fn get_mut(self, state: &mut dyn State) -> ParamMut<Obj> {
-        let arena = self.descriptor.arena;
+        let state_part = self.descriptor.state_part;
         ParamMut {
-            arena: state.get_mut_raw(arena).unwrap_or_else(|| panic!("{:?} required", arena)),
+            state_part: state.get_mut_raw(state_part).unwrap_or_else(|| panic!("{:?} required", state_part)),
             param: self
         }
     }
@@ -521,15 +521,15 @@ macro_rules! binding_n {
                     [< BindingExt $n >] (id, PhantomType::new())
                 }
 
-                fn param_ref(arena: &dyn Any, id: RawId) -> &P {
-                    let bindings = arena.downcast_ref::<Bindings>().unwrap();
+                fn param_ref(state_part: &dyn Any, id: RawId) -> &P {
+                    let bindings = state_part.downcast_ref::<Bindings>().unwrap();
                     let node = bindings.0[Id::from_raw(id)].0.downcast_ref::<BindingNode<T>>().unwrap();
                     let sources = node.sources.downcast_ref::< [< BindingExt $n NodeSources >] <P, $( [< S $i >] ,)* T>>().unwrap();
                     &sources.param
                 }
 
-                fn param_mut(arena: &mut dyn Any, id: RawId) -> &mut P {
-                    let bindings = arena.downcast_mut::<Bindings>().unwrap();
+                fn param_mut(state_part: &mut dyn Any, id: RawId) -> &mut P {
+                    let bindings = state_part.downcast_mut::<Bindings>().unwrap();
                     let node = bindings.0[Id::from_raw(id)].0.downcast_mut::<BindingNode<T>>().unwrap();
                     let sources = node.sources.downcast_mut::< [< BindingExt $n NodeSources >] <P, $( [< S $i >] ,)* T>>().unwrap();
                     &mut sources.param
@@ -537,7 +537,7 @@ macro_rules! binding_n {
 
                 #[allow(dead_code)]
                 const PARAM_DESCRIPTOR: ParamDescriptor<P> = ParamDescriptor {
-                    arena: TypeId::of::<Bindings>(),
+                    state_part: TypeId::of::<Bindings>(),
                     get_raw: Self::param_ref,
                     get_raw_mut: Self::param_mut,
                 };
