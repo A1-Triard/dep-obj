@@ -9,7 +9,7 @@ mod circuit {
     use components_arena::{Arena, Component, ComponentStop, Id, NewtypeComponentId, with_arena_in_state_part};
     use dep_obj::{DetachedDepObjId, DepType, impl_dep_obj};
     use downcast_rs::{Downcast, impl_downcast};
-    use dyn_context::NewtypeStop;
+    use dyn_context::Stop;
     use dyn_context::state::{SelfState, State, StateExt};
     use macro_attr_2018::macro_attr;
 
@@ -64,10 +64,8 @@ mod circuit {
 
     impl DetachedDepObjId for Chip { }
 
-    macro_attr! {
-        #[derive(Debug, NewtypeStop!)]
-        pub struct Circuit(Arena<ChipNode>);
-    }
+    #[derive(Debug, Stop)]
+    pub struct Circuit(Arena<ChipNode>);
 
     impl SelfState for Circuit { }
 
@@ -135,11 +133,10 @@ mod not_chip {
 use circuit::*;
 use dep_obj::{Change, DepObjId};
 use dep_obj::binding::{Binding1, Bindings};
-use dyn_context::Stop;
-use dyn_context::state::{Stop, State, StateExt, StateRefMut};
+use dyn_context::{State, Stop};
+use dyn_context::state::{Stop, StateExt, StateRefMut};
 use not_chip::*;
 use or_chip::*;
-use std::any::{Any, TypeId};
 use std::fmt::Write;
 
 #[derive(Debug, Clone)]
@@ -150,42 +147,17 @@ struct TriggerChips {
     pub not_2: Chip,
 }
 
-#[derive(Stop)]
-#[stop(explicit)]
+#[derive(State, Stop)]
+#[state(part)]
 struct TriggerState {
+    #[state(part)]
     bindings: Bindings,
+    #[state(part)]
     #[stop]
     circuit: Circuit,
+    #[state(part)]
     chips: TriggerChips,
     log: String,
-}
-
-impl State for TriggerState {
-    fn get_raw(&self, ty: TypeId) -> Option<&dyn Any> {
-        if ty == TypeId::of::<TriggerState>() {
-            Some(self)
-        } else if ty == TypeId::of::<Bindings>() {
-            Some(&self.bindings)
-        } else if ty == TypeId::of::<Circuit>() {
-            Some(&self.circuit)
-        } else if ty == TypeId::of::<TriggerChips>() {
-            Some(&self.chips)
-        } else {
-            None
-        }
-    }
-
-    fn get_mut_raw(&mut self, ty: TypeId) -> Option<&mut dyn Any> {
-        if ty == TypeId::of::<TriggerState>() {
-            Some(self)
-        } else if ty == TypeId::of::<Bindings>() {
-            Some(&mut self.bindings)
-        } else if ty == TypeId::of::<Circuit>() {
-            Some(&mut self.circuit)
-        } else {
-            None
-        }
-    }
 }
 
 fn main() {
