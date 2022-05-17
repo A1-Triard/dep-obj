@@ -65,8 +65,8 @@ mod items {
     }
 
     impl_dep_obj!(Item {
-        trait ItemObj as ItemObjKey { Items | .obj },
         type ItemProps as ItemProps { Items | .props },
+        trait ItemObj as ItemObjKey { Items | .obj },
     });
 
     #[derive(Debug, Stop)]
@@ -93,6 +93,7 @@ mod items {
 }
 
 mod weapon {
+    use dep_obj::dep_type;
     use dyn_context::state::State;
     use crate::items::*;
 
@@ -143,6 +144,8 @@ fn run(state: &mut dyn State) {
     });
     item.add_binding::<ItemProps, _>(state, weight);
     weight.set_source_1(state, &mut ItemProps::WEIGHT.value_source(item));
+
+    Weapon::DAMAGE.set(state, item, 8.0).immediate();
 
     println!("> item.base_weight = 5.0");
     ItemProps::BASE_WEIGHT.set(state, item, 5.0).immediate();
