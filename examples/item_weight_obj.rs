@@ -100,6 +100,7 @@ mod weapon {
     dep_type! {
         #[derive(Debug)]
         pub struct Weapon in Item as ItemObjKey {
+            base_damage: f32 = 0.0,
             damage: f32 = 0.0,
         }
     }
@@ -117,6 +118,7 @@ mod behavior {
     use dep_obj::binding::Binding3;
     use dyn_context::state::State;
     use crate::items::*;
+    use crate::weapon::*;
 
     pub fn item(state: &mut dyn State, item: Item) {
         let weight = Binding3::new(state, (), |(), base_weight, cursed, equipped| Some(
@@ -126,6 +128,14 @@ mod behavior {
         weight.set_source_1(state, &mut ItemProps::BASE_WEIGHT.value_source(item));
         weight.set_source_2(state, &mut ItemProps::CURSED.value_source(item));
         weight.set_source_3(state, &mut ItemProps::EQUIPPED.value_source(item));
+
+        let damage = Binding3::new(state, (), |(), base_damage, cursed, equipped| Some(
+            if equipped && cursed { base_damage / 2.0 } else { base_damage }
+        ));
+        Weapon::DAMAGE.bind(state, item, damage);
+        damage.set_source_1(state, &mut Weapon::BASE_DAMAGE.value_source(item));
+        damage.set_source_2(state, &mut ItemProps::CURSED.value_source(item));
+        damage.set_source_3(state, &mut ItemProps::EQUIPPED.value_source(item));
     }
 }
 
@@ -145,7 +155,14 @@ fn run(state: &mut dyn State) {
     item.add_binding::<ItemProps, _>(state, weight);
     weight.set_source_1(state, &mut ItemProps::WEIGHT.value_source(item));
 
-    Weapon::DAMAGE.set(state, item, 8.0).immediate();
+    let damage = Binding1::new(state, (), |(), damage| Some(damage));
+    damage.set_target_fn(state, (), |_state, (), damage| {
+        println!("Item damage changed, new damage: {}", damage);
+    });
+    item.add_binding::<Weapon, _>(state, damage);
+    damage.set_source_1(state, &mut Weapon::DAMAGE.value_source(item));
+
+    Weapon::BASE_DAMAGE.set(state, item, 8.0).immediate();
 
     println!("> item.base_weight = 5.0");
     ItemProps::BASE_WEIGHT.set(state, item, 5.0).immediate();
