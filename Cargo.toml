@@ -20,7 +20,7 @@ rustdoc-args = ["--cfg", "docsrs"]
 components-arena = { version = "3.0.0", git = "https://github.com/A1-Triard/components-arena.git", features = ["dyn-context"] }
 downcast-rs = { version = "1.2.0", default-features = false }
 dyn-clone = "1.0.2"
-dyn-context = "0.14.1"
+dyn-context = "0.16.0"
 educe = "0.4.13"
 generics = "0.4.0"
 indoc = "1.0.6"
