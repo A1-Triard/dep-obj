@@ -5,7 +5,7 @@
 #![deny(warnings)]
 
 mod items {
-    use components_arena::{Arena, Component, ComponentStop, NewtypeComponentId, Id, with_arena_newtype};
+    use components_arena::{Arena, Component, ComponentStop, NewtypeComponentId, Id, with_arena_in_state_part};
     use dep_obj::{DetachedDepObjId, dep_type, impl_dep_obj};
     use dyn_context::NewtypeStop;
     use dyn_context::state::{SelfState, State, StateExt};
@@ -20,7 +20,7 @@ mod items {
     }
 
     impl ComponentStop for ItemStop {
-        with_arena_newtype!(Items);
+        with_arena_in_state_part!(Items);
 
         fn stop(&self, state: &mut dyn State, id: Id<ItemComponent>) {
             Item(id).drop_bindings_priv(state);

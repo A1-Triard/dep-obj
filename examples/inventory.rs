@@ -10,21 +10,25 @@ use dep_obj::{Change, DepObjId, DepVecItemPos, DetachedDepObjId, GenericBuilder,
 use dep_obj::{dep_type, impl_dep_obj, with_builder};
 use macro_attr_2018::macro_attr;
 use dep_obj::binding::{Binding1, Binding2, BindingExt2, Bindings, Re};
-use dyn_context::state::{State, StateExt};
+use dyn_context::state::{State, StateExt, Stop};
 use std::any::{TypeId, Any};
 use std::borrow::Cow;
 use std::fmt::Write;
 
 macro_attr! {
-    #[derive(Debug, Component!)]
-    struct ItemData {
+    #[derive(Debug, Component!(stop=ItemStop))]
+    struct ItemComponent {
         props: ItemProps,
     }
 }
 
+impl ComponentStop for ItemStop {
+    with_arena_n
+}
+
 macro_attr! {
     #[derive(Debug, Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash, NewtypeComponentId!)]
-    struct Item(Id<ItemData>);
+    struct Item(Id<ItemComponent>);
 }
 
 impl DetachedDepObjId for Item { }
@@ -43,10 +47,10 @@ dep_type! {
 impl Item {
     fn new(state: &mut dyn State) -> Item {
         let game: &mut Game = state.get_mut();
-        game.items.insert(|id| (ItemData { props: ItemProps::new_priv() }, Item(id)))
+        game.items.insert(|id| (ItemComponent { props: ItemProps::new_priv() }, Item(id)))
     }
 
-    fn drop_item(self, state: &mut dyn State) {
+    fn drop_self(self, state: &mut dyn State) {
         self.drop_bindings_priv(state);
         let game: &mut Game = state.get_mut();
         game.items.remove(self.0);
@@ -112,7 +116,7 @@ impl Npc {
         npc
     }
 
-    fn drop_npc(self, state: &mut dyn State) {
+    fn drop_self(self, state: &mut dyn State) {
         self.drop_bindings_priv(state);
         let game: &mut Game = state.get_mut();
         game.npcs.remove(self.0);
@@ -124,7 +128,7 @@ impl_dep_obj!(Npc {
 });
 
 struct Game {
-    items: Arena<ItemData>,
+    items: Arena<ItemComponent>,
     npcs: Arena<NpcComponent>,
     bindings: Bindings,
     log: String,
@@ -149,6 +153,17 @@ impl State for Game {
         } else {
             None
         }
+    }
+}
+
+impl Stop for Game {
+    fn is_stopped(&self) -> bool {
+        self.items.is_stopped() && self.npcs.is_stopped()
+    }
+
+    fn stop(state: &mut dyn State) {
+        <Arena<ItemComponent>>::stop(state);
+        <Arena<NpcComponent>>::stop(state);
     }
 }
 
@@ -200,9 +215,9 @@ fn main() {
     NpcProps::ITEMS_ENHANCEMENT.set(game, npc, 4).immediate();
     NpcProps::EQUIPPED_ITEMS.remove(game, npc, DepVecItemPos::FirstItem).immediate();
     NpcProps::ITEMS_ENHANCEMENT.set(game, npc, 5).immediate();
-    npc.drop_npc(game);
-    sword.drop_item(game);
-    shield.drop_item(game);
+    npc.drop_self(game);
+    sword.drop_self(game);
+    shield.drop_self(game);
     print!("{}", game.log);
     assert_eq!(game.log, "\
         Sword equipped.\n\

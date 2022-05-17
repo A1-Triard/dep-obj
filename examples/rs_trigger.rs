@@ -6,7 +6,7 @@
 #![allow(dead_code)]
 
 mod circuit {
-    use components_arena::{Arena, Component, ComponentStop, Id, NewtypeComponentId, with_arena_newtype};
+    use components_arena::{Arena, Component, ComponentStop, Id, NewtypeComponentId, with_arena_in_state_part};
     use dep_obj::{DetachedDepObjId, DepType, impl_dep_obj};
     use downcast_rs::{Downcast, impl_downcast};
     use dyn_context::NewtypeStop;
@@ -27,7 +27,7 @@ mod circuit {
     }
 
     impl ComponentStop for ChipStop {
-        with_arena_newtype!(Circuit);
+        with_arena_in_state_part!(Circuit);
 
         fn stop(&self, state: &mut dyn State, id: Id<ChipNode>) {
             Chip(id).drop_bindings_priv(state);
@@ -135,6 +135,7 @@ mod not_chip {
 use circuit::*;
 use dep_obj::{Change, DepObjId};
 use dep_obj::binding::{Binding1, Bindings};
+use dyn_context::Stop;
 use dyn_context::state::{Stop, State, StateExt, StateRefMut};
 use not_chip::*;
 use or_chip::*;
@@ -149,8 +150,11 @@ struct TriggerChips {
     pub not_2: Chip,
 }
 
+#[derive(Stop)]
+#[stop(explicit)]
 struct TriggerState {
     bindings: Bindings,
+    #[stop]
     circuit: Circuit,
     chips: TriggerChips,
     log: String,
@@ -232,7 +236,7 @@ fn main() {
     OrLegs::IN_1.set(state, chips.or_2, true).immediate();
     OrLegs::IN_1.set(state, chips.or_2, false).immediate();
 
-    Circuit::stop(state);
+    TriggerState::stop(state);
 
     print!("{}", state.log);
     assert_eq!(state.log, "\
