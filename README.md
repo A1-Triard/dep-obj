@@ -350,7 +350,7 @@ will be updated automatically when any of them changes.
 
 Finally, lets write some test code to make our just builded game system work:
 
-```
+```rust
 fn run(state: &mut dyn State) {
     let item = Item::new(state, behavior::item);
 
