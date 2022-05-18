@@ -14,9 +14,7 @@ mod items {
     use macro_attr_2018::macro_attr;
     use std::borrow::Cow;
 
-    pub enum ItemObjKey { }
-
-    pub trait ItemObj: Downcast + DepType<Id=Item, DepObjKey=ItemObjKey> { }
+    pub trait ItemObj: Downcast + DepType<Id=Item> { }
 
     impl_downcast!(ItemObj);
 
@@ -72,8 +70,8 @@ mod items {
     }
 
     impl_dep_obj!(Item {
-        type ItemProps as ItemProps { Items | .props },
-        trait ItemObj as ItemObjKey { Items | .obj },
+        type ItemProps { Items | .props },
+        trait ItemObj { Items | .obj },
     });
 
     #[derive(Debug, Stop)]
@@ -89,7 +87,7 @@ mod items {
 
     dep_type! {
         #[derive(Debug)]
-        pub struct ItemProps in Item as ItemProps {
+        pub struct ItemProps in Item {
             name: Cow<'static, str> = Cow::Borrowed(""),
             base_weight: f32 = 0.0,
             weight: f32 = 0.0,
@@ -107,7 +105,7 @@ mod weapon {
 
     dep_type! {
         #[derive(Debug)]
-        pub struct Weapon in Item as ItemObjKey {
+        pub struct Weapon in Item {
             base_damage: f32 = 0.0,
             damage: f32 = 0.0,
         }
@@ -148,7 +146,7 @@ fn track_prop<D: DepType<Id=Item> + 'static, T: Convenient + Display>(
     item: Item,
     prop_name: &'static str,
     prop: DepProp<D, T>
-) where Item: DepObj<D::DepObjKey, D> {
+) where Item: DepObj<D> {
     let binding = Binding2::new(state, (), |(), name, value: Option<Change<T>>|
         value.map(|value| (name, value.new))
     );

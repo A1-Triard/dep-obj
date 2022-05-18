@@ -39,7 +39,7 @@ impl DetachedDepObjId for Item { }
 
 dep_type! {
     #[derive(Debug)]
-    struct ItemProps in Item as ItemProps {
+    struct ItemProps in Item {
         name: Cow<'static, str> = Cow::Borrowed(""),
         equipped: bool = false,
         enhancement: i8 = 0,
@@ -64,7 +64,7 @@ impl Item {
 }
 
 impl_dep_obj!(Item {
-    type ItemProps as ItemProps { Game { .items } | .props }
+    type ItemProps { Game { .items } | .props }
 });
 
 macro_attr! {
@@ -91,7 +91,7 @@ impl DetachedDepObjId for Npc { }
 
 dep_type! {
     #[derive(Debug)]
-    struct NpcProps in Npc as NpcProps {
+    struct NpcProps in Npc {
         equipped_items [Item],
         items_enhancement: i8 = 0,
     }
@@ -136,7 +136,7 @@ impl Npc {
 }
 
 impl_dep_obj!(Npc {
-    type NpcProps as NpcProps { Game { .npcs } | .props }
+    type NpcProps { Game { .npcs } | .props }
 });
 
 #[derive(State, Stop)]
