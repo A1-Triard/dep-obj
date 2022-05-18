@@ -70,8 +70,8 @@ mod items {
     }
 
     impl_dep_obj!(Item {
-        type ItemProps { Items | .props },
-        trait ItemObj { Items | .obj },
+        type ItemProps => Items | .props,
+        trait ItemObj => Items | .obj,
     });
 
     #[derive(Debug, Stop)]

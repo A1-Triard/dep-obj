@@ -61,7 +61,7 @@ mod items {
     }
 
     impl_dep_obj!(Item {
-        type ItemProps { Items | .props },
+        type ItemProps => Items | .props
     });
 
     #[derive(Debug, Stop)]

@@ -59,7 +59,7 @@ mod circuit {
     }
 
     impl_dep_obj!(Chip {
-        trait ChipLegs { Circuit | .legs }
+        trait ChipLegs => Circuit | .legs
     });
 
     impl DetachedDepObjId for Chip { }

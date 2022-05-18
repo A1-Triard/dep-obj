@@ -64,7 +64,7 @@ impl Item {
 }
 
 impl_dep_obj!(Item {
-    type ItemProps { Game { .items } | .props }
+    type ItemProps => Game { .items } | .props
 });
 
 macro_attr! {
@@ -136,7 +136,7 @@ impl Npc {
 }
 
 impl_dep_obj!(Npc {
-    type NpcProps { Game { .npcs } | .props }
+    type NpcProps => Game { .npcs } | .props
 });
 
 #[derive(State, Stop)]
