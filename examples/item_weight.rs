@@ -108,7 +108,7 @@ fn track_weight(state: &mut dyn State, item: Item) {
 fn run(state: &mut dyn State) {
     let the_item = Item::new(state);
     track_weight(state, the_item);
-    ItemProps::NAME.set(state, the_item, Cow::Borrowed("The item")).immediate();
+    ItemProps::NAME.set(state, the_item, Cow::Borrowed("The Item")).immediate();
 
     println!("> the_item.base_weight = 5.0");
     ItemProps::BASE_WEIGHT.set(state, the_item, 5.0).immediate();

@@ -7,6 +7,7 @@
 mod items {
     use components_arena::{Arena, Component, ComponentStop, NewtypeComponentId, Id, with_arena_in_state_part};
     use dep_obj::{DetachedDepObjId, GenericBuilder, dep_type, impl_dep_obj, with_builder};
+    use dep_obj::binding::Binding3;
     use dyn_context::Stop;
     use dyn_context::state::{SelfState, State, StateExt};
     use macro_attr_2018::macro_attr;
@@ -35,10 +36,10 @@ mod items {
     impl DetachedDepObjId for Item { }
 
     impl Item {
-        pub fn new(state: &mut dyn State, init: impl FnOnce(&mut dyn State, Item)) -> Item {
+        pub fn new(state: &mut dyn State) -> Item {
             let items: &mut Items = state.get_mut();
             let item = items.0.insert(|id| (ItemComponent { props: ItemProps::new_priv() }, Item(id)));
-            init(state, item);
+            item.bind_weight(state);
             item
         }
 
@@ -49,6 +50,16 @@ mod items {
         }
 
         with_builder!(ItemPropsBuilder<'b>);
+
+        fn bind_weight(self, state: &mut dyn State) {
+            let weight = Binding3::new(state, (), |(), base_weight, cursed, equipped| Some(
+                if equipped && cursed { base_weight + 100.0 } else { base_weight }
+            ));
+            ItemProps::WEIGHT.bind(state, self, weight);
+            weight.set_source_1(state, &mut ItemProps::BASE_WEIGHT.value_source(self));
+            weight.set_source_2(state, &mut ItemProps::CURSED.value_source(self));
+            weight.set_source_3(state, &mut ItemProps::EQUIPPED.value_source(self));
+        }
     }
 
     impl_dep_obj!(Item {
@@ -80,49 +91,40 @@ mod items {
     }
 }
 
-mod behavior {
-    use dyn_context::state::State;
-    use dep_obj::binding::Binding3;
-    use crate::items::*;
-
-    pub fn item(state: &mut dyn State, item: Item) {
-        let weight = Binding3::new(state, (), |(), base_weight, cursed, equipped| Some(
-            if equipped && cursed { base_weight + 100.0 } else { base_weight }
-        ));
-        ItemProps::WEIGHT.bind(state, item, weight);
-        weight.set_source_1(state, &mut ItemProps::BASE_WEIGHT.value_source(item));
-        weight.set_source_2(state, &mut ItemProps::CURSED.value_source(item));
-        weight.set_source_3(state, &mut ItemProps::EQUIPPED.value_source(item));
-    }
-}
-
-use dep_obj::DepObjId;
-use dep_obj::binding::{Binding1, Bindings};
+use dep_obj::{Change, DepObjId};
+use dep_obj::binding::{Binding2, Bindings};
 use dyn_context::state::{Stop, State, StateRefMut};
 use items::*;
+use std::borrow::Cow;
+
+fn track_weight(state: &mut dyn State, item: Item) {
+    let weight = Binding2::new(state, (), |(), name, weight: Option<Change<f32>>|
+        weight.map(|weight| (name, weight.new))
+    );
+    weight.set_target_fn(state, (), |_state, (), (name, weight)| {
+        print!("\n{name} now weights {weight}.\n\n");
+    });
+    item.add_binding::<ItemProps, _>(state, weight);
+    weight.set_source_1(state, &mut ItemProps::NAME.value_source(item));
+    weight.set_source_2(state, &mut ItemProps::WEIGHT.change_source(item));
+}
 
 fn run(state: &mut dyn State) {
-    let item = Item::new(state, behavior::item);
-
-    item.build(state, |props| props
+    let the_item = Item::new(state);
+    track_weight(state, the_item);
+    the_item.build(state, |props| props
+        .name(Cow::Borrowed("The Item"))
         .base_weight(5.0)
         .cursed(true)
     );
 
-    let weight = Binding1::new(state, (), |(), weight| Some(weight));
-    weight.set_target_fn(state, (), |_state, (), weight| {
-        println!("Item weight changed, new weight: {}", weight);
-    });
-    item.add_binding::<ItemProps, _>(state, weight);
-    weight.set_source_1(state, &mut ItemProps::WEIGHT.value_source(item));
+    println!("> the_item.equipped = true");
+    ItemProps::EQUIPPED.set(state, the_item, true).immediate();
 
-    println!("> item.equipped = true");
-    ItemProps::EQUIPPED.set(state, item, true).immediate();
+    println!("> the_item.cursed = false");
+    ItemProps::CURSED.set(state, the_item, false).immediate();
 
-    println!("> item.cursed = false");
-    ItemProps::CURSED.set(state, item, false).immediate();
-
-    item.drop_self(state);
+    the_item.drop_self(state);
 }
 
 fn main() {
