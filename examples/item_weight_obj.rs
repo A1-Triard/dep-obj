@@ -7,6 +7,7 @@
 mod items {
     use components_arena::{Arena, Component, ComponentStop, NewtypeComponentId, Id, with_arena_in_state_part};
     use dep_obj::{DepType, DetachedDepObjId, dep_type, impl_dep_obj};
+    use dep_obj::binding::Binding3;
     use downcast_rs::{Downcast, impl_downcast};
     use dyn_context::Stop;
     use dyn_context::state::{SelfState, State, StateExt};
@@ -43,17 +44,13 @@ mod items {
     impl DetachedDepObjId for Item { }
 
     impl Item {
-        pub fn new(
-            state: &mut dyn State,
-            obj: Box<dyn ItemObj>,
-            init: impl FnOnce(&mut dyn State, Item)
-        ) -> Item {
+        pub fn new(state: &mut dyn State, obj: Box<dyn ItemObj>) -> Item {
             let items: &mut Items = state.get_mut();
             let item = items.0.insert(|id| (ItemComponent {
                 props: ItemProps::new_priv(),
                 obj
             }, Item(id)));
-            init(state, item);
+            item.bind_weight(state);
             item
         }
 
@@ -61,6 +58,16 @@ mod items {
             self.drop_bindings_priv(state);
             let items: &mut Items = state.get_mut();
             items.0.remove(self.0);
+        }
+
+        fn bind_weight(self, state: &mut dyn State) {
+            let weight = Binding3::new(state, (), |(), base_weight, cursed, equipped| Some(
+                if equipped && cursed { base_weight + 100.0 } else { base_weight }
+            ));
+            ItemProps::WEIGHT.bind(state, self, weight);
+            weight.set_source_1(state, &mut ItemProps::BASE_WEIGHT.value_source(self));
+            weight.set_source_2(state, &mut ItemProps::CURSED.value_source(self));
+            weight.set_source_3(state, &mut ItemProps::EQUIPPED.value_source(self));
         }
     }
 
@@ -94,6 +101,7 @@ mod items {
 
 mod weapon {
     use dep_obj::dep_type;
+    use dep_obj::binding::Binding3;
     use dyn_context::state::State;
     use crate::items::*;
 
@@ -108,75 +116,72 @@ mod weapon {
     impl ItemObj for Weapon { }
 
     impl Weapon {
-        pub fn new(state: &mut dyn State, init: impl FnOnce(&mut dyn State, Item)) -> Item {
-            Item::new(state, Box::new(Self::new_priv()), init)
+        #[allow(clippy::new_ret_no_self)]
+        pub fn new(state: &mut dyn State) -> Item {
+            let item = Item::new(state, Box::new(Self::new_priv()));
+            Self::bind_damage(state, item);
+            item
+        }
+
+        fn bind_damage(state: &mut dyn State, item: Item) {
+            let damage = Binding3::new(state, (), |(), base_damage, cursed, equipped| Some(
+                if equipped && cursed { base_damage / 2.0 } else { base_damage }
+            ));
+            Weapon::DAMAGE.bind(state, item, damage);
+            damage.set_source_1(state, &mut Weapon::BASE_DAMAGE.value_source(item));
+            damage.set_source_2(state, &mut ItemProps::CURSED.value_source(item));
+            damage.set_source_3(state, &mut ItemProps::EQUIPPED.value_source(item));
         }
     }
 }
 
-mod behavior {
-    use dep_obj::binding::Binding3;
-    use dyn_context::state::State;
-    use crate::items::*;
-    use crate::weapon::*;
-
-    pub fn item(state: &mut dyn State, item: Item) {
-        let weight = Binding3::new(state, (), |(), base_weight, cursed, equipped| Some(
-            if equipped && cursed { base_weight + 100.0 } else { base_weight }
-        ));
-        ItemProps::WEIGHT.bind(state, item, weight);
-        weight.set_source_1(state, &mut ItemProps::BASE_WEIGHT.value_source(item));
-        weight.set_source_2(state, &mut ItemProps::CURSED.value_source(item));
-        weight.set_source_3(state, &mut ItemProps::EQUIPPED.value_source(item));
-
-        let damage = Binding3::new(state, (), |(), base_damage, cursed, equipped| Some(
-            if equipped && cursed { base_damage / 2.0 } else { base_damage }
-        ));
-        Weapon::DAMAGE.bind(state, item, damage);
-        damage.set_source_1(state, &mut Weapon::BASE_DAMAGE.value_source(item));
-        damage.set_source_2(state, &mut ItemProps::CURSED.value_source(item));
-        damage.set_source_3(state, &mut ItemProps::EQUIPPED.value_source(item));
-    }
-}
-
-use dep_obj::DepObjId;
-use dep_obj::binding::{Binding1, Bindings};
+use dep_obj::{Change, Convenient, DepObj, DepObjId, DepProp, DepType};
+use dep_obj::binding::{Binding2, Bindings};
 use dyn_context::state::{Stop, State, StateRefMut};
 use items::*;
+use std::borrow::Cow;
+use std::fmt::Display;
 use weapon::*;
 
+fn track_prop<D: DepType<Id=Item> + 'static, T: Convenient + Display>(
+    state: &mut dyn State,
+    item: Item,
+    prop_name: &'static str,
+    prop: DepProp<D, T>
+) where Item: DepObj<D::DepObjKey, D> {
+    let binding = Binding2::new(state, (), |(), name, value: Option<Change<T>>|
+        value.map(|value| (name, value.new))
+    );
+    binding.set_target_fn(state, prop_name, |_state, prop_name, (name, value)| {
+        print!("{name} {prop_name} now is {value}.\n\n");
+    });
+    item.add_binding::<ItemProps, _>(state, binding);
+    binding.set_source_1(state, &mut ItemProps::NAME.value_source(item));
+    binding.set_source_2(state, &mut prop.change_source(item));
+}
+
 fn run(state: &mut dyn State) {
-    let item = Weapon::new(state, behavior::item);
+    let sword = Weapon::new(state);
+    track_prop(state, sword, "weight", ItemProps::WEIGHT);
+    track_prop(state, sword, "damage", Weapon::DAMAGE);
+    ItemProps::NAME.set(state, sword, Cow::Borrowed("Sword")).immediate();
 
-    let weight = Binding1::new(state, (), |(), weight| Some(weight));
-    weight.set_target_fn(state, (), |_state, (), weight| {
-        println!("Item weight changed, new weight: {}", weight);
-    });
-    item.add_binding::<ItemProps, _>(state, weight);
-    weight.set_source_1(state, &mut ItemProps::WEIGHT.value_source(item));
+    print!("> sword.base_damage = 8.0\n\n");
+    Weapon::BASE_DAMAGE.set(state, sword, 8.0).immediate();
 
-    let damage = Binding1::new(state, (), |(), damage| Some(damage));
-    damage.set_target_fn(state, (), |_state, (), damage| {
-        println!("Item damage changed, new damage: {}", damage);
-    });
-    item.add_binding::<Weapon, _>(state, damage);
-    damage.set_source_1(state, &mut Weapon::DAMAGE.value_source(item));
+    print!("> sword.base_weight = 5.0\n\n");
+    ItemProps::BASE_WEIGHT.set(state, sword, 5.0).immediate();
 
-    Weapon::BASE_DAMAGE.set(state, item, 8.0).immediate();
+    print!("> sword.cursed = true\n\n");
+    ItemProps::CURSED.set(state, sword, true).immediate();
 
-    println!("> item.base_weight = 5.0");
-    ItemProps::BASE_WEIGHT.set(state, item, 5.0).immediate();
+    print!("> sword.equipped = true\n\n");
+    ItemProps::EQUIPPED.set(state, sword, true).immediate();
 
-    println!("> item.cursed = true");
-    ItemProps::CURSED.set(state, item, true).immediate();
+    print!("> sword.cursed = false\n\n");
+    ItemProps::CURSED.set(state, sword, false).immediate();
 
-    println!("> item.equipped = true");
-    ItemProps::EQUIPPED.set(state, item, true).immediate();
-
-    println!("> item.cursed = false");
-    ItemProps::CURSED.set(state, item, false).immediate();
-
-    item.drop_self(state);
+    sword.drop_self(state);
 }
 
 fn main() {
