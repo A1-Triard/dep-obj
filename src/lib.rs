@@ -163,7 +163,7 @@ pub mod example {
     }
 
     impl_dep_obj!(MyDepTypeId {
-        type MyDepType as MyDepType { MyApp { .my_dep_types } | .dep_data }
+        type MyDepType { MyApp { .my_dep_types } | .dep_data }
     });
 }
 
@@ -681,9 +681,9 @@ impl<T: DetachedDepObjId> DepObjId for T {
 /// use components_arena::{Arena, Component, NewtypeComponentId, Id};
 /// use dep_obj::{DetachedDepObjId, dep_obj, dep_type};
 /// use dep_obj::binding::{Bindings, Binding, Binding1};
+/// use dyn_context::State;
 /// use dyn_context::state::{State, StateExt};
 /// use macro_attr_2018::macro_attr;
-/// use std::any::{Any, TypeId};
 ///
 /// dep_type! {
 ///     #[derive(Debug)]
@@ -707,32 +707,13 @@ impl<T: DetachedDepObjId> DepObjId for T {
 ///
 /// impl DetachedDepObjId for MyDepTypeId { }
 ///
+/// #[derive(State)]
+/// #[state(part)]
 /// pub struct MyApp {
+///     #[state(part)]
 ///     bindings: Bindings,
 ///     my_dep_types: Arena<MyDepTypePrivateData>,
 ///     res: Binding<i32>,
-/// }
-///
-/// impl State for MyApp {
-///     fn get_raw(&self, ty: TypeId) -> Option<&dyn Any> {
-///         if ty == TypeId::of::<Bindings>() {
-///             Some(&self.bindings)
-///         } else if ty == TypeId::of::<MyApp>() {
-///             Some(self)
-///         } else {
-///             None
-///         }
-///     }
-///
-///     fn get_mut_raw(&mut self, ty: TypeId) -> Option<&mut dyn Any> {
-///         if ty == TypeId::of::<Bindings>() {
-///             Some(&mut self.bindings)
-///         } else if ty == TypeId::of::<MyApp>() {
-///             Some(self)
-///         } else {
-///             None
-///         }
-///     }
 /// }
 ///
 /// impl MyDepTypeId {
