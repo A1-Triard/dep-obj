@@ -76,7 +76,7 @@ mod circuit {
 
 mod or_chip {
     use crate::circuit::*;
-    use dep_obj::{dep_type};
+    use dep_obj::dep_type;
     use dep_obj::binding::Binding2;
     use dyn_context::state::State;
 
