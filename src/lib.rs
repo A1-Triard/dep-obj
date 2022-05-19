@@ -103,8 +103,7 @@ pub mod example {
 
     use crate::{DetachedDepObjId, GenericBuilder, impl_dep_obj, dep_type, with_builder};
     use components_arena::{Arena, Component, ComponentStop, Id, NewtypeComponentId, with_arena_in_state_part};
-    use dyn_context::Stop;
-    use dyn_context::state::{SelfState, State, StateExt};
+    use dyn_context::{SelfState, State, StateExt, Stop};
 
     dep_type! {
         #[derive(Debug)]
@@ -196,9 +195,9 @@ pub use core::option::Option as std_option_Option;
 #[doc(hidden)]
 pub use core::stringify as std_stringify;
 #[doc(hidden)]
-pub use dyn_context::state::State as dyn_context_state_State;
+pub use dyn_context::State as dyn_context_State;
 #[doc(hidden)]
-pub use dyn_context::state::StateExt as dyn_context_state_StateExt;
+pub use dyn_context::StateExt as dyn_context_StateExt;
 #[doc(hidden)]
 pub use generics::concat as generics_concat;
 #[doc(hidden)]
@@ -221,7 +220,7 @@ use core::iter::once;
 use core::mem::{replace, take};
 use core::ops::{Deref, DerefMut};
 use dyn_clone::{DynClone, clone_trait_object};
-use dyn_context::state::State;
+use dyn_context::State;
 use educe::Educe;
 use macro_attr_2018::macro_attr;
 use phantom_type::PhantomType;
@@ -681,8 +680,7 @@ impl<T: DetachedDepObjId> DepObjId for T {
 /// use components_arena::{Arena, Component, NewtypeComponentId, Id};
 /// use dep_obj::{DetachedDepObjId, dep_obj, dep_type};
 /// use dep_obj::binding::{Bindings, Binding, Binding1};
-/// use dyn_context::State;
-/// use dyn_context::state::{State, StateExt};
+/// use dyn_context::{State, StateExt};
 /// use macro_attr_2018::macro_attr;
 ///
 /// dep_type! {
@@ -2272,7 +2270,7 @@ macro_rules! with_builder_impl {
     ) => {
         pub fn build(
             self,
-            state: &mut dyn $crate::dyn_context_state_State,
+            state: &mut dyn $crate::dyn_context_State,
             f: impl for<$lt> FnOnce(
                 $($($builder_path)+ ::)? $builder < $lt $($builder_tail)+
             ) -> $($($builder_path)+ ::)? $builder < $lt $($builder_tail)+
@@ -2936,7 +2934,7 @@ macro_rules! dep_type_impl {
         $crate::std_compile_error!($crate::std_concat!(
             "invalid dep type property attributes: '",
             $crate::std_stringify!($(#[$inherits])*),
-            "; allowed attributes are: '#[inherits]', '#[ref]'"
+            "'; allowed attributes are: '#[inherits]', '#[ref]'"
         ));
     };
     (
@@ -3084,7 +3082,7 @@ macro_rules! dep_type_impl {
         $crate::std_compile_error!($crate::std_concat!(
             "invalid dep type event attributes: '",
             $crate::std_stringify!($(#[$inherits])*),
-            "; allowed attributes are: '#[bubble]'"
+            "'; allowed attributes are: '#[bubble]'"
         ));
     };
     (
@@ -3294,7 +3292,7 @@ macro_rules! dep_type_impl {
                 }
 
                 #[allow(unused_variables)]
-                fn update_parent_children_has_handlers($state: &mut dyn $crate::dyn_context_state_State, $id: $crate::components_arena_RawId) where Self: Sized {
+                fn update_parent_children_has_handlers($state: &mut dyn $crate::dyn_context_State, $id: $crate::components_arena_RawId) where Self: Sized {
                     $($update_handlers)*
                 }
             }
@@ -3331,7 +3329,7 @@ macro_rules! dep_type_impl {
     };
     (
         $($token:tt)*
-    ) => {
+    ) => { // TODO: test where_clause place
         $crate::std_compile_error!($crate::indoc_indoc!("
             invalid dep type definition, allowed form is
 
@@ -3632,10 +3630,10 @@ macro_rules! dep_obj_impl {
         ]
     ) => {
         impl $($g)* $Id $($w)* {
-            fn drop_bindings_priv(self, state: &mut dyn $crate::dyn_context_state_State) {
+            fn drop_bindings_priv(self, state: &mut dyn $crate::dyn_context_State) {
                 $(
                     let $this = self;
-                    let $state_part: &mut $StatePart = <dyn $crate::dyn_context_state_State as $crate::dyn_context_state_StateExt>::get_mut(state);
+                    let $state_part: &mut $StatePart = <dyn $crate::dyn_context_State as $crate::dyn_context_StateExt>::get_mut(state);
                     $(
                         let bindings = <dyn $tr as $crate::DepType>::collect_all_bindings($field);
                     )?
@@ -3662,7 +3660,7 @@ macro_rules! dep_obj_impl {
                 )*
                 $(
                     let $this = self;
-                    let $state_part: &mut $StatePart = <dyn $crate::dyn_context_state_State as $crate::dyn_context_state_StateExt>::get_mut(state);
+                    let $state_part: &mut $StatePart = <dyn $crate::dyn_context_State as $crate::dyn_context_StateExt>::get_mut(state);
                     $(
                         let handlers = <dyn $tr as $crate::DepType>::take_all_handlers($field_mut);
                     )?

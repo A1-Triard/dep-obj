@@ -11,9 +11,9 @@ panic = "abort"
 panic = "abort"
 
 [dependencies]
-components-arena = { version = "3.0.0", git = "https://github.com/A1-Triard/components-arena.git", features = ["dyn-context"] }
+components-arena = { version = "3.0.0", features = ["dyn-context"] }
 dep-obj = { path = ".." }
-dyn-context = "0.16.0"
+dyn-context = "0.17.0"
 libc_alloc = "1.0.3"
 macro-attr-2018 = "2.0.1"
 
