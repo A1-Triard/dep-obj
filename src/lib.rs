@@ -2287,6 +2287,95 @@ macro_rules! with_builder_impl {
     };
 }
 
+/// Defines dependency type.
+///
+/// Accepts input in any of following forms:
+///
+/// ```ignore
+/// $(#[$attr:meta])* $vis:vis struct $name:ident in $Id:ty {
+///     $($(
+///         $(#[$field_attr:meta])* $field_name:ident
+///         $(
+///             : $field_type:ty = $field_value:expr
+///         |
+///             [$vec_field_item_type:ty]
+///         |
+///             yield $event_like_field_type:ty
+///         )
+///     ),+ $(,)?)?
+/// }
+///
+/// $($(
+///     type BaseBuilder = $base_builder_type:ty;
+/// |
+///     type BaseBuilder<$generics> = $base_builder_type:ty $(where $where_clause)?;
+/// ))?
+/// ```
+///
+/// ```ignore
+/// $(#[$attr:meta])* $vis:vis struct $name:ident <$generics> in $Id:ty
+///     $(where $where_clause)? {
+///     $($(
+///         $(#[$field_attr:meta])* $field_name:ident
+///         $(
+///             : $field_type:ty = $field_value:expr
+///         |
+///             [$vec_field_item_type:ty]
+///         |
+///             yield $event_like_field_type:ty
+///         )
+///     ),+ $(,)?)?
+/// }
+///
+/// $($(
+///     type BaseBuilder = $base_builder_type:ty;
+/// |
+///     type BaseBuilder<$generics> = $base_builder_type:ty $(where $where_clause)?;
+/// ))?
+/// ```
+///
+/// ```ignore
+/// $(
+///     type BaseBuilder = $base_builder_type:ty;
+/// |
+///     type BaseBuilder<$generics> = $base_builder_type:ty $(where $where_clause)?;
+/// )
+///
+/// $(#[$attr:meta])* $vis:vis struct $name:ident in $Id:ty {
+///     $($(
+///         $(#[$field_attr:meta])* $field_name:ident
+///         $(
+///             : $field_type:ty = $field_value:expr
+///         |
+///             [$vec_field_item_type:ty]
+///         |
+///             yield $event_like_field_type:ty
+///         )
+///     ),+ $(,)?)?
+/// }
+/// ```
+///
+/// ```ignore
+/// $(
+///     type BaseBuilder = $base_builder_type:ty;
+/// |
+///     type BaseBuilder<$generics> = $base_builder_type:ty $(where $where_clause)?;
+/// )
+///
+/// $(#[$attr:meta])* $vis:vis struct $name:ident <$generics> in $Id:ty
+///     $(where $where_clause)? {
+///     $($(
+///         $(#[$field_attr:meta])* $field_name:ident
+///         $(
+///             : $field_type:ty = $field_value:expr
+///         |
+///             [$vec_field_item_type:ty]
+///         |
+///             yield $event_like_field_type:ty
+///         )
+///     ),+ $(,)?)?
+/// }
+/// ```
 #[macro_export]
 macro_rules! dep_type {
     (
@@ -3329,16 +3418,36 @@ macro_rules! dep_type_impl {
     };
     (
         $($token:tt)*
-    ) => { // TODO: test where_clause place
+    ) => {
         $crate::std_compile_error!($crate::indoc_indoc!("
-            invalid dep type definition, allowed form is
+            invalid dep type definition, allowed forms are
 
-            $(#[$attr])* $vis struct $name $(<$generics> $(where $where_clause)?)? in $Id {
-                $(#[$field_1_attr])* $field_1_name $(: $field_1_type = $field_1_value | [$field_1_type] | yield $field_1_type),
-                $(#[$field_2_attr])* $field_2_name $(: $field_2_type = $field_2_value | [$field_2_type] | yield $field_2_type),
-                ...
+            $(#[$attr:meta])* $vis:vis struct $name:ident in $Id:ty {
+                $($(
+                    $(#[$field_attr:meta])* $field_name:ident
+                    $(
+                        : $field_type:ty = $field_value:expr
+                    |
+                        [$vec_field_item_type:ty]
+                    |
+                        yield $event_like_field_type:ty
+                    )
+                ),+ $(,)?)?
             }
 
+            $(#[$attr:meta])* $vis:vis struct $name:ident <$generics> in $Id:ty
+                $(where $where_clause)? {
+                $($(
+                    $(#[$field_attr:meta])* $field_name:ident
+                    $(
+                        : $field_type:ty = $field_value:expr
+                    |
+                        [$vec_field_item_type:ty]
+                    |
+                        yield $event_like_field_type:ty
+                    )
+                ),+ $(,)?)?
+            }
         "));
     };
 }
