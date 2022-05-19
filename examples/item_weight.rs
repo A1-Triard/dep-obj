@@ -8,8 +8,7 @@ mod items {
     use components_arena::{Arena, Component, ComponentStop, NewtypeComponentId, Id, with_arena_in_state_part};
     use dep_obj::{DetachedDepObjId, dep_type, impl_dep_obj};
     use dep_obj::binding::Binding3;
-    use dyn_context::Stop;
-    use dyn_context::state::{SelfState, State, StateExt};
+    use dyn_context::{SelfState, State, StateExt, Stop};
     use macro_attr_2018::macro_attr;
     use std::borrow::Cow;
 
@@ -89,7 +88,7 @@ mod items {
 
 use dep_obj::{DepObjId, Change};
 use dep_obj::binding::{Binding2, Bindings};
-use dyn_context::state::{Stop, State, StateRefMut};
+use dyn_context::{Stop, State, StateRefMut};
 use items::*;
 use std::borrow::Cow;
 

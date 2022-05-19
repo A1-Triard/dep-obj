@@ -6,7 +6,7 @@ use core::fmt::Debug;
 use core::ops::{Deref, DerefMut};
 use downcast_rs::{Downcast, impl_downcast};
 use dyn_clone::{DynClone, clone_trait_object};
-use dyn_context::state::{SelfState, State, StateExt};
+use dyn_context::{SelfState, State, StateExt};
 use educe::Educe;
 use macro_attr_2018::macro_attr;
 use panicking::panicking;

@@ -9,8 +9,7 @@ mod circuit {
     use components_arena::{Arena, Component, ComponentStop, Id, NewtypeComponentId, with_arena_in_state_part};
     use dep_obj::{DetachedDepObjId, DepType, impl_dep_obj};
     use downcast_rs::{Downcast, impl_downcast};
-    use dyn_context::Stop;
-    use dyn_context::state::{SelfState, State, StateExt};
+    use dyn_context::{SelfState, State, StateExt, Stop};
     use macro_attr_2018::macro_attr;
 
     pub enum ChipLegsKey { }
@@ -78,7 +77,7 @@ mod or_chip {
     use crate::circuit::*;
     use dep_obj::dep_type;
     use dep_obj::binding::Binding2;
-    use dyn_context::state::State;
+    use dyn_context::State;
 
     dep_type! {
         #[derive(Debug)]
@@ -107,7 +106,7 @@ mod not_chip {
     use crate::circuit::*;
     use dep_obj::dep_type;
     use dep_obj::binding::Binding1;
-    use dyn_context::state::State;
+    use dyn_context::State;
 
     dep_type! {
         #[derive(Debug)]
@@ -133,8 +132,7 @@ mod not_chip {
 use circuit::*;
 use dep_obj::{Change, DepObjId};
 use dep_obj::binding::{Binding1, Bindings};
-use dyn_context::{State, Stop};
-use dyn_context::state::{Stop, StateExt, StateRefMut};
+use dyn_context::{State, StateExt, StateRefMut, Stop};
 use not_chip::*;
 use or_chip::*;
 use std::fmt::Write;

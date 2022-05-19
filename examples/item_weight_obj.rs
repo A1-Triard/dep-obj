@@ -9,8 +9,7 @@ mod items {
     use dep_obj::{DepType, DetachedDepObjId, dep_type, impl_dep_obj};
     use dep_obj::binding::Binding3;
     use downcast_rs::{Downcast, impl_downcast};
-    use dyn_context::Stop;
-    use dyn_context::state::{SelfState, State, StateExt};
+    use dyn_context::{SelfState, State, StateExt, Stop};
     use macro_attr_2018::macro_attr;
     use std::borrow::Cow;
 
@@ -100,7 +99,7 @@ mod items {
 mod weapon {
     use dep_obj::dep_type;
     use dep_obj::binding::Binding3;
-    use dyn_context::state::State;
+    use dyn_context::State;
     use crate::items::*;
 
     dep_type! {
@@ -135,7 +134,7 @@ mod weapon {
 
 use dep_obj::{Change, Convenient, DepObj, DepObjId, DepProp, DepType};
 use dep_obj::binding::{Binding2, Bindings};
-use dyn_context::state::{Stop, State, StateRefMut};
+use dyn_context::{Stop, State, StateRefMut};
 use items::*;
 use std::borrow::Cow;
 use std::fmt::Display;

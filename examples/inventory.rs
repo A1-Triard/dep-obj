@@ -10,8 +10,7 @@ use dep_obj::{Change, DepObjId, DepVecItemPos, DetachedDepObjId, GenericBuilder,
 use dep_obj::{dep_type, impl_dep_obj, with_builder};
 use macro_attr_2018::macro_attr;
 use dep_obj::binding::{Binding1, Binding2, BindingExt2, Bindings, Re};
-use dyn_context::{State, Stop};
-use dyn_context::state::{State, StateExt, Stop};
+use dyn_context::{State, StateExt, Stop};
 use std::borrow::Cow;
 use std::fmt::Write;
 
