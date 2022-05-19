@@ -3485,6 +3485,27 @@ macro_rules! dep_type_impl {
     };
 }
 
+/// Specifies dependency objects list and accessing methods.
+///
+/// Accepts input in the following form:
+///
+/// ```ignore
+/// $(
+///     impl $Id:ty
+/// |
+///     impl <$generics> $Id:ty $(where $where_clause)?
+/// )
+/// {
+///     $(
+///         fn(
+///             self as $this:ident,
+///             $state_part:ident : $StatePart:ty
+///         ) -> $(optional)? $(dyn ($tr:path) | ($ty:ty)) {
+///             if mut { $field_mut:expr } else { $field:expr }
+///         }
+///     )*
+/// }
+/// ```
 #[macro_export]
 macro_rules! dep_obj {
     (
@@ -3541,9 +3562,17 @@ macro_rules! dep_obj_impl {
         $crate::std_compile_error!($crate::indoc_indoc!("
             invalid dep obj implementation, allowed form is
 
-            impl $generics $Id:ty $(where $where_clause)? {
+            $(
+                impl $Id:ty
+            |
+                impl <$generics> $Id:ty $(where $where_clause)?
+            )
+            {
                 $(
-                    fn (self as $this:ident, $state_part:ident : $StatePart:ty) -> $(optional)? $(dyn ($tr:path) | ($ty:ty)) {
+                    fn(
+                        self as $this:ident,
+                        $state_part:ident : $StatePart:ty
+                    ) -> $(optional)? $(dyn ($tr:path) | ($ty:ty)) {
                         if mut { $field_mut:expr } else { $field:expr }
                     }
                 )*
@@ -3747,19 +3776,18 @@ macro_rules! dep_obj_impl {
         [$($g:tt)*] [$($w:tt)*] [$Id:ty]
         [$this:ident] [$state_part:ident] [$StatePart:ty] -> [$($opt_tr:path)?] [$($tr:path)?] [$($opt_ty:ty)?] [$($ty:ty)?]
     ) => {
-        $crate::std_compile_error!($crate::std_concat!("\
-            invalid dep obj return type\n\
-            \n\
-        ",
+        $crate::std_compile_error!($crate::std_concat!(
+            "invalid dep obj return type\n\n",
             $crate::std_stringify!($(optional dyn($opt_tr))? $((trait $tr))? $(optional($opt_ty))? $(($ty))?),
-        "\
-            \n\n\
-            allowed form are \
-            '($ty:ty)', \
-            'dyn($trait:path)', \
-            'optional($ty:ty)', and \
-            'optional dyn($trait:path)'\
-        "));
+            "\
+                \n\n\
+                allowed forms are \
+                '($ty:ty)', \
+                'dyn($tr:path)', \
+                'optional($ty:ty)', and \
+                'optional dyn($tr:path)'\
+            "
+        ));
     };
     (
         @drop_bindings
@@ -3835,6 +3863,23 @@ macro_rules! dep_obj_impl {
     };
 }
 
+/// Specifies dependency objects list and accessing methods in simplified form.
+///
+/// Accepts input in the following form:
+///
+/// ```ignore
+/// $(
+///     $Id:ty
+/// |
+///     <$generics> $Id:ty $(where $where_clause)?
+/// )
+/// {
+///     $($(
+///         $(optional)? $(type $ty:ty | trait $tr:path) =>
+///             $StatePart:ty $({ . $state_part_field:tt)? } | . $component_field:tt
+///     ),+ $(,)?)?
+/// }
+/// ```
 #[macro_export]
 macro_rules! impl_dep_obj {
     (
@@ -3870,9 +3915,15 @@ macro_rules! impl_dep_obj_impl {
         $crate::std_compile_error!($crate::indoc_indoc!("
             invalid dep obj implementation, allowed form is
 
-            $generics $Id:ty $(where $where_clause)? {
+            $(
+                $Id:ty
+            |
+                <$generics> $Id:ty $(where $where_clause)?
+            )
+            {
                 $($(
-                    $(optional)? $(type $ty:ty | trait $tr:path) => $StatePart:ty $({ . $state_part_field:tt)? } | . $component_field:tt
+                    $(optional)? $(type $ty:ty | trait $tr:path) =>
+                        $StatePart:ty $({ . $state_part_field:tt)? } | . $component_field:tt
                 ),+ $(,)?)?
             }
 
@@ -4038,19 +4089,26 @@ macro_rules! impl_dep_obj_impl {
         [$($ty:tt)*] [$($opt_ty:tt)*] [$($tr:tt)*] [$($opt_tr:tt)*]
         [, $($token:tt)* ]
     ) => {
-        $crate::std_compile_error!($crate::std_concat!($crate::indoc_indoc!("
-            invalid dep obj access function definition, allowed form is
+        $crate::std_compile_error!($crate::std_concat!(
+            "invalid dep obj access function definition\n\n",
+            $crate::std_stringify!($($token)*),
+            "\n\n",
+            $crate::indoc_indoc!("
+                allowed form is
 
-            $(optional)? $(type $ty:ty | trait $tr:path) => $StatePart:ty $({ . $state_part_field:tt })? | . $component_field:tt ...
+                $(optional)? $(type $ty:ty | trait $tr:path) =>
+                    $StatePart:ty $({ . $state_part_field:tt)? } | . $component_field:tt
 
-        "), "but found '", $crate::std_stringify!($($token)*), "'."));
+            ")
+        ));
     };
     (
         @objs
         [$($g:tt)*] [$($r:tt)*] [$($w:tt)*] [$Id:ty]
         [$($ty:tt)*] [$($opt_ty:tt)*] [$($tr:tt)*] [$($opt_tr:tt)*]
-        [$($token:tt)+]
+        [$token:tt $($tail:tt)*]
     ) => {
+        $crate::unexpected_token($token);
         $crate::std_compile_error!("missing comma");
     };
 }
