@@ -2189,6 +2189,12 @@ impl<'a, T: ComponentId> GenericBuilder<'a, T> {
 
 #[doc(hidden)]
 #[macro_export]
+macro_rules! unexpected_token {
+    () => { };
+}
+
+#[doc(hidden)]
+#[macro_export]
 macro_rules! split_by_in {
     (
         $callback:path {
@@ -2292,29 +2298,13 @@ macro_rules! with_builder_impl {
 /// Accepts input in any of following forms:
 ///
 /// ```ignore
-/// $(#[$attr:meta])* $vis:vis struct $name:ident in $Id:ty {
-///     $($(
-///         $(#[$field_attr:meta])* $field_name:ident
-///         $(
-///             : $field_type:ty = $field_value:expr
-///         |
-///             [$vec_field_item_type:ty]
-///         |
-///             yield $event_like_field_type:ty
-///         )
-///     ),+ $(,)?)?
-/// }
-///
-/// $($(
-///     type BaseBuilder = $base_builder_type:ty;
+/// $(#[$attr:meta])* $vis:vis struct $name:ident
+/// $(
+///     in $Id:ty
 /// |
-///     type BaseBuilder<$generics> = $base_builder_type:ty $(where $where_clause)?;
-/// ))?
-/// ```
-///
-/// ```ignore
-/// $(#[$attr:meta])* $vis:vis struct $name:ident <$generics> in $Id:ty
-///     $(where $where_clause)? {
+///     <$generics> in $Id:ty $(where $where_clause)? 
+/// )
+/// {
 ///     $($(
 ///         $(#[$field_attr:meta])* $field_name:ident
 ///         $(
@@ -2322,7 +2312,7 @@ macro_rules! with_builder_impl {
 ///         |
 ///             [$vec_field_item_type:ty]
 ///         |
-///             yield $event_like_field_type:ty
+///             yield $event_field_type:ty
 ///         )
 ///     ),+ $(,)?)?
 /// }
@@ -2341,29 +2331,13 @@ macro_rules! with_builder_impl {
 ///     type BaseBuilder<$generics> = $base_builder_type:ty $(where $where_clause)?;
 /// )
 ///
-/// $(#[$attr:meta])* $vis:vis struct $name:ident in $Id:ty {
-///     $($(
-///         $(#[$field_attr:meta])* $field_name:ident
-///         $(
-///             : $field_type:ty = $field_value:expr
-///         |
-///             [$vec_field_item_type:ty]
-///         |
-///             yield $event_like_field_type:ty
-///         )
-///     ),+ $(,)?)?
-/// }
-/// ```
-///
-/// ```ignore
+/// $(#[$attr:meta])* $vis:vis struct $name:ident
 /// $(
-///     type BaseBuilder = $base_builder_type:ty;
+///     in $Id:ty
 /// |
-///     type BaseBuilder<$generics> = $base_builder_type:ty $(where $where_clause)?;
+///     <$generics> in $Id:ty $(where $where_clause)? 
 /// )
-///
-/// $(#[$attr:meta])* $vis:vis struct $name:ident <$generics> in $Id:ty
-///     $(where $where_clause)? {
+/// {
 ///     $($(
 ///         $(#[$field_attr:meta])* $field_name:ident
 ///         $(
@@ -2371,7 +2345,7 @@ macro_rules! with_builder_impl {
 ///         |
 ///             [$vec_field_item_type:ty]
 ///         |
-///             yield $event_like_field_type:ty
+///             yield $event_field_type:ty
 ///         )
 ///     ),+ $(,)?)?
 /// }
@@ -2423,8 +2397,7 @@ macro_rules! dep_type_impl {
     ) => {
         $crate::std_compile_error!("\
             invalid dep type definition; allowed form is \
-            '$(#[$attr])* $vis struct $name $(<$generics> $(where $where_clause)?)? \
-            in $Id { ... }'\
+            '$(#[$attr:meta])* $vis:vis struct $name:ident ...'\
         ");
     };
     (
@@ -2432,10 +2405,14 @@ macro_rules! dep_type_impl {
         [$($bc_g:tt)*] [$($bc_r:tt)*] [$($bc_w:tt)*]
         $($token:tt)*
     ) => {
-        $crate::std_compile_error!("\
-            invalid dep type base builder definition; allowed form is \
-            'type BaseBuilder $(<$generics> $($where_clause)?)? = $base_builder_type;\
-        ");
+        $crate::std_compile_error!($crate::indoc_indoc!("
+            invalid dep type base builder definition; allowed forms are
+
+            type BaseBuilder = $base_builder_type:ty;
+
+            type BaseBuilder<$generics> = $base_builder_type:ty $(where $where_clause)?;
+
+        "));
     };
     (
         $(#[$attr:meta])* $vis:vis struct $name:ident $($body:tt)*
@@ -2476,9 +2453,10 @@ macro_rules! dep_type_impl {
         {
             $($($(#[$inherits:tt])* $field:ident $delim:tt $($field_ty:ty $(= $field_val:expr)?)?),+ $(,)?)?
         }
-        $($token:tt)+
+        $token:tt $($tail:tt)*
     ) => {
-        $crate::std_compile_error!("unexpected extra tokens after dep type definition body");
+        $crate::unexpected_token!($token);
+        $crate::std_compile_error!("unexpected extra tokens after dep type definition");
     };
     (
         @struct
@@ -2530,13 +2508,23 @@ macro_rules! dep_type_impl {
         {
             $($($(#[$inherits:tt])* $field:ident $delim:tt $($field_ty:ty $(= $field_val:expr)?)?),+ $(,)?)?
         }
-
-        $($token:tt)*
+        $token:tt $($tail:tt)*
     ) => {
-        $crate::std_compile_error!("\
-            invalid dep type base builder definition; allowed form is \
-            'type BaseBuilder $(<$generics> $(where $where_clause)?)? = $base_builder_type;
-        ");
+        $crate::unexpected_token!($token);
+        $crate::std_compile_error!($crate::std_concat!(
+            "\
+                invalid tokens after dep type definition; \
+                the only allowed construction here is a dep type base builder definition \
+            ",
+            $crate::indoc_indoc!("
+                in any of following forms:
+
+                type BaseBuilder = $base_builder_type:ty;
+
+                type BaseBuilder<$generics> = $base_builder_type:ty $(where $where_clause)?;
+
+            ")
+        ));
     };
     (
         @struct
@@ -2548,10 +2536,23 @@ macro_rules! dep_type_impl {
         $crate::std_compile_error!($crate::indoc_indoc!("
             invalid dep type definition, allowed form is
 
-            $(#[$attr])* $vis struct $name $(<$generics> $(where $where_clause)?)? in $Id {
-                $(#[$field_1_attr])* $field_1_name $(: $field_1_type = $field_1_value | [$field_1_type] | yield $field_1_type),
-                $(#[$field_2_attr])* $field_2_name $(: $field_2_type = $field_2_value | [$field_2_type] | yield $field_2_type),
-                ...
+            $(#[$attr:meta])* $vis:vis struct $name:ident
+            $(
+                in $Id:ty
+            |
+                <$generics> in $Id:ty $(where $where_clause)? 
+            )
+            {
+                $($(
+                    $(#[$field_attr:meta])* $field_name:ident
+                    $(
+                        : $field_type:ty = $field_value:expr
+                    |
+                        [$vec_field_item_type:ty]
+                    |
+                        yield $event_field_type:ty
+                    )
+                ),+ $(,)?)?
             }
 
         "));
@@ -2580,8 +2581,9 @@ macro_rules! dep_type_impl {
         [$($bc_g:tt)*] [$($bc_r:tt)*] [$($bc_w:tt)*]
         = $BaseBuilder:ty;
 
-        $($token:tt)*
+        $token:tt $($tail:tt)*
     ) => {
+        $crate::unexpected_token!($token);
         $crate::std_compile_error!("unexpected extra tokens after dep type base builder definition");
     };
     (
@@ -2592,10 +2594,14 @@ macro_rules! dep_type_impl {
         [$($bc_g:tt)*] [$($bc_r:tt)*] [$($bc_w:tt)*]
         $($token:tt)*
     ) => {
-        $crate::std_compile_error!("\
-            invalid dep type base builder definition; allowed form is \
-            'type BaseBuilder $(<$generics> $(where $where_clause)?)? = $base_builder_type;
-        ");
+        $crate::std_compile_error!($crate::indoc_indoc!("
+            invalid dep type base builder definition; allowed forms are
+
+            type BaseBuilder = $base_builder_type:ty;
+
+            type BaseBuilder<$generics> = $base_builder_type:ty $(where $where_clause)?;
+
+        "));
     };
     (
         @concat_generics
@@ -3279,18 +3285,20 @@ macro_rules! dep_type_impl {
         )?]
         [[[$($inherits:tt)*] $field:ident $delim:tt $field_ty:ty $(= $field_val:expr)?] $($fields:tt)*]
     ) => {
-        $crate::std_compile_error!($crate::std_concat!("\
-            invalid dep type field definition\n\
-            \n\
-        ",
+        $crate::std_compile_error!($crate::std_concat!(
+            "invalid dep type field definition\n\n",
             $crate::std_stringify!($(#[$inherits])? $field $delim $field_ty $(= $field_val)?),
-        "\
-            \n\n\
-            allowed forms are \
-            '$(#[$field_attr])* $field_name : $field_type = $field_value', \
-            '$field_name [$field_type]', and \
-            '$(#[$field_attr])* $field_name yield $field_type'\
-        "));
+            "\n\n",
+            $crate::indoc_indoc!("
+                allowed forms are
+
+                $(#[$field_attr:meta])* $field_name:ident : $field_type:ty = $field_value:expr
+
+                $(#[$field_attr:meta])* $field_name:ident [$vec_field_item_type:ty]
+
+                $(#[$field_attr:meta])* $field_name:ident yield $event_field_type:ty
+            ")
+        ));
     };
     (
         @unroll_fields
@@ -3420,9 +3428,15 @@ macro_rules! dep_type_impl {
         $($token:tt)*
     ) => {
         $crate::std_compile_error!($crate::indoc_indoc!("
-            invalid dep type definition, allowed forms are
+            invalid dep_type macro input, allowed forms are
 
-            $(#[$attr:meta])* $vis:vis struct $name:ident in $Id:ty {
+            $(#[$attr:meta])* $vis:vis struct $name:ident
+            $(
+                in $Id:ty
+            |
+                <$generics> in $Id:ty $(where $where_clause)? 
+            )
+            {
                 $($(
                     $(#[$field_attr:meta])* $field_name:ident
                     $(
@@ -3430,13 +3444,32 @@ macro_rules! dep_type_impl {
                     |
                         [$vec_field_item_type:ty]
                     |
-                        yield $event_like_field_type:ty
+                        yield $event_field_type:ty
                     )
                 ),+ $(,)?)?
             }
 
-            $(#[$attr:meta])* $vis:vis struct $name:ident <$generics> in $Id:ty
-                $(where $where_clause)? {
+            $($(
+                type BaseBuilder = $base_builder_type:ty;
+            |
+                type BaseBuilder<$generics> = $base_builder_type:ty $(where $where_clause)?;
+            ))?
+
+            and
+
+            $(
+                type BaseBuilder = $base_builder_type:ty;
+            |
+                type BaseBuilder<$generics> = $base_builder_type:ty $(where $where_clause)?;
+            )
+
+            $(#[$attr:meta])* $vis:vis struct $name:ident
+            $(
+                in $Id:ty
+            |
+                <$generics> in $Id:ty $(where $where_clause)? 
+            )
+            {
                 $($(
                     $(#[$field_attr:meta])* $field_name:ident
                     $(
@@ -3444,7 +3477,7 @@ macro_rules! dep_type_impl {
                     |
                         [$vec_field_item_type:ty]
                     |
-                        yield $event_like_field_type:ty
+                        yield $event_field_type:ty
                     )
                 ),+ $(,)?)?
             }
