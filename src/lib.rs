@@ -2302,7 +2302,7 @@ macro_rules! with_builder_impl {
 /// $(
 ///     in $Id:ty
 /// |
-///     <$generics> in $Id:ty $(where $where_clause)? 
+///     <$generics> in $Id:ty $(where $where_clause)?
 /// )
 /// {
 ///     $($(
@@ -2335,7 +2335,7 @@ macro_rules! with_builder_impl {
 /// $(
 ///     in $Id:ty
 /// |
-///     <$generics> in $Id:ty $(where $where_clause)? 
+///     <$generics> in $Id:ty $(where $where_clause)?
 /// )
 /// {
 ///     $($(
@@ -2540,7 +2540,7 @@ macro_rules! dep_type_impl {
             $(
                 in $Id:ty
             |
-                <$generics> in $Id:ty $(where $where_clause)? 
+                <$generics> in $Id:ty $(where $where_clause)?
             )
             {
                 $($(
@@ -3434,7 +3434,7 @@ macro_rules! dep_type_impl {
             $(
                 in $Id:ty
             |
-                <$generics> in $Id:ty $(where $where_clause)? 
+                <$generics> in $Id:ty $(where $where_clause)?
             )
             {
                 $($(
@@ -3467,7 +3467,7 @@ macro_rules! dep_type_impl {
             $(
                 in $Id:ty
             |
-                <$generics> in $Id:ty $(where $where_clause)? 
+                <$generics> in $Id:ty $(where $where_clause)?
             )
             {
                 $($(
