@@ -46,8 +46,7 @@ mod items {
     use alloc::borrow::Cow;
     use components_arena::{Arena, Component, ComponentStop, NewtypeComponentId, Id, with_arena_in_state_part};
     use dep_obj::{DetachedDepObjId, dep_type, impl_dep_obj};
-    use dyn_context::Stop;
-    use dyn_context::state::{SelfState, State, StateExt};
+    use dyn_context::{SelfState, State, StateExt, Stop};
     use macro_attr_2018::macro_attr;
 
     macro_attr! {
@@ -117,7 +116,7 @@ mod items {
 
 mod behavior {
     use dep_obj::binding::Binding3;
-    use dyn_context::state::State;
+    use dyn_context::State;
     use crate::items::*;
 
     pub fn item(state: &mut dyn State, item: Item) {
@@ -132,7 +131,7 @@ mod behavior {
 }
 
 use dep_obj::binding::Bindings;
-use dyn_context::state::{Stop, State, StateRefMut};
+use dyn_context::{Stop, State, StateRefMut};
 use items::*;
 
 fn run(state: &mut dyn State) {
