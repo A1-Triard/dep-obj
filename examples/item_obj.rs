@@ -112,7 +112,7 @@ mod weapon {
         }
     }
     
-    ext_builder!(<T: DepObjBuilder<Id=Item>> ItemPropsBuilder<T> as ItemPropsBuilderWeaponExt[Item] { Weapon });
+    ext_builder!(<T> ItemPropsBuilder<T> as ItemPropsBuilderWeaponExt[Item] where T: DepObjBuilder<Id=Item> { Weapon });
 
     impl ItemObj for Weapon { }
 

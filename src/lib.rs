@@ -2209,8 +2209,33 @@ macro_rules! ext_builder_impl {
             $builder:ident $(in $($builder_path:tt)+)?
         }
     ) => {
+        $crate::generics_concat! {
+            $crate::ext_builder_impl {
+                @impl
+                [$($g)*] [$($r)*] [$($w)*]
+                [$base_builder] [$ext] [$Id]
+                [$builder] [$($($builder_path)+)?]
+            }
+            [$($g)*] [$($r)*] [$($w)*],
+            [] [] [where Self: Sized]
+        }
+    };
+    (
+        @generics
+        [$($g:tt)*] [$($r:tt)*] [$($w:tt)*]
+        $($token:tt)*
+    ) => {
+        $crate::std_compile_error!("invalid builder extension");
+    };
+    (
+        @impl
+        [$($g:tt)*] [$($r:tt)*] [$($w:tt)*]
+        [$base_builder:ty] [$ext:ident] [$Id:ty]
+        [$builder:ident] [$($($builder_path:tt)+)?]
+        [$($tr_g:tt)*] [$($tr_r:tt)*] [$($tr_w:tt)*]
+    ) => {
         $crate::paste_paste! {
-            pub trait $ext $($g)* : $crate::DepObjBuilder<Id=$Id> $($w)* where Self: Sized {
+            pub trait $ext $($tr_g)* : $crate::DepObjBuilder<Id=$Id> $($tr_w)* {
                 fn [< $builder:snake >] (
                     self,
                     f: impl FnOnce(
@@ -2230,13 +2255,6 @@ macro_rules! ext_builder_impl {
                 }
             }
         }
-    };
-    (
-        @generics
-        [$($g:tt)*] [$($r:tt)*] [$($w:tt)*]
-        $($token:tt)*
-    ) => {
-        $crate::std_compile_error!("invalid builder extension");
     };
 }
 
