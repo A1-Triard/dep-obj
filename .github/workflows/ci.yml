@@ -91,16 +91,21 @@ jobs:
       with:
         command: run
         args: "--verbose --example inventory"
-    - name: run --example item_weight
+    - name: run --example item
       uses: actions-rs/cargo@v1
       with:
         command: run
-        args: "--verbose --example item_weight"
-    - name: run --example item_weight_with_builder
+        args: "--verbose --example item"
+    - name: run --example item_with_builder
       uses: actions-rs/cargo@v1
       with:
         command: run
-        args: "--verbose --example item_weight_with_builder"
+        args: "--verbose --example item_with_builder"
+    - name: run --example item_obj
+      uses: actions-rs/cargo@v1
+      with:
+        command: run
+        args: "--verbose --example item_obj"
     - name: outdated
       uses: actions-rs/cargo@v1
       with:
