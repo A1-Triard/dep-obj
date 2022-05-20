@@ -6,7 +6,7 @@
 
 mod items {
     use components_arena::{Arena, Component, ComponentStop, NewtypeComponentId, Id, with_arena_in_state_part};
-    use dep_obj::{DepType, DetachedDepObjId, dep_type, impl_dep_obj, with_builder};
+    use dep_obj::{Builder, DepType, DetachedDepObjId, dep_type, ext_builder, impl_dep_obj, with_builder};
     use dep_obj::binding::Binding3;
     use downcast_rs::{Downcast, impl_downcast};
     use dyn_context::{SelfState, State, StateExt, Stop};
@@ -41,7 +41,7 @@ mod items {
     impl DetachedDepObjId for Item { }
 
     impl Item {
-        with_builder!(ItemProps);
+        with_builder!();
 
         pub fn new(state: &mut dyn State, obj: Box<dyn ItemObj>) -> Item {
             let items: &mut Items = state.get_mut();
@@ -75,6 +75,10 @@ mod items {
         trait ItemObj => Items | .obj,
     });
 
+    ext_builder!(<'a> Builder<'a, Item> as BuilderItemPropsExt[Item] {
+        props -> (ItemProps)
+    });
+
     #[derive(Debug, Stop)]
     pub struct Items(Arena<ItemComponent>);
 
@@ -99,7 +103,7 @@ mod items {
 }
 
 mod weapon {
-    use dep_obj::{DepObjBuilder, dep_type, ext_builder};
+    use dep_obj::{Builder, dep_type, ext_builder};
     use dep_obj::binding::Binding3;
     use dyn_context::State;
     use crate::items::*;
@@ -112,7 +116,9 @@ mod weapon {
         }
     }
     
-    ext_builder!(<T> ItemPropsBuilder<T> as ItemPropsBuilderWeaponExt[Item] where T: DepObjBuilder<Id=Item> { Weapon });
+    ext_builder!(<'a> Builder<'a, Item> as BuilderWeaponExt[Item] {
+        weapon -> (Weapon)
+    });
 
     impl ItemObj for Weapon { }
 
@@ -203,8 +209,10 @@ fn run(state: &mut dyn State) {
     track_prop(state, sword, "weight", ItemProps::WEIGHT);
     track_prop(state, sword, "damage", Weapon::DAMAGE);
     sword.build(state, |sword| sword
-        .name(Cow::Borrowed("Sword"))
-        .base_weight(5.0)
+        .props(|props| props
+            .name(Cow::Borrowed("Sword"))
+            .base_weight(5.0)
+        )
         .weapon(|weapon| weapon
             .base_damage(8.0)
         )

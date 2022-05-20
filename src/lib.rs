@@ -2160,23 +2160,17 @@ pub trait DepObj<Type: DepType> {
     }
 }
 
-pub struct GenericBuilder<'a, T: ComponentId> {
-    id: T,
-    state: &'a mut dyn State,
+pub struct Builder<'a, T: ComponentId> {
+    pub id: T,
+    pub state: &'a mut dyn State,
 }
 
-impl<'a, T: ComponentId> DepObjBuilder for GenericBuilder<'a, T> {
+impl<'a, T: ComponentId> DepObjBuilder for Builder<'a, T> {
     type Id = T;
 
     fn id(&self) -> T { self.id }
     fn state(&self) -> &dyn State { self.state }
     fn state_mut(&mut self) -> &mut dyn State { self.state }
-}
-
-impl<'a, T: ComponentId> GenericBuilder<'a, T> {
-    pub fn new(state: &'a mut dyn State, id: T) -> Self {
-        GenericBuilder { id, state }
-    }
 }
 
 #[doc(hidden)]
@@ -2206,14 +2200,14 @@ macro_rules! ext_builder_impl {
         @generics
         [$($g:tt)*] [$($r:tt)*] [$($w:tt)*]
         $base_builder:ty as $ext:ident [$Id:ty] {
-            $builder:ident $(in $($builder_path:tt)+)?
+            $fn_name:ident -> ($builder:ident $(in $($builder_path:tt)+)?)
         }
     ) => {
         $crate::generics_concat! {
             $crate::ext_builder_impl {
                 @impl
                 [$($g)*] [$($r)*] [$($w)*]
-                [$base_builder] [$ext] [$Id]
+                [$base_builder] [$ext] [$Id] [$fn_name]
                 [$builder] [$($($builder_path)+)?]
             }
             [$($g)*] [$($r)*] [$($w)*],
@@ -2230,13 +2224,13 @@ macro_rules! ext_builder_impl {
     (
         @impl
         [$($g:tt)*] [$($r:tt)*] [$($w:tt)*]
-        [$base_builder:ty] [$ext:ident] [$Id:ty]
+        [$base_builder:ty] [$ext:ident] [$Id:ty] [$fn_name:ident]
         [$builder:ident] [$($($builder_path:tt)+)?]
         [$($tr_g:tt)*] [$($tr_r:tt)*] [$($tr_w:tt)*]
     ) => {
         $crate::paste_paste! {
             pub trait $ext $($tr_g)* : $crate::DepObjBuilder<Id=$Id> $($tr_w)* {
-                fn [< $builder:snake >] (
+                fn $fn_name (
                     self,
                     f: impl FnOnce(
                         $($($builder_path)+ ::)? [< $builder Builder >] < Self >
@@ -2245,7 +2239,7 @@ macro_rules! ext_builder_impl {
             }
 
             impl $($g)* $ext $($r)* for $base_builder $($w)* {
-                fn [< $builder:snake >] (
+                fn $fn_name (
                     self,
                     f: impl  FnOnce(
                         $($($builder_path)+ ::)? [< $builder Builder >] < Self >
@@ -2262,17 +2256,15 @@ macro_rules! ext_builder_impl {
 macro_rules! with_builder {
     (
     ) => {
-        $crate::paste_paste! {
-            pub fn build(
-                self,
-                state: &mut dyn $crate::dyn_context_State,
-                f: impl for<'builder_lt> FnOnce(
-                    $crate::GenericBuilder <'builder_lt, Self>
-                ) -> $crate::GenericBuilder <'builder_lt, Self>
-            ) -> Self {
-                f($crate::GenericBuilder::new(state, self));
-                self
-            }
+        pub fn build(
+            self,
+            state: &mut dyn $crate::dyn_context_State,
+            f: impl for<'builder_lt> FnOnce(
+                $crate::Builder<'builder_lt, Self>
+            ) -> $crate::Builder<'builder_lt, Self>
+        ) -> Self {
+            f($crate::Builder { state, id: self });
+            self
         }
     };
     (
@@ -2283,13 +2275,13 @@ macro_rules! with_builder {
                 self,
                 state: &mut dyn $crate::dyn_context_State,
                 f: impl for<'builder_lt> FnOnce(
-                    $($($builder_path)+ ::)? [< $builder Builder >] < $crate::GenericBuilder <'builder_lt, Self> >
-                ) -> $($($builder_path)+ ::)? [< $builder Builder >] < $crate::GenericBuilder <'builder_lt, Self> >
+                    $($($builder_path)+ ::)? [< $builder Builder >] < $crate::Builder <'builder_lt, Self> >
+                ) -> $($($builder_path)+ ::)? [< $builder Builder >] < $crate::Builder <'builder_lt, Self> >
             ) -> Self {
-                let base_builder = $crate::GenericBuilder::new(state, self);
+                let base_builder = $crate::Builder { state, id: self };
                 f(
                     <
-                        $($($builder_path)+ ::)? [< $builder Builder >] < $crate::GenericBuilder <'_, Self> >
+                        $($($builder_path)+ ::)? [< $builder Builder >] < $crate::Builder <'_, Self> >
                     >::new_priv(base_builder)
                 );
                 self
