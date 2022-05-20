@@ -13,7 +13,9 @@ mod items {
     use macro_attr_2018::macro_attr;
     use std::borrow::Cow;
 
-    pub trait ItemObj: Downcast + DepType<Id=Item> { }
+    pub enum ItemObjKey { }
+
+    pub trait ItemObj: Downcast + DepType<Id=Item, DepObjKey=ItemObjKey> { }
 
     impl_downcast!(ItemObj);
 
@@ -71,8 +73,8 @@ mod items {
     }
 
     impl_dep_obj!(Item {
-        type ItemProps => Items | .props,
-        trait ItemObj => Items | .obj,
+        fn<ItemProps>() -> (ItemProps) { Items | .props }
+        fn<ItemObjKey>() -> dyn(ItemObj) { Items | .obj }
     });
 
     ext_builder!(<'a> Builder<'a, Item> as BuilderItemPropsExt[Item] {
@@ -92,7 +94,7 @@ mod items {
 
     dep_type! {
         #[derive(Debug)]
-        pub struct ItemProps[Item] {
+        pub struct ItemProps = Item[ItemProps] {
             name: Cow<'static, str> = Cow::Borrowed(""),
             base_weight: f32 = 0.0,
             weight: f32 = 0.0,
@@ -110,7 +112,7 @@ mod weapon {
 
     dep_type! {
         #[derive(Debug)]
-        pub struct Weapon[Item] {
+        pub struct Weapon = Item[ItemObjKey] {
             base_damage: f32 = 0.0,
             damage: f32 = 0.0,
         }
@@ -150,7 +152,7 @@ mod armor {
 
     dep_type! {
         #[derive(Debug)]
-        pub struct Armor[Item] {
+        pub struct Armor = Item[ItemObjKey] {
             base_armor_class: f32 = 0.0,
             armor_class: f32 = 0.0,
         }
@@ -192,7 +194,7 @@ fn track_prop<D: DepType<Id=Item> + 'static, T: Convenient + Display>(
     item: Item,
     prop_name: &'static str,
     prop: DepProp<D, T>
-) where Item: DepObj<D> {
+) where Item: DepObj<D::DepObjKey, D> {
     let binding = Binding2::new(state, (), |(), name, value: Option<Change<T>>|
         value.map(|value| (name, value.new))
     );

@@ -60,7 +60,7 @@ mod items {
     }
 
     impl_dep_obj!(Item {
-        type ItemProps => Items | .props
+        fn<ItemProps>() -> (ItemProps) { Items | .props }
     });
 
     #[derive(Debug, Stop)]
@@ -76,7 +76,7 @@ mod items {
 
     dep_type! {
         #[derive(Debug)]
-        pub struct ItemProps[Item] {
+        pub struct ItemProps = Item[ItemProps] {
             name: Cow<'static, str> = Cow::Borrowed(""),
             base_weight: f32 = 0.0,
             weight: f32 = 0.0,

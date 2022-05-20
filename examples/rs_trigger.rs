@@ -14,7 +14,7 @@ mod circuit {
 
     pub enum ChipLegsKey { }
 
-    pub trait ChipLegs: Downcast + DepType<Id=Chip> { }
+    pub trait ChipLegs: Downcast + DepType<Id=Chip, DepObjKey=ChipLegsKey> { }
 
     impl_downcast!(ChipLegs);
 
@@ -58,7 +58,7 @@ mod circuit {
     }
 
     impl_dep_obj!(Chip {
-        trait ChipLegs => Circuit | .legs
+        fn<ChipLegsKey>() -> dyn(ChipLegs) { Circuit | .legs }
     });
 
     impl DetachedDepObjId for Chip { }
@@ -81,7 +81,7 @@ mod or_chip {
 
     dep_type! {
         #[derive(Debug)]
-        pub struct OrLegs[Chip] {
+        pub struct OrLegs = Chip[ChipLegsKey] {
             in_1: bool = false,
             in_2: bool = false,
             out: bool = false,
@@ -110,7 +110,7 @@ mod not_chip {
 
     dep_type! {
         #[derive(Debug)]
-        pub struct NotLegs[Chip] {
+        pub struct NotLegs = Chip[ChipLegsKey] {
             in_: bool = false,
             out: bool = true,
         }
