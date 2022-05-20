@@ -48,7 +48,7 @@ mod items {
             items.0.remove(self.0);
         }
 
-        with_builder!(ItemPropsBuilder<'b>);
+        with_builder!(ItemProps<'b>);
 
         fn bind_weight(self, state: &mut dyn State) {
             let weight = Binding3::new(state, (), |(), base_weight, cursed, equipped| Some(

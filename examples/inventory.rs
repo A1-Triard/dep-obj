@@ -59,7 +59,7 @@ impl Item {
         game.items.remove(self.0);
     }
 
-    with_builder!(ItemPropsBuilder<'a>);
+    with_builder!(ItemProps<'a>);
 }
 
 impl_dep_obj!(Item {

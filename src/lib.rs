@@ -1514,7 +1514,7 @@ impl<Owner: DepType> Style<Owner> {
     }
 }
 
-pub trait DepObjBaseBuilder<OwnerId: ComponentId> {
+pub trait DepObjBuilder<OwnerId: ComponentId> {
     fn state(&self) -> &dyn State;
     fn state_mut(&mut self) -> &mut dyn State;
     fn id(&self) -> OwnerId;
@@ -2099,18 +2099,6 @@ impl<Owner: DepType + 'static, ItemType: Convenient> Source for DepVecItemInitia
     }
 }
 
-pub trait NewPriv {
-    fn new_priv() -> Self;
-}
-
-pub trait SizedDepType: NewPriv + DepType where Self: Sized { }
-
-impl<T: NewPriv + DepType> SizedDepType for T { }
-
-pub trait NewPrivParam<T> {
-    fn new_priv(t: T) -> Self;
-}
-
 pub struct DepObjRef<'a, Obj> {
     state_part: &'a dyn Any,
     id: RawId,
@@ -2175,7 +2163,7 @@ pub struct GenericBuilder<'a, T: ComponentId> {
     state: &'a mut dyn State,
 }
 
-impl<'a, T: ComponentId> DepObjBaseBuilder<T> for GenericBuilder<'a, T> {
+impl<'a, T: ComponentId> DepObjBuilder<T> for GenericBuilder<'a, T> {
     fn id(&self) -> T { self.id }
     fn state(&self) -> &dyn State { self.state }
     fn state_mut(&mut self) -> &mut dyn State { self.state }
@@ -2255,6 +2243,85 @@ macro_rules! split_by_in {
 }
 
 #[macro_export]
+macro_rules! ext_builder {
+    (
+        $($token:tt)+
+    ) => {
+        $crate::generics_parse! {
+            $crate::ext_builder_impl {
+                @generics
+            }
+            $($token)+
+        }
+    };
+}
+
+#[doc(hidden)]
+#[macro_export]
+macro_rules! ext_builder_impl {
+    (
+        @generics
+        [$($g:tt)*] [$($r:tt)*] [$($w:tt)*]
+        $base_builder:ty as $ext:ident {
+            $builder:ident < $lt:lifetime $($builder_tail:tt)+
+        }
+    ) => {
+        $crate::split_by_in! {
+            $crate::ext_builder_impl {
+                @path
+                [$($g)*] [$($r)*] [$($w)*]
+                [$base_builder] [$ext]
+                [$builder] [$lt]
+            }
+            $($builder_tail)+
+        }
+    };
+    (
+        @generics
+        [$($g:tt)*] [$($r:tt)*] [$($w:tt)*]
+        $($token:tt)*
+    ) => {
+        $crate::std_compile_error!("invalid builder extension");
+    };
+    (
+        @path
+        [$($g:tt)*] [$($r:tt)*] [$($w:tt)*]
+        [$base_builder:ty] [$ext:ident]
+        [$builder:ident] [$lt:lifetime] [$($builder_tail:tt)+] [$($($builder_path:tt)+)?]
+    ) => {
+        $crate::paste_paste! {
+            pub trait $ext {
+                fn [< $builder:snake >] (
+                    self,
+                    f: impl for<$lt> FnOnce(
+                        $($($builder_path)+ ::)? [< $builder Builder >] < $lt $($builder_tail)+
+                    ) -> $($($builder_path)+ ::)? [< $builder Builder >] < $lt $($builder_tail)+
+                ) -> Self;
+            }
+
+            impl $($g)* $ext for $base_builder $($w)* {
+                fn [< $builder:snake >] (
+                    self,
+                    f: impl for<$lt> FnOnce(
+                        $($($builder_path)+ ::)? [< $builder Builder >] < $lt $($builder_tail)+
+                    ) -> $($($builder_path)+ ::)? [< $builder Builder >] < $lt $($builder_tail)+
+                ) -> Self {
+                    f(<$($($builder_path)+ ::)? [< $builder Builder >] <'_ $($builder_tail)+>::new_priv(self)).base_priv()
+                }
+            }
+        }
+    };
+    (
+        @path
+        [$($g:tt)*] [$($r:tt)*] [$($w:tt)*]
+        [$base_builder:ty] [$ext:ident]
+        [$builder:ident] [$lt:lifetime] [] [$($($builder_path:tt)+)?]
+    ) => {
+        $crate::std_compile_error!("unclosed generics");
+    };
+}
+
+#[macro_export]
 macro_rules! with_builder {
     (
         $builder:ident < $lt:lifetime $($builder_tail:tt)+
@@ -2274,16 +2341,18 @@ macro_rules! with_builder_impl {
     (
         [$builder:ident] [$lt:lifetime] [$($builder_tail:tt)+] [$($($builder_path:tt)+)?]
     ) => {
-        pub fn build(
-            self,
-            state: &mut dyn $crate::dyn_context_State,
-            f: impl for<$lt> FnOnce(
-                $($($builder_path)+ ::)? $builder < $lt $($builder_tail)+
-            ) -> $($($builder_path)+ ::)? $builder < $lt $($builder_tail)+
-        ) -> Self {
-            let base_builder = $crate::GenericBuilder::new(state, self);
-            f(<$($($builder_path)+ ::)? $builder <'_ $($builder_tail)+>::new_priv(base_builder));
-            self
+        $crate::paste_paste! {
+            pub fn build(
+                self,
+                state: &mut dyn $crate::dyn_context_State,
+                f: impl for<$lt> FnOnce(
+                    $($($builder_path)+ ::)? [< $builder Builder >] < $lt $($builder_tail)+
+                ) -> $($($builder_path)+ ::)? [< $builder Builder >] < $lt $($builder_tail)+
+            ) -> Self {
+                let base_builder = $crate::GenericBuilder::new(state, self);
+                f(<$($($builder_path)+ ::)? [< $builder Builder >] <'_ $($builder_tail)+>::new_priv(base_builder));
+                self
+            }
         }
     };
     (
@@ -2704,8 +2773,8 @@ macro_rules! dep_type_impl {
                     $($builder_methods)*
 
                     $vis fn [< $field _ref >] (mut self, value: $field_ty) -> Self {
-                        let id = <$BaseBuilder as $crate::DepObjBaseBuilder<$Id>>::id(&self.base);
-                        let state = <$BaseBuilder as $crate::DepObjBaseBuilder<$Id>>::state_mut(&mut self.base);
+                        let id = <$BaseBuilder as $crate::DepObjBuilder<$Id>>::id(&self.base);
+                        let state = <$BaseBuilder as $crate::DepObjBuilder<$Id>>::state_mut(&mut self.base);
                         $name:: [< $field:upper >] .set(state, id, value).immediate();
                         self
                     }
@@ -2778,8 +2847,8 @@ macro_rules! dep_type_impl {
                     $($builder_methods)*
 
                     $vis fn [< $field _ref >] (mut self, value: $field_ty) -> Self {
-                        let id = <$BaseBuilder as $crate::DepObjBaseBuilder<$Id>>::id(&self.base);
-                        let state = <$BaseBuilder as $crate::DepObjBaseBuilder<$Id>>::state_mut(&mut self.base);
+                        let id = <$BaseBuilder as $crate::DepObjBuilder<$Id>>::id(&self.base);
+                        let state = <$BaseBuilder as $crate::DepObjBuilder<$Id>>::state_mut(&mut self.base);
                         $name:: [< $field:upper >] .set(state, id, value).immediate();
                         self
                     }
@@ -2852,8 +2921,8 @@ macro_rules! dep_type_impl {
                     $($builder_methods)*
 
                     $vis fn $field(mut self, value: $field_ty) -> Self {
-                        let id = <$BaseBuilder as $crate::DepObjBaseBuilder<$Id>>::id(&self.base);
-                        let state = <$BaseBuilder as $crate::DepObjBaseBuilder<$Id>>::state_mut(&mut self.base);
+                        let id = <$BaseBuilder as $crate::DepObjBuilder<$Id>>::id(&self.base);
+                        let state = <$BaseBuilder as $crate::DepObjBuilder<$Id>>::state_mut(&mut self.base);
                         $name:: [< $field:upper >] .set(state, id, value).immediate();
                         self
                     }
@@ -2925,8 +2994,8 @@ macro_rules! dep_type_impl {
                     $($builder_methods)*
 
                     $vis fn [< $field _ref >] (mut self, value: $field_ty) -> Self {
-                        let id = <$BaseBuilder as $crate::DepObjBaseBuilder<$Id>>::id(&self.base);
-                        let state = <$BaseBuilder as $crate::DepObjBaseBuilder<$Id>>::state_mut(&mut self.base);
+                        let id = <$BaseBuilder as $crate::DepObjBuilder<$Id>>::id(&self.base);
+                        let state = <$BaseBuilder as $crate::DepObjBuilder<$Id>>::state_mut(&mut self.base);
                         $name:: [< $field:upper >] .set(state, id, value).immediate();
                         self
                     }
@@ -2998,8 +3067,8 @@ macro_rules! dep_type_impl {
                     $($builder_methods)*
 
                     $vis fn $field(mut self, value: $field_ty) -> Self {
-                        let id = <$BaseBuilder as $crate::DepObjBaseBuilder<$Id>>::id(&self.base);
-                        let state = <$BaseBuilder as $crate::DepObjBaseBuilder<$Id>>::state_mut(&mut self.base);
+                        let id = <$BaseBuilder as $crate::DepObjBuilder<$Id>>::id(&self.base);
+                        let state = <$BaseBuilder as $crate::DepObjBuilder<$Id>>::state_mut(&mut self.base);
                         $name:: [< $field:upper >] .set(state, id, value).immediate();
                         self
                     }
@@ -3355,12 +3424,6 @@ macro_rules! dep_type_impl {
                 core: [< $name Core >] $($r)*
             }
 
-            impl $($g)* $crate::NewPriv for $name $($r)* $($w)* {
-                fn new_priv() -> Self {
-                    Self::new_priv()
-                }
-            }
-
             impl $($g)* $name $($r)* $($w)* {
                 const fn new_priv() -> Self {
                     Self { core: [< $name Core >] ::new() }
@@ -3399,6 +3462,14 @@ macro_rules! dep_type_impl {
                     base: $BaseBuilder,
                 }
 
+                impl $($bc_g)* $crate::DepObjBuilder < $Id > for [< $name Builder >] $($bc_r)* $($bc_w)* {
+                    fn state(&self) -> &dyn $crate::dyn_context_State { self.base.state() }
+
+                    fn state_mut(&mut self) -> &mut dyn $crate::dyn_context_State { self.base.state_mut() }
+
+                    fn id(&self) -> $Id { self.base.id() }
+                }
+
                 impl $($bc_g)* [< $name Builder >] $($bc_r)* $($bc_w)* {
                     fn new_priv(base: $BaseBuilder) -> Self {
                         Self { base }
@@ -3414,12 +3485,6 @@ macro_rules! dep_type_impl {
                     fn base_priv_mut(&mut self) -> &mut $BaseBuilder { &mut self.base }
 
                     $($builder_methods)*
-                }
-
-                impl $($bc_g)* $crate::NewPrivParam<$BaseBuilder> for [< $name Builder >] $($bc_r)* $($bc_w)* {
-                    fn new_priv(base: $BaseBuilder) -> Self {
-                        Self::new_priv(base)
-                    }
                 }
             )?
         }

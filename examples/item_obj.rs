@@ -6,7 +6,7 @@
 
 mod items {
     use components_arena::{Arena, Component, ComponentStop, NewtypeComponentId, Id, with_arena_in_state_part};
-    use dep_obj::{DepType, DetachedDepObjId, dep_type, impl_dep_obj};
+    use dep_obj::{DepType, DetachedDepObjId, GenericBuilder, dep_type, impl_dep_obj};
     use dep_obj::binding::Binding3;
     use downcast_rs::{Downcast, impl_downcast};
     use dyn_context::{SelfState, State, StateExt, Stop};
@@ -93,11 +93,13 @@ mod items {
             equipped: bool = false,
             cursed: bool = false,
         }
+
+        type BaseBuilder<'a> = GenericBuilder<'a, Item>;
     }
 }
 
 mod weapon {
-    use dep_obj::dep_type;
+    use dep_obj::{dep_type, ext_builder};
     use dep_obj::binding::Binding3;
     use dyn_context::State;
     use crate::items::*;
@@ -108,7 +110,10 @@ mod weapon {
             base_damage: f32 = 0.0,
             damage: f32 = 0.0,
         }
+        type BaseBuilder<'a> = ItemPropsBuilder<'a>;
     }
+
+    ext_builder!(<'a> ItemPropsBuilder<'a> as ItemPropsBuilderWeaponExt { Weapon<'b> });
 
     impl ItemObj for Weapon { }
 
@@ -132,6 +137,42 @@ mod weapon {
     }
 }
 
+mod armor {
+    use dep_obj::dep_type;
+    use dep_obj::binding::Binding3;
+    use dyn_context::State;
+    use crate::items::*;
+
+    dep_type! {
+        #[derive(Debug)]
+        pub struct Armor in Item {
+            base_armor_class: f32 = 0.0,
+            armor_class: f32 = 0.0,
+        }
+    }
+
+    impl ItemObj for Armor { }
+
+    impl Armor {
+        #[allow(clippy::new_ret_no_self)]
+        pub fn new(state: &mut dyn State) -> Item {
+            let item = Item::new(state, Box::new(Self::new_priv()));
+            Self::bind_armor_class(state, item);
+            item
+        }
+
+        fn bind_armor_class(state: &mut dyn State, item: Item) {
+            let armor_class = Binding3::new(state, (), |(), base_armor_class, cursed, equipped| Some(
+                if equipped && cursed { base_armor_class / 2.0 } else { base_armor_class }
+            ));
+            Armor::ARMOR_CLASS.bind(state, item, armor_class);
+            armor_class.set_source_1(state, &mut Armor::BASE_ARMOR_CLASS.value_source(item));
+            armor_class.set_source_2(state, &mut ItemProps::CURSED.value_source(item));
+            armor_class.set_source_3(state, &mut ItemProps::EQUIPPED.value_source(item));
+        }
+    }
+}
+
 use dep_obj::{Change, Convenient, DepObj, DepObjId, DepProp, DepType};
 use dep_obj::binding::{Binding2, Bindings};
 use dyn_context::{Stop, State, StateRefMut};
@@ -139,6 +180,7 @@ use items::*;
 use std::borrow::Cow;
 use std::fmt::Display;
 use weapon::*;
+use armor::*;
 
 fn track_prop<D: DepType<Id=Item> + 'static, T: Convenient + Display>(
     state: &mut dyn State,
@@ -163,11 +205,22 @@ fn run(state: &mut dyn State) {
     track_prop(state, sword, "damage", Weapon::DAMAGE);
     ItemProps::NAME.set(state, sword, Cow::Borrowed("Sword")).immediate();
 
+    let boots = Armor::new(state);
+    track_prop(state, boots, "weight", ItemProps::WEIGHT);
+    track_prop(state, boots, "armor_class", Armor::ARMOR_CLASS);
+    ItemProps::NAME.set(state, boots, Cow::Borrowed("Boots")).immediate();
+
     print!("> sword.base_damage = 8.0\n\n");
     Weapon::BASE_DAMAGE.set(state, sword, 8.0).immediate();
 
     print!("> sword.base_weight = 5.0\n\n");
     ItemProps::BASE_WEIGHT.set(state, sword, 5.0).immediate();
+
+    print!("> boots.base_armor_class = 4.0\n\n");
+    Armor::BASE_ARMOR_CLASS.set(state, boots, 4.0).immediate();
+
+    print!("> boots.base_weight = 1.5\n\n");
+    ItemProps::BASE_WEIGHT.set(state, boots, 1.5).immediate();
 
     print!("> sword.cursed = true\n\n");
     ItemProps::CURSED.set(state, sword, true).immediate();
@@ -178,6 +231,7 @@ fn run(state: &mut dyn State) {
     print!("> sword.cursed = false\n\n");
     ItemProps::CURSED.set(state, sword, false).immediate();
 
+    boots.drop_self(state);
     sword.drop_self(state);
 }
 
