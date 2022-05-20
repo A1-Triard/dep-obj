@@ -30,12 +30,10 @@ pub mod example {
     //! ```ignore
     //! dep_type! {
     //!     #[derive(Debug)]
-    //!     pub struct MyDepType in MyDepTypeId {
+    //!     pub struct MyDepType[MyDepTypeId] {
     //!         prop_1: bool = false,
     //!         prop_2: i32 = 10,
     //!     }
-    //!
-    //!     type BaseBuilder<'a> = GenericBuilder<'a, MyDepTypeId>;
     //! }
     //!
     //! macro_attr! {
@@ -79,7 +77,7 @@ pub mod example {
     //!         app.my_dep_types.remove(self.0);
     //!     }
     //!
-    //!     with_builder!(MyDepTypeBuilder<'b>);
+    //!     with_builder!(MyDepType);
     //! }
     //!
     //! impl_dep_obj!(MyDepTypeId {
@@ -101,18 +99,16 @@ pub mod example {
     //! }
     //! ```
 
-    use crate::{DetachedDepObjId, GenericBuilder, impl_dep_obj, dep_type, with_builder};
+    use crate::{DetachedDepObjId, impl_dep_obj, dep_type, with_builder};
     use components_arena::{Arena, Component, ComponentStop, Id, NewtypeComponentId, with_arena_in_state_part};
     use dyn_context::{SelfState, State, StateExt, Stop};
 
     dep_type! {
         #[derive(Debug)]
-        pub struct MyDepType in MyDepTypeId {
+        pub struct MyDepType[MyDepTypeId] {
             prop_1: bool = false,
             prop_2: i32 = 10,
         }
-
-        type BaseBuilder<'a> = GenericBuilder<'a, MyDepTypeId>;
     }
 
     #[derive(Debug)]
@@ -158,7 +154,7 @@ pub mod example {
             app.my_dep_types.remove(self.0);
         }
 
-        with_builder!(MyDepTypeBuilder<'b>);
+        with_builder!(MyDepType);
     }
 
     impl_dep_obj!(MyDepTypeId {
@@ -678,14 +674,14 @@ impl<T: DetachedDepObjId> DepObjId for T {
 /// # #![feature(const_ptr_offset_from)]
 /// # #![feature(const_type_id)]
 /// use components_arena::{Arena, Component, NewtypeComponentId, Id};
-/// use dep_obj::{DetachedDepObjId, dep_obj, dep_type};
+/// use dep_obj::{DetachedDepObjId, dep_type, impl_dep_obj};
 /// use dep_obj::binding::{Bindings, Binding, Binding1};
 /// use dyn_context::{State, StateExt};
 /// use macro_attr_2018::macro_attr;
 ///
 /// dep_type! {
 ///     #[derive(Debug)]
-///     pub struct MyDepType in MyDepTypeId {
+///     pub struct MyDepType[MyDepTypeId] {
 ///         prop_1: bool = false,
 ///         prop_2: i32 = 10,
 ///     }
@@ -729,17 +725,9 @@ impl<T: DetachedDepObjId> DepObjId for T {
 ///     }
 /// }
 ///
-/// dep_obj! {
-///     impl MyDepTypeId {
-///         fn(self as this, app: MyApp) -> (MyDepType) {
-///             if mut {
-///                 &mut app.my_dep_types[this.0].dep_data
-///             } else {
-///                 &app.my_dep_types[this.0].dep_data
-///             }
-///         }
-///     }
-/// }
+/// impl_dep_obj!(MyDepTypeId {
+///     type MyDepType => MyApp { .my_dep_types } | .dep_data
+/// });
 ///
 /// fn main() {
 ///     let mut bindings = Bindings::new();
