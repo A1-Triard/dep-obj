@@ -3876,7 +3876,7 @@ macro_rules! dep_obj_impl {
 /// {
 ///     $($(
 ///         $(optional)? $(type $ty:ty | trait $tr:path) =>
-///             $StatePart:ty $({ . $state_part_field:tt)? } | . $component_field:tt
+///             $StatePart:ty $({ . $state_part_field:tt })? | . $component_field:tt
 ///     ),+ $(,)?)?
 /// }
 /// ```
@@ -3923,7 +3923,7 @@ macro_rules! impl_dep_obj_impl {
             {
                 $($(
                     $(optional)? $(type $ty:ty | trait $tr:path) =>
-                        $StatePart:ty $({ . $state_part_field:tt)? } | . $component_field:tt
+                        $StatePart:ty $({ . $state_part_field:tt })? | . $component_field:tt
                 ),+ $(,)?)?
             }
 
@@ -4097,7 +4097,7 @@ macro_rules! impl_dep_obj_impl {
                 allowed form is
 
                 $(optional)? $(type $ty:ty | trait $tr:path) =>
-                    $StatePart:ty $({ . $state_part_field:tt)? } | . $component_field:tt
+                    $StatePart:ty $({ . $state_part_field:tt })? | . $component_field:tt
 
             ")
         ));
