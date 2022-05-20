@@ -6,7 +6,7 @@
 #![allow(dead_code)]
 
 use components_arena::{Arena, Component, ComponentStop, NewtypeComponentId, Id, with_arena_in_state_part};
-use dep_obj::{Change, DepObjId, DepVecItemPos, DetachedDepObjId, GenericBuilder, ItemChange};
+use dep_obj::{Change, DepObjId, DepVecItemPos, DetachedDepObjId, ItemChange};
 use dep_obj::{dep_type, impl_dep_obj, with_builder};
 use macro_attr_2018::macro_attr;
 use dep_obj::binding::{Binding1, Binding2, BindingExt2, Bindings, Re};
@@ -38,7 +38,7 @@ impl DetachedDepObjId for Item { }
 
 dep_type! {
     #[derive(Debug)]
-    struct ItemProps in Item {
+    struct ItemProps[Item] {
         name: Cow<'static, str> = Cow::Borrowed(""),
         equipped: bool = false,
         enhancement: i8 = 0,
@@ -57,7 +57,7 @@ impl Item {
         game.items.remove(self.0);
     }
 
-    with_builder!(ItemProps<'a>);
+    with_builder!(ItemProps);
 }
 
 impl_dep_obj!(Item {
@@ -88,7 +88,7 @@ impl DetachedDepObjId for Npc { }
 
 dep_type! {
     #[derive(Debug)]
-    struct NpcProps in Npc {
+    struct NpcProps[Npc] {
         equipped_items [Item],
         items_enhancement: i8 = 0,
     }

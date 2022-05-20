@@ -6,7 +6,7 @@
 
 mod items {
     use components_arena::{Arena, Component, ComponentStop, NewtypeComponentId, Id, with_arena_in_state_part};
-    use dep_obj::{DetachedDepObjId, dep_type, impl_dep_obj};
+    use dep_obj::{DetachedDepObjId, dep_type, impl_dep_obj, with_builder};
     use dep_obj::binding::Binding3;
     use dyn_context::{SelfState, State, StateExt, Stop};
     use macro_attr_2018::macro_attr;
@@ -48,6 +48,8 @@ mod items {
             items.0.remove(self.0);
         }
 
+        with_builder!(ItemProps);
+
         fn bind_weight(self, state: &mut dyn State) {
             let weight = Binding3::new(state, (), |(), base_weight, cursed, equipped| Some(
                 if equipped && cursed { base_weight + 100.0 } else { base_weight }
@@ -76,7 +78,7 @@ mod items {
 
     dep_type! {
         #[derive(Debug)]
-        pub struct ItemProps in Item {
+        pub struct ItemProps[Item] {
             name: Cow<'static, str> = Cow::Borrowed(""),
             base_weight: f32 = 0.0,
             weight: f32 = 0.0,
@@ -86,7 +88,7 @@ mod items {
     }
 }
 
-use dep_obj::{DepObjId, Change};
+use dep_obj::{Change, DepObjId};
 use dep_obj::binding::{Binding2, Bindings};
 use dyn_context::{Stop, State, StateRefMut};
 use items::*;
@@ -107,13 +109,11 @@ fn track_weight(state: &mut dyn State, item: Item) {
 fn run(state: &mut dyn State) {
     let the_item = Item::new(state);
     track_weight(state, the_item);
-    ItemProps::NAME.set(state, the_item, Cow::Borrowed("The Item")).immediate();
-
-    println!("> the_item.base_weight = 5.0");
-    ItemProps::BASE_WEIGHT.set(state, the_item, 5.0).immediate();
-
-    println!("> the_item.cursed = true");
-    ItemProps::CURSED.set(state, the_item, true).immediate();
+    the_item.build(state, |props| props
+        .name(Cow::Borrowed("The Item"))
+        .base_weight(5.0)
+        .cursed(true)
+    );
 
     println!("> the_item.equipped = true");
     ItemProps::EQUIPPED.set(state, the_item, true).immediate();
