@@ -2188,6 +2188,30 @@ macro_rules! ext_builder_impl {
         @generics
         [$($g:tt)*] [$($r:tt)*] [$($w:tt)*]
         $base_builder:ty as $ext:ident [$Id:ty] {
+            fn $fn_name:ident (
+                $state:ident $(: $State:ty)?,
+                $id:ident $(: $Id_:ty)?
+            ) -> ($builder:ident $(in $($builder_path:tt)+)?) {
+                $($e:tt)*
+            }
+        }
+    ) => {
+        $crate::generics_concat! {
+            $crate::ext_builder_impl {
+                @impl
+                [$($g)*] [$($r)*] [$($w)*]
+                [$base_builder] [$ext] [$Id] [$fn_name]
+                [$builder] [$($($builder_path)+)?]
+                [$state $($State)?] [$id $($Id_)?] [$($e)*]
+            }
+            [$($g)*] [$($r)*] [$($w)*],
+            [] [] [where Self: Sized]
+        }
+    };
+    (
+        @generics
+        [$($g:tt)*] [$($r:tt)*] [$($w:tt)*]
+        $base_builder:ty as $ext:ident [$Id:ty] {
             $fn_name:ident -> ($builder:ident $(in $($builder_path:tt)+)?)
         }
     ) => {
@@ -2197,6 +2221,7 @@ macro_rules! ext_builder_impl {
                 [$($g)*] [$($r)*] [$($w)*]
                 [$base_builder] [$ext] [$Id] [$fn_name]
                 [$builder] [$($($builder_path)+)?]
+                [_state] [_id] []
             }
             [$($g)*] [$($r)*] [$($w)*],
             [] [] [where Self: Sized]
@@ -2214,6 +2239,7 @@ macro_rules! ext_builder_impl {
         [$($g:tt)*] [$($r:tt)*] [$($w:tt)*]
         [$base_builder:ty] [$ext:ident] [$Id:ty] [$fn_name:ident]
         [$builder:ident] [$($($builder_path:tt)+)?]
+        [$state:ident $($State:ty)?] [$id:ident $($Id_:ty)?] [$($e:tt)*]
         [$($tr_g:tt)*] [$($tr_r:tt)*] [$($tr_w:tt)*]
     ) => {
         $crate::paste_paste! {
@@ -2228,11 +2254,16 @@ macro_rules! ext_builder_impl {
 
             impl $($g)* $ext $($r)* for $base_builder $($w)* {
                 fn $fn_name (
-                    self,
+                    mut self,
                     f: impl  FnOnce(
                         $($($builder_path)+ ::)? [< $builder Builder >] < Self >
                     ) -> $($($builder_path)+ ::)? [< $builder Builder >] < Self >
                 ) -> Self {
+                    {
+                        let $id $(: $Id_)? = <Self as $crate::DepObjBuilder>::id(&self);
+                        let $state $(: $State)? = <Self as $crate::DepObjBuilder>::state_mut(&mut self);
+                        $($e)*
+                    }
                     f(<$($($builder_path)+ ::)? [< $builder Builder >] <Self> >::new_priv(self)).base_priv()
                 }
             }
