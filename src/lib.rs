@@ -3858,3 +3858,7 @@ macro_rules! impl_dep_obj_impl {
         $crate::std_compile_error!("missing comma");
     };
 }
+
+#[cfg(test)]
+mod test {
+}
