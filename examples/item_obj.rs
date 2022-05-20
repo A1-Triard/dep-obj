@@ -6,7 +6,7 @@
 
 mod items {
     use components_arena::{Arena, Component, ComponentStop, NewtypeComponentId, Id, with_arena_in_state_part};
-    use dep_obj::{DepType, DetachedDepObjId, GenericBuilder, dep_type, impl_dep_obj};
+    use dep_obj::{DepType, DetachedDepObjId, GenericBuilder, dep_type, impl_dep_obj, with_builder};
     use dep_obj::binding::Binding3;
     use downcast_rs::{Downcast, impl_downcast};
     use dyn_context::{SelfState, State, StateExt, Stop};
@@ -41,6 +41,8 @@ mod items {
     impl DetachedDepObjId for Item { }
 
     impl Item {
+        with_builder!(ItemProps<'a>);
+
         pub fn new(state: &mut dyn State, obj: Box<dyn ItemObj>) -> Item {
             let items: &mut Items = state.get_mut();
             let item = items.0.insert(|id| (ItemComponent {
@@ -203,18 +205,18 @@ fn run(state: &mut dyn State) {
     let sword = Weapon::new(state);
     track_prop(state, sword, "weight", ItemProps::WEIGHT);
     track_prop(state, sword, "damage", Weapon::DAMAGE);
-    ItemProps::NAME.set(state, sword, Cow::Borrowed("Sword")).immediate();
+    sword.build(state, |sword| sword
+        .name(Cow::Borrowed("Sword"))
+        .base_weight(5.0)
+        .weapon(|weapon| weapon
+            .base_damage(8.0)
+        )
+    );
 
     let boots = Armor::new(state);
     track_prop(state, boots, "weight", ItemProps::WEIGHT);
     track_prop(state, boots, "armor_class", Armor::ARMOR_CLASS);
     ItemProps::NAME.set(state, boots, Cow::Borrowed("Boots")).immediate();
-
-    print!("> sword.base_damage = 8.0\n\n");
-    Weapon::BASE_DAMAGE.set(state, sword, 8.0).immediate();
-
-    print!("> sword.base_weight = 5.0\n\n");
-    ItemProps::BASE_WEIGHT.set(state, sword, 5.0).immediate();
 
     print!("> boots.base_armor_class = 4.0\n\n");
     Armor::BASE_ARMOR_CLASS.set(state, boots, 4.0).immediate();
