@@ -104,7 +104,7 @@ mod items {
 
     dep_type! {
         #[derive(Debug)]
-        pub struct ItemProps in Item {
+        pub struct ItemProps[Item] {
             name: Cow<'static, str> = Cow::Borrowed(""),
             base_weight: f32 = 0.0,
             weight: f32 = 0.0,
