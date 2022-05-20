@@ -99,7 +99,7 @@ fn track_weight(state: &mut dyn State, item: Item) {
         weight.map(|weight| (name, weight.new))
     );
     weight.set_target_fn(state, (), |_state, (), (name, weight)| {
-        print!("\n{name} now weights {weight}.\n\n");
+        println!("\n{name} now weights {weight}.");
     });
     item.add_binding::<ItemProps, _>(state, weight);
     weight.set_source_1(state, &mut ItemProps::NAME.value_source(item));
@@ -115,10 +115,10 @@ fn run(state: &mut dyn State) {
         .cursed(true)
     );
 
-    println!("> the_item.equipped = true");
+    println!("\n> the_item.equipped = true");
     ItemProps::EQUIPPED.set(state, the_item, true).immediate();
 
-    println!("> the_item.cursed = false");
+    println!("\n> the_item.cursed = false");
     ItemProps::CURSED.set(state, the_item, false).immediate();
 
     the_item.drop_self(state);

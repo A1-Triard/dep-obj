@@ -197,7 +197,7 @@ fn track_prop<D: DepType<Id=Item> + 'static, T: Convenient + Display>(
         value.map(|value| (name, value.new))
     );
     binding.set_target_fn(state, prop_name, |_state, prop_name, (name, value)| {
-        print!("{name} {prop_name} now is {value}.\n\n");
+        println!("\n{name} {prop_name} now is {value}.");
     });
     item.add_binding::<ItemProps, _>(state, binding);
     binding.set_source_1(state, &mut ItemProps::NAME.value_source(item));
@@ -223,19 +223,19 @@ fn run(state: &mut dyn State) {
     track_prop(state, boots, "armor_class", Armor::ARMOR_CLASS);
     ItemProps::NAME.set(state, boots, Cow::Borrowed("Boots")).immediate();
 
-    print!("> boots.base_armor_class = 4.0\n\n");
+    println!("\n> boots.base_armor_class = 4.0");
     Armor::BASE_ARMOR_CLASS.set(state, boots, 4.0).immediate();
 
-    print!("> boots.base_weight = 1.5\n\n");
+    println!("\n> boots.base_weight = 1.5");
     ItemProps::BASE_WEIGHT.set(state, boots, 1.5).immediate();
 
-    print!("> sword.cursed = true\n\n");
+    println!("\n> sword.cursed = true");
     ItemProps::CURSED.set(state, sword, true).immediate();
 
-    print!("> sword.equipped = true\n\n");
+    println!("\n> sword.equipped = true");
     ItemProps::EQUIPPED.set(state, sword, true).immediate();
 
-    print!("> sword.cursed = false\n\n");
+    println!("\n> sword.cursed = false");
     ItemProps::CURSED.set(state, sword, false).immediate();
 
     boots.drop_self(state);
