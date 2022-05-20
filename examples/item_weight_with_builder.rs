@@ -6,7 +6,7 @@
 
 mod items {
     use components_arena::{Arena, Component, ComponentStop, NewtypeComponentId, Id, with_arena_in_state_part};
-    use dep_obj::{DetachedDepObjId, GenericBuilder, dep_type, impl_dep_obj, with_builder};
+    use dep_obj::{DetachedDepObjId, dep_type, impl_dep_obj, with_builder};
     use dep_obj::binding::Binding3;
     use dyn_context::{SelfState, State, StateExt, Stop};
     use macro_attr_2018::macro_attr;
@@ -48,7 +48,7 @@ mod items {
             items.0.remove(self.0);
         }
 
-        with_builder!(ItemProps<'b>);
+        with_builder!(ItemProps);
 
         fn bind_weight(self, state: &mut dyn State) {
             let weight = Binding3::new(state, (), |(), base_weight, cursed, equipped| Some(
@@ -85,8 +85,6 @@ mod items {
             equipped: bool = false,
             cursed: bool = false,
         }
-
-        type BaseBuilder<'a> = GenericBuilder<'a, Item>;
     }
 }
 

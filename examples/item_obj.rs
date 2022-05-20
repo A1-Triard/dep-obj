@@ -6,7 +6,7 @@
 
 mod items {
     use components_arena::{Arena, Component, ComponentStop, NewtypeComponentId, Id, with_arena_in_state_part};
-    use dep_obj::{DepType, DetachedDepObjId, GenericBuilder, dep_type, impl_dep_obj, with_builder};
+    use dep_obj::{DepType, DetachedDepObjId, dep_type, impl_dep_obj, with_builder};
     use dep_obj::binding::Binding3;
     use downcast_rs::{Downcast, impl_downcast};
     use dyn_context::{SelfState, State, StateExt, Stop};
@@ -41,7 +41,7 @@ mod items {
     impl DetachedDepObjId for Item { }
 
     impl Item {
-        with_builder!(ItemProps<'a>);
+        with_builder!(ItemProps);
 
         pub fn new(state: &mut dyn State, obj: Box<dyn ItemObj>) -> Item {
             let items: &mut Items = state.get_mut();
@@ -88,34 +88,31 @@ mod items {
 
     dep_type! {
         #[derive(Debug)]
-        pub struct ItemProps in Item {
+        pub struct ItemProps[Item] {
             name: Cow<'static, str> = Cow::Borrowed(""),
             base_weight: f32 = 0.0,
             weight: f32 = 0.0,
             equipped: bool = false,
             cursed: bool = false,
         }
-
-        type BaseBuilder<'a> = GenericBuilder<'a, Item>;
     }
 }
 
 mod weapon {
-    use dep_obj::{dep_type, ext_builder};
+    use dep_obj::{DepObjBuilder, dep_type, ext_builder};
     use dep_obj::binding::Binding3;
     use dyn_context::State;
     use crate::items::*;
 
     dep_type! {
         #[derive(Debug)]
-        pub struct Weapon in Item {
+        pub struct Weapon[Item] {
             base_damage: f32 = 0.0,
             damage: f32 = 0.0,
         }
-        type BaseBuilder<'a> = ItemPropsBuilder<'a>;
     }
-
-    ext_builder!(<'a> ItemPropsBuilder<'a> as ItemPropsBuilderWeaponExt { Weapon<'b> });
+    
+    ext_builder!(<T: DepObjBuilder<Id=Item>> ItemPropsBuilder<T> as ItemPropsBuilderWeaponExt[Item] { Weapon });
 
     impl ItemObj for Weapon { }
 
@@ -147,7 +144,7 @@ mod armor {
 
     dep_type! {
         #[derive(Debug)]
-        pub struct Armor in Item {
+        pub struct Armor[Item] {
             base_armor_class: f32 = 0.0,
             armor_class: f32 = 0.0,
         }

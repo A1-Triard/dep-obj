@@ -43,8 +43,6 @@ dep_type! {
         equipped: bool = false,
         enhancement: i8 = 0,
     }
-
-    type BaseBuilder<'a> = GenericBuilder<'a, Item>;
 }
 
 impl Item {

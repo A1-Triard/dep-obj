@@ -1514,10 +1514,12 @@ impl<Owner: DepType> Style<Owner> {
     }
 }
 
-pub trait DepObjBuilder<OwnerId: ComponentId> {
+pub trait DepObjBuilder {
+    type Id: ComponentId;
+
     fn state(&self) -> &dyn State;
     fn state_mut(&mut self) -> &mut dyn State;
-    fn id(&self) -> OwnerId;
+    fn id(&self) -> Self::Id;
 }
 
 #[derive(Educe)]
@@ -2163,7 +2165,9 @@ pub struct GenericBuilder<'a, T: ComponentId> {
     state: &'a mut dyn State,
 }
 
-impl<'a, T: ComponentId> DepObjBuilder<T> for GenericBuilder<'a, T> {
+impl<'a, T: ComponentId> DepObjBuilder for GenericBuilder<'a, T> {
+    type Id = T;
+
     fn id(&self) -> T { self.id }
     fn state(&self) -> &dyn State { self.state }
     fn state_mut(&mut self) -> &mut dyn State { self.state }
@@ -2179,67 +2183,6 @@ impl<'a, T: ComponentId> GenericBuilder<'a, T> {
 #[macro_export]
 macro_rules! unexpected_token {
     () => { };
-}
-
-#[doc(hidden)]
-#[macro_export]
-macro_rules! split_by_in {
-    (
-        $callback:path {
-            $($callback_args:tt)*
-        }
-        $($token:tt)*
-    ) => {
-        $crate::split_by_in! {
-            @before [$callback] [$($callback_args)*]
-            [] [$($token)*]
-        }
-    };
-    (
-        @before [$callback:path] [$($callback_args:tt)*]
-        [$($before:tt)*] []
-    ) => {
-        $callback ! {
-            $($callback_args)*
-            [$($before)*] []
-        }
-    };
-    (
-        @before [$callback:path] [$($callback_args:tt)*]
-        [$($before:tt)*] [in $($tail:tt)*]
-    ) => {
-        $crate::split_by_in! {
-            @after [$callback] [$($callback_args)*] [$($before)*]
-            [] [$($tail)*]
-        }
-    };
-    (
-        @before [$callback:path] [$($callback_args:tt)*]
-        [$($before:tt)*] [$token:tt $($tail:tt)*]
-    ) => {
-        $crate::split_by_in! {
-            @before [$callback] [$($callback_args)*]
-            [$($before)* $token] [$($tail)*]
-        }
-    };
-    (
-        @after [$callback:path] [$($callback_args:tt)*] [$($before:tt)*]
-        [$($after:tt)*] []
-    ) => {
-        $callback ! {
-            $($callback_args)*
-            [$($before)*] [$($after)*]
-        }
-    };
-    (
-        @after [$callback:path] [$($callback_args:tt)*] [$($before:tt)*]
-        [$($after:tt)*] [$token:tt $($tail:tt)*]
-    ) => {
-        $crate::split_by_in! {
-            @after [$callback] [$($callback_args)*] [$($before)*]
-            [$($after)* $token] [$($tail)*]
-        }
-    };
 }
 
 #[macro_export]
@@ -2262,18 +2205,30 @@ macro_rules! ext_builder_impl {
     (
         @generics
         [$($g:tt)*] [$($r:tt)*] [$($w:tt)*]
-        $base_builder:ty as $ext:ident {
-            $builder:ident < $lt:lifetime $($builder_tail:tt)+
+        $base_builder:ty as $ext:ident [$Id:ty] {
+            $builder:ident $(in $($builder_path:tt)+)?
         }
     ) => {
-        $crate::split_by_in! {
-            $crate::ext_builder_impl {
-                @path
-                [$($g)*] [$($r)*] [$($w)*]
-                [$base_builder] [$ext]
-                [$builder] [$lt]
+        $crate::paste_paste! {
+            pub trait $ext $($g)* : $crate::DepObjBuilder<Id=$Id> $($w)* where Self: Sized {
+                fn [< $builder:snake >] (
+                    self,
+                    f: impl FnOnce(
+                        $($($builder_path)+ ::)? [< $builder Builder >] < Self >
+                    ) -> $($($builder_path)+ ::)? [< $builder Builder >] < Self >
+                ) -> Self;
             }
-            $($builder_tail)+
+
+            impl $($g)* $ext $($r)* for $base_builder $($w)* {
+                fn [< $builder:snake >] (
+                    self,
+                    f: impl  FnOnce(
+                        $($($builder_path)+ ::)? [< $builder Builder >] < Self >
+                    ) -> $($($builder_path)+ ::)? [< $builder Builder >] < Self >
+                ) -> Self {
+                    f(<$($($builder_path)+ ::)? [< $builder Builder >] <Self> >::new_priv(self)).base_priv()
+                }
+            }
         }
     };
     (
@@ -2283,128 +2238,58 @@ macro_rules! ext_builder_impl {
     ) => {
         $crate::std_compile_error!("invalid builder extension");
     };
-    (
-        @path
-        [$($g:tt)*] [$($r:tt)*] [$($w:tt)*]
-        [$base_builder:ty] [$ext:ident]
-        [$builder:ident] [$lt:lifetime] [$($builder_tail:tt)+] [$($($builder_path:tt)+)?]
-    ) => {
-        $crate::paste_paste! {
-            pub trait $ext {
-                fn [< $builder:snake >] (
-                    self,
-                    f: impl for<$lt> FnOnce(
-                        $($($builder_path)+ ::)? [< $builder Builder >] < $lt $($builder_tail)+
-                    ) -> $($($builder_path)+ ::)? [< $builder Builder >] < $lt $($builder_tail)+
-                ) -> Self;
-            }
-
-            impl $($g)* $ext for $base_builder $($w)* {
-                fn [< $builder:snake >] (
-                    self,
-                    f: impl for<$lt> FnOnce(
-                        $($($builder_path)+ ::)? [< $builder Builder >] < $lt $($builder_tail)+
-                    ) -> $($($builder_path)+ ::)? [< $builder Builder >] < $lt $($builder_tail)+
-                ) -> Self {
-                    f(<$($($builder_path)+ ::)? [< $builder Builder >] <'_ $($builder_tail)+>::new_priv(self)).base_priv()
-                }
-            }
-        }
-    };
-    (
-        @path
-        [$($g:tt)*] [$($r:tt)*] [$($w:tt)*]
-        [$base_builder:ty] [$ext:ident]
-        [$builder:ident] [$lt:lifetime] [] [$($($builder_path:tt)+)?]
-    ) => {
-        $crate::std_compile_error!("unclosed generics");
-    };
 }
 
 #[macro_export]
 macro_rules! with_builder {
     (
-        $builder:ident < $lt:lifetime $($builder_tail:tt)+
-    ) => {
-        $crate::split_by_in! {
-            $crate::with_builder_impl {
-                [$builder] [$lt]
-            }
-            $($builder_tail)+
-        }
-    };
-}
-
-#[doc(hidden)]
-#[macro_export]
-macro_rules! with_builder_impl {
-    (
-        [$builder:ident] [$lt:lifetime] [$($builder_tail:tt)+] [$($($builder_path:tt)+)?]
     ) => {
         $crate::paste_paste! {
             pub fn build(
                 self,
                 state: &mut dyn $crate::dyn_context_State,
-                f: impl for<$lt> FnOnce(
-                    $($($builder_path)+ ::)? [< $builder Builder >] < $lt $($builder_tail)+
-                ) -> $($($builder_path)+ ::)? [< $builder Builder >] < $lt $($builder_tail)+
+                f: impl for<'builder_lt> FnOnce(
+                    $crate::GenericBuilder <'builder_lt, Self>
+                ) -> $crate::GenericBuilder <'builder_lt, Self>
             ) -> Self {
-                let base_builder = $crate::GenericBuilder::new(state, self);
-                f(<$($($builder_path)+ ::)? [< $builder Builder >] <'_ $($builder_tail)+>::new_priv(base_builder));
+                f($crate::GenericBuilder::new(state, self));
                 self
             }
         }
     };
     (
-        [$builder:ident] [$lt:lifetime] [] [$($($builder_path:tt)+)?]
+        $builder:ident $(in $($builder_path:tt)+)?
     ) => {
-        $crate::std_compile_error!("unclosed generics");
+        $crate::paste_paste! {
+            pub fn build(
+                self,
+                state: &mut dyn $crate::dyn_context_State,
+                f: impl for<'builder_lt> FnOnce(
+                    $($($builder_path)+ ::)? [< $builder Builder >] < $crate::GenericBuilder <'builder_lt, Self> >
+                ) -> $($($builder_path)+ ::)? [< $builder Builder >] < $crate::GenericBuilder <'builder_lt, Self> >
+            ) -> Self {
+                let base_builder = $crate::GenericBuilder::new(state, self);
+                f(
+                    <
+                        $($($builder_path)+ ::)? [< $builder Builder >] < $crate::GenericBuilder <'_, Self> >
+                    >::new_priv(base_builder)
+                );
+                self
+            }
+        }
     };
 }
 
 /// Defines dependency type.
 ///
-/// Accepts input in any of following forms:
+/// Accepts input in the following form:
 ///
 /// ```ignore
 /// $(#[$attr:meta])* $vis:vis struct $name:ident
 /// $(
-///     in $Id:ty
+///     [$Id:ty]
 /// |
-///     <$generics> in $Id:ty $(where $where_clause)?
-/// )
-/// {
-///     $($(
-///         $(#[$field_attr:meta])* $field_name:ident
-///         $(
-///             : $field_type:ty = $field_value:expr
-///         |
-///             [$vec_field_item_type:ty]
-///         |
-///             yield $event_field_type:ty
-///         )
-///     ),+ $(,)?)?
-/// }
-///
-/// $($(
-///     type BaseBuilder = $base_builder_type:ty;
-/// |
-///     type BaseBuilder<$generics> = $base_builder_type:ty $(where $where_clause)?;
-/// ))?
-/// ```
-///
-/// ```ignore
-/// $(
-///     type BaseBuilder = $base_builder_type:ty;
-/// |
-///     type BaseBuilder<$generics> = $base_builder_type:ty $(where $where_clause)?;
-/// )
-///
-/// $(#[$attr:meta])* $vis:vis struct $name:ident
-/// $(
-///     in $Id:ty
-/// |
-///     <$generics> in $Id:ty $(where $where_clause)?
+///     <$generics> [$Id:ty] $(where $where_clause)?
 /// )
 /// {
 ///     $($(
@@ -2432,64 +2317,12 @@ macro_rules! dep_type {
 #[macro_export]
 macro_rules! dep_type_impl {
     (
-        type BaseBuilder $($token:tt)*
-    ) => {
-        $crate::generics_parse! {
-            $crate::dep_type_impl {
-                @type BaseBuilder
-            }
-        }
-        $($token)*
-    };
-    (
-        @type BaseBuilder
-        [$($bc_g:tt)*] [$($bc_r:tt)*] [$($bc_w:tt)*]
-        = $BaseBuilder:ty;
-
         $(#[$attr:meta])* $vis:vis struct $name:ident $($body:tt)*
     ) => {
         $crate::generics_parse! {
             $crate::dep_type_impl {
                 @struct
-                [[$BaseBuilder] [$($bc_g)*] [$($bc_r)*] [$($bc_w)*]]
-                [$([$attr])*] [$vis] [$name]
-            }
-            $($body)*
-        }
-    };
-    (
-        @type BaseBuilder
-        [$($bc_g:tt)*] [$($bc_r:tt)*] [$($bc_w:tt)*]
-        = $BaseBuilder:ty;
-
-        $($token:tt)*
-    ) => {
-        $crate::std_compile_error!("\
-            invalid dep type definition; allowed form is \
-            '$(#[$attr:meta])* $vis:vis struct $name:ident ...'\
-        ");
-    };
-    (
-        @type BaseBuilder
-        [$($bc_g:tt)*] [$($bc_r:tt)*] [$($bc_w:tt)*]
-        $($token:tt)*
-    ) => {
-        $crate::std_compile_error!($crate::indoc_indoc!("
-            invalid dep type base builder definition; allowed forms are
-
-            type BaseBuilder = $base_builder_type:ty;
-
-            type BaseBuilder<$generics> = $base_builder_type:ty $(where $where_clause)?;
-
-        "));
-    };
-    (
-        $(#[$attr:meta])* $vis:vis struct $name:ident $($body:tt)*
-    ) => {
-        $crate::generics_parse! {
-            $crate::dep_type_impl {
-                @struct
-                []
+                [Base]
                 [$([$attr])*] [$vis] [$name]
             }
             $($body)*
@@ -2497,10 +2330,10 @@ macro_rules! dep_type_impl {
     };
     (
         @struct
-        [[$BaseBuilder:ty] [$($bc_g:tt)*] [$($bc_r:tt)*] [$($bc_w:tt)*]]
+        [$BaseBuilder:ident]
         [$([$attr:meta])*] [$vis:vis] [$name:ident]
         [$($g:tt)*] [$($r:tt)*] [$($w:tt)*]
-        in $Id:ty
+        [$Id:ty]
         {
             $($($(#[$inherits:tt])* $field:ident $delim:tt $($field_ty:ty $(= $field_val:expr)?)?),+ $(,)?)?
         }
@@ -2509,16 +2342,16 @@ macro_rules! dep_type_impl {
             @concat_generics
             [$([$attr])*] [$vis] [$name] [id] [$Id]
             [$($g)*] [$($r)*] [$($w)*]
-            [[$BaseBuilder] [$($bc_g)*] [$($bc_r)*] [$($bc_w)*]]
+            [$BaseBuilder]
             [$($([[$($inherits)*] $field $delim $($field_ty $(= $field_val)?)?])+)?]
         }
     };
     (
         @struct
-        [[$BaseBuilder:ty] [$($bc_g:tt)*] [$($bc_r:tt)*] [$($bc_w:tt)*]]
+        [$BaseBuilder:ident]
         [$([$attr:meta])*] [$vis:vis] [$name:ident]
         [$($g:tt)*] [$($r:tt)*] [$($w:tt)*]
-        in $Id:ty
+        [$Id:ty]
         {
             $($($(#[$inherits:tt])* $field:ident $delim:tt $($field_ty:ty $(= $field_val:expr)?)?),+ $(,)?)?
         }
@@ -2529,75 +2362,7 @@ macro_rules! dep_type_impl {
     };
     (
         @struct
-        []
-        [$([$attr:meta])*] [$vis:vis] [$name:ident]
-        [$($g:tt)*] [$($r:tt)*] [$($w:tt)*]
-        in $Id:ty
-        {
-            $($($(#[$inherits:tt])* $field:ident $delim:tt $($field_ty:ty $(= $field_val:expr)?)?),+ $(,)?)?
-        }
-
-        type BaseBuilder $($token:tt)*
-    ) => {
-        $crate::generics_parse! {
-            $crate::dep_type_impl {
-                @type BaseBuilder after
-                [$([$attr])*] [$vis] [$name] [id] [$Id]
-                [$($g)*] [$($r)*] [$($w)*]
-                [$($([[$($inherits)*] $field $delim $($field_ty $(= $field_val)?)?])+)?]
-            }
-            $($token)*
-        }
-    };
-    (
-        @struct
-        []
-        [$([$attr:meta])*] [$vis:vis] [$name:ident]
-        [$($g:tt)*] [$($r:tt)*] [$($w:tt)*]
-        in $Id:ty
-        {
-            $($($(#[$inherits:tt])* $field:ident $delim:tt $($field_ty:ty $(= $field_val:expr)?)?),+ $(,)?)?
-        }
-    ) => {
-        $crate::dep_type_impl! {
-            @unroll_fields
-            [$([$attr])*] [$vis] [$name] [id] [$Id] [state] [this] [bindings] [handlers]
-            [$($g)*] [$($r)*] [$($w)*]
-            [] [] [] [] [] [] []
-            []
-            [$($([[$($inherits)*] $field $delim $($field_ty $(= $field_val)?)?])+)?]
-        }
-    };
-    (
-        @struct
-        []
-        [$([$attr:meta])*] [$vis:vis] [$name:ident]
-        [$($g:tt)*] [$($r:tt)*] [$($w:tt)*]
-        in $Id:ty
-        {
-            $($($(#[$inherits:tt])* $field:ident $delim:tt $($field_ty:ty $(= $field_val:expr)?)?),+ $(,)?)?
-        }
-        $token:tt $($tail:tt)*
-    ) => {
-        $crate::unexpected_token!($token);
-        $crate::std_compile_error!($crate::std_concat!(
-            "\
-                invalid tokens after dep type definition; \
-                the only allowed construction here is a dep type base builder definition \
-            ",
-            $crate::indoc_indoc!("
-                in any of following forms:
-
-                type BaseBuilder = $base_builder_type:ty;
-
-                type BaseBuilder<$generics> = $base_builder_type:ty $(where $where_clause)?;
-
-            ")
-        ));
-    };
-    (
-        @struct
-        [$([$BaseBuilder:ty] [$($bc_g:tt)*] [$($bc_r:tt)*] [$($bc_w:tt)*])?]
+        [$BaseBuilder:ident]
         [$([$attr:meta])*] [$vis:vis] [$name:ident]
         [$($g:tt)*] [$($r:tt)*] [$($w:tt)*]
         $($token:tt)*
@@ -2607,9 +2372,9 @@ macro_rules! dep_type_impl {
 
             $(#[$attr:meta])* $vis:vis struct $name:ident
             $(
-                in $Id:ty
+                [$Id:ty]
             |
-                <$generics> in $Id:ty $(where $where_clause)?
+                <$generics> [$Id:ty] $(where $where_clause)?
             )
             {
                 $($(
@@ -2627,56 +2392,10 @@ macro_rules! dep_type_impl {
         "));
     };
     (
-        @type BaseBuilder after
-        [$([$attr:meta])*] [$vis:vis] [$name:ident] [$id:ident] [$Id:ty]
-        [$($g:tt)*] [$($r:tt)*] [$($w:tt)*]
-        [$($([[$($inherits:tt)*] $field:ident $delim:tt $($field_ty:ty $(= $field_val:expr)?)?])+)?]
-        [$($bc_g:tt)*] [$($bc_r:tt)*] [$($bc_w:tt)*]
-        = $BaseBuilder:ty;
-    ) => {
-        $crate::dep_type_impl! {
-            @concat_generics
-            [$([$attr])*] [$vis] [$name] [$id] [$Id]
-            [$($g)*] [$($r)*] [$($w)*]
-            [[$BaseBuilder] [$($bc_g)*] [$($bc_r)*] [$($bc_w)*]]
-            [$($([[$($inherits)*] $field $delim $($field_ty $(= $field_val)?)?])+)?]
-        }
-    };
-    (
-        @type BaseBuilder after
-        [$([$attr:meta])*] [$vis:vis] [$name:ident] [$id:ident] [$Id:ty]
-        [$($g:tt)*] [$($r:tt)*] [$($w:tt)*]
-        [$($([[$($inherits:tt)*] $field:ident $delim:tt $($field_ty:ty $(= $field_val:expr)?)?])+)?]
-        [$($bc_g:tt)*] [$($bc_r:tt)*] [$($bc_w:tt)*]
-        = $BaseBuilder:ty;
-
-        $token:tt $($tail:tt)*
-    ) => {
-        $crate::unexpected_token!($token);
-        $crate::std_compile_error!("unexpected extra tokens after dep type base builder definition");
-    };
-    (
-        @type BaseBuilder after
-        [$([$attr:meta])*] [$vis:vis] [$name:ident] [$id:ident] [$Id:ty]
-        [$($g:tt)*] [$($r:tt)*] [$($w:tt)*]
-        [$($([[$($inherits:tt)*] $field:ident $delim:tt $($field_ty:ty $(= $field_val:expr)?)?])+)?]
-        [$($bc_g:tt)*] [$($bc_r:tt)*] [$($bc_w:tt)*]
-        $($token:tt)*
-    ) => {
-        $crate::std_compile_error!($crate::indoc_indoc!("
-            invalid dep type base builder definition; allowed forms are
-
-            type BaseBuilder = $base_builder_type:ty;
-
-            type BaseBuilder<$generics> = $base_builder_type:ty $(where $where_clause)?;
-
-        "));
-    };
-    (
         @concat_generics
         [$([$attr:meta])*] [$vis:vis] [$name:ident] [$id:ident] [$Id:ty]
         [$($g:tt)*] [$($r:tt)*] [$($w:tt)*]
-        [[$BaseBuilder:ty] [$($bc_g:tt)*] [$($bc_r:tt)*] [$($bc_w:tt)*]]
+        [$BaseBuilder:ident]
         [$([[$($inherits:tt)*] $field:ident $delim:tt $($field_ty:ty $(= $field_val:expr)?)?])*]
     ) => {
         $crate::generics_concat! {
@@ -2687,13 +2406,13 @@ macro_rules! dep_type_impl {
                 [$($g)*] [$($r)*] [$($w)*]
                 [$([[$($inherits)*] $field $delim $($field_ty $(= $field_val)?)?])*]
             }
-            [$($g)*] [$($r)*] [$($w)*],
-            [$($bc_g)*] [$($bc_r)*] [$($bc_w)*]
+            [ < $BaseBuilder : $crate::DepObjBuilder <Id= $Id > > ] [ < $BaseBuilder > ] [],
+            [$($g)*] [$($r)*] [$($w)*]
         }
     };
     (
         @concat_generics_done
-        [$BaseBuilder:ty]
+        [$BaseBuilder:ident]
         [$([$attr:meta])*] [$vis:vis] [$name:ident] [$id:ident] [$Id:ty]
         [$($g:tt)*] [$($r:tt)*] [$($w:tt)*]
         [$([[$($inherits:tt)*] $field:ident $delim:tt $($field_ty:ty $(= $field_val:expr)?)?])*]
@@ -2704,7 +2423,7 @@ macro_rules! dep_type_impl {
             [$([$attr])*] [$vis] [$name] [$id] [$Id] [state] [this] [bindings] [handlers]
             [$($g)*] [$($r)*] [$($w)*]
             [] [] [] [] [] [] []
-            [[$BaseBuilder] [$($bc_g)*] [$($bc_r)*] [$($bc_w)*] []]
+            [$BaseBuilder] [$($bc_g)*] [$($bc_r)*] [$($bc_w)*] []
             [$([[$($inherits)*] $field $delim $($field_ty $(= $field_val)?)?])*]
         }
     };
@@ -2720,10 +2439,8 @@ macro_rules! dep_type_impl {
         [$($core_bindings:tt)*]
         [$($core_handlers:tt)*]
         [$($update_handlers:tt)*]
-        [$(
-            [$BaseBuilder:ty] [$($bc_g:tt)*] [$($bc_r:tt)*] [$($bc_w:tt)*]
-            [$($builder_methods:tt)*]
-        )?]
+        [$BaseBuilder:ident] [$($bc_g:tt)*] [$($bc_r:tt)*] [$($bc_w:tt)*]
+        [$($builder_methods:tt)*]
         [[[ref inherits] $field:ident : $field_ty:ty = $field_val:expr] $($fields:tt)*]
     ) => {
         $crate::dep_type_impl! {
@@ -2767,19 +2484,17 @@ macro_rules! dep_type_impl {
                 $($update_handlers)*
                 $name:: [< $field:upper >] .update_parent_children_has_handlers($state, $id);
             ]
-            [$(
-                [$BaseBuilder] [$($bc_g)*] [$($bc_r)*] [$($bc_w)*]
-                [
-                    $($builder_methods)*
+            [$BaseBuilder] [$($bc_g)*] [$($bc_r)*] [$($bc_w)*]
+            [
+                $($builder_methods)*
 
-                    $vis fn [< $field _ref >] (mut self, value: $field_ty) -> Self {
-                        let id = <$BaseBuilder as $crate::DepObjBuilder<$Id>>::id(&self.base);
-                        let state = <$BaseBuilder as $crate::DepObjBuilder<$Id>>::state_mut(&mut self.base);
-                        $name:: [< $field:upper >] .set(state, id, value).immediate();
-                        self
-                    }
-                ]
-            )?]
+                $vis fn [< $field _ref >] (mut self, value: $field_ty) -> Self {
+                    let id = <$BaseBuilder as $crate::DepObjBuilder>::id(&self.base);
+                    let state = <$BaseBuilder as $crate::DepObjBuilder>::state_mut(&mut self.base);
+                    $name:: [< $field:upper >] .set(state, id, value).immediate();
+                    self
+                }
+            ]
             [$($fields)*]
         }
     };
@@ -2795,10 +2510,8 @@ macro_rules! dep_type_impl {
         [$($core_bindings:tt)*]
         [$($core_handlers:tt)*]
         [$($update_handlers:tt)*]
-        [$(
-            [$BaseBuilder:ty] [$($bc_g:tt)*] [$($bc_r:tt)*] [$($bc_w:tt)*]
-            [$($builder_methods:tt)*]
-        )?]
+        [$BaseBuilder:ident] [$($bc_g:tt)*] [$($bc_r:tt)*] [$($bc_w:tt)*]
+        [$($builder_methods:tt)*]
         [[[inherits ref] $field:ident : $field_ty:ty = $field_val:expr] $($fields:tt)*]
     ) => {
         $crate::dep_type_impl! {
@@ -2809,7 +2522,7 @@ macro_rules! dep_type_impl {
                 $($core_fields)*
                 $field: $crate::DepPropEntry<$field_ty>,
             ]
-            [
+                [
                 $($core_new)*
                 $field: $crate::DepPropEntry::new(&Self:: [< $field:upper _DEFAULT >] , true),
             ]
@@ -2841,19 +2554,17 @@ macro_rules! dep_type_impl {
                 $($update_handlers)*
                 $name:: [< $field:upper >] .update_parent_children_has_handlers($state, $id);
             ]
-            [$(
-                [$BaseBuilder] [$($bc_g)*] [$($bc_r)*] [$($bc_w)*]
-                [
-                    $($builder_methods)*
+            [$BaseBuilder] [$($bc_g)*] [$($bc_r)*] [$($bc_w)*]
+            [
+                $($builder_methods)*
 
-                    $vis fn [< $field _ref >] (mut self, value: $field_ty) -> Self {
-                        let id = <$BaseBuilder as $crate::DepObjBuilder<$Id>>::id(&self.base);
-                        let state = <$BaseBuilder as $crate::DepObjBuilder<$Id>>::state_mut(&mut self.base);
-                        $name:: [< $field:upper >] .set(state, id, value).immediate();
-                        self
-                    }
-                ]
-            )?]
+                $vis fn [< $field _ref >] (mut self, value: $field_ty) -> Self {
+                    let id = <$BaseBuilder as $crate::DepObjBuilder>::id(&self.base);
+                    let state = <$BaseBuilder as $crate::DepObjBuilder>::state_mut(&mut self.base);
+                    $name:: [< $field:upper >] .set(state, id, value).immediate();
+                    self
+                }
+            ]
             [$($fields)*]
         }
     };
@@ -2869,10 +2580,8 @@ macro_rules! dep_type_impl {
         [$($core_bindings:tt)*]
         [$($core_handlers:tt)*]
         [$($update_handlers:tt)*]
-        [$(
-            [$BaseBuilder:ty] [$($bc_g:tt)*] [$($bc_r:tt)*] [$($bc_w:tt)*]
-            [$($builder_methods:tt)*]
-        )?]
+        [$BaseBuilder:ident] [$($bc_g:tt)*] [$($bc_r:tt)*] [$($bc_w:tt)*]
+        [$($builder_methods:tt)*]
         [[[inherits] $field:ident : $field_ty:ty = $field_val:expr] $($fields:tt)*]
     ) => {
         $crate::dep_type_impl! {
@@ -2915,19 +2624,17 @@ macro_rules! dep_type_impl {
                 $($update_handlers)*
                 $name:: [< $field:upper >] .update_parent_children_has_handlers($state, $id);
             ]
-            [$(
-                [$BaseBuilder] [$($bc_g)*] [$($bc_r)*] [$($bc_w)*]
-                [
-                    $($builder_methods)*
+            [$BaseBuilder] [$($bc_g)*] [$($bc_r)*] [$($bc_w)*]
+            [
+                $($builder_methods)*
 
-                    $vis fn $field(mut self, value: $field_ty) -> Self {
-                        let id = <$BaseBuilder as $crate::DepObjBuilder<$Id>>::id(&self.base);
-                        let state = <$BaseBuilder as $crate::DepObjBuilder<$Id>>::state_mut(&mut self.base);
-                        $name:: [< $field:upper >] .set(state, id, value).immediate();
-                        self
-                    }
-                ]
-            )?]
+                $vis fn $field(mut self, value: $field_ty) -> Self {
+                    let id = <$BaseBuilder as $crate::DepObjBuilder>::id(&self.base);
+                    let state = <$BaseBuilder as $crate::DepObjBuilder>::state_mut(&mut self.base);
+                    $name:: [< $field:upper >] .set(state, id, value).immediate();
+                    self
+                }
+            ]
             [$($fields)*]
         }
     };
@@ -2943,10 +2650,8 @@ macro_rules! dep_type_impl {
         [$($core_bindings:tt)*]
         [$($core_handlers:tt)*]
         [$($update_handlers:tt)*]
-        [$(
-            [$BaseBuilder:ty] [$($bc_g:tt)*] [$($bc_r:tt)*] [$($bc_w:tt)*]
-            [$($builder_methods:tt)*]
-        )?]
+        [$BaseBuilder:ident] [$($bc_g:tt)*] [$($bc_r:tt)*] [$($bc_w:tt)*]
+        [$($builder_methods:tt)*]
         [[[ref] $field:ident : $field_ty:ty = $field_val:expr] $($fields:tt)*]
     ) => {
         $crate::dep_type_impl! {
@@ -2988,19 +2693,17 @@ macro_rules! dep_type_impl {
             [
                 $($update_handlers)*
             ]
-            [$(
-                [$BaseBuilder] [$($bc_g)*] [$($bc_r)*] [$($bc_w)*]
-                [
-                    $($builder_methods)*
+            [$BaseBuilder] [$($bc_g)*] [$($bc_r)*] [$($bc_w)*]
+            [
+                $($builder_methods)*
 
-                    $vis fn [< $field _ref >] (mut self, value: $field_ty) -> Self {
-                        let id = <$BaseBuilder as $crate::DepObjBuilder<$Id>>::id(&self.base);
-                        let state = <$BaseBuilder as $crate::DepObjBuilder<$Id>>::state_mut(&mut self.base);
-                        $name:: [< $field:upper >] .set(state, id, value).immediate();
-                        self
-                    }
-                ]
-            )?]
+                $vis fn [< $field _ref >] (mut self, value: $field_ty) -> Self {
+                    let id = <$BaseBuilder as $crate::DepObjBuilder>::id(&self.base);
+                    let state = <$BaseBuilder as $crate::DepObjBuilder>::state_mut(&mut self.base);
+                    $name:: [< $field:upper >] .set(state, id, value).immediate();
+                    self
+                }
+            ]
             [$($fields)*]
         }
     };
@@ -3016,10 +2719,8 @@ macro_rules! dep_type_impl {
         [$($core_bindings:tt)*]
         [$($core_handlers:tt)*]
         [$($update_handlers:tt)*]
-        [$(
-            [$BaseBuilder:ty] [$($bc_g:tt)*] [$($bc_r:tt)*] [$($bc_w:tt)*]
-            [$($builder_methods:tt)*]
-        )?]
+        [$BaseBuilder:ident] [$($bc_g:tt)*] [$($bc_r:tt)*] [$($bc_w:tt)*]
+        [$($builder_methods:tt)*]
         [[[] $field:ident : $field_ty:ty = $field_val:expr] $($fields:tt)*]
     ) => {
         $crate::dep_type_impl! {
@@ -3061,19 +2762,17 @@ macro_rules! dep_type_impl {
             [
                 $($update_handlers)*
             ]
-            [$(
-                [$BaseBuilder] [$($bc_g)*] [$($bc_r)*] [$($bc_w)*]
-                [
-                    $($builder_methods)*
+            [$BaseBuilder] [$($bc_g)*] [$($bc_r)*] [$($bc_w)*]
+            [
+                $($builder_methods)*
 
-                    $vis fn $field(mut self, value: $field_ty) -> Self {
-                        let id = <$BaseBuilder as $crate::DepObjBuilder<$Id>>::id(&self.base);
-                        let state = <$BaseBuilder as $crate::DepObjBuilder<$Id>>::state_mut(&mut self.base);
-                        $name:: [< $field:upper >] .set(state, id, value).immediate();
-                        self
-                    }
-                ]
-            )?]
+                $vis fn $field(mut self, value: $field_ty) -> Self {
+                    let id = <$BaseBuilder as $crate::DepObjBuilder>::id(&self.base);
+                    let state = <$BaseBuilder as $crate::DepObjBuilder>::state_mut(&mut self.base);
+                    $name:: [< $field:upper >] .set(state, id, value).immediate();
+                    self
+                }
+            ]
             [$($fields)*]
         }
     };
@@ -3090,7 +2789,7 @@ macro_rules! dep_type_impl {
         [$($core_handlers:tt)*]
         [$($update_handlers:tt)*]
         [$(
-            [$BaseBuilder:ty] [$($bc_g:tt)*] [$($bc_r:tt)*] [$($bc_w:tt)*]
+            [$BaseBuilder:ident] [$($bc_g:tt)*] [$($bc_r:tt)*] [$($bc_w:tt)*]
             [$($builder_methods:tt)*]
         )?]
         [[[$($inherits:tt)*] $field:ident : $field_ty:ty = $field_val:expr] $($fields:tt)*]
@@ -3113,10 +2812,8 @@ macro_rules! dep_type_impl {
         [$($core_bindings:tt)*]
         [$($core_handlers:tt)*]
         [$($update_handlers:tt)*]
-        [$(
-            [$BaseBuilder:ty] [$($bc_g:tt)*] [$($bc_r:tt)*] [$($bc_w:tt)*]
-            [$($builder_methods:tt)*]
-        )?]
+        [$BaseBuilder:ident] [$($bc_g:tt)*] [$($bc_r:tt)*] [$($bc_w:tt)*]
+        [$($builder_methods:tt)*]
         [[[bubble] $field:ident yield $field_ty:ty] $($fields:tt)*]
     ) => {
         $crate::dep_type_impl! {
@@ -3154,12 +2851,10 @@ macro_rules! dep_type_impl {
             [
                 $($update_handlers)*
             ]
-            [$(
-                [$BaseBuilder] [$($bc_g)*] [$($bc_r)*] [$($bc_w)*]
-                [
-                    $($builder_methods)*
-                ]
-            )?]
+            [$BaseBuilder] [$($bc_g)*] [$($bc_r)*] [$($bc_w)*]
+            [
+                $($builder_methods)*
+            ]
             [$($fields)*]
         }
     };
@@ -3175,10 +2870,8 @@ macro_rules! dep_type_impl {
         [$($core_bindings:tt)*]
         [$($core_handlers:tt)*]
         [$($update_handlers:tt)*]
-        [$(
-            [$BaseBuilder:ty] [$($bc_g:tt)*] [$($bc_r:tt)*] [$($bc_w:tt)*]
-            [$($builder_methods:tt)*]
-        )?]
+        [$BaseBuilder:ident] [$($bc_g:tt)*] [$($bc_r:tt)*] [$($bc_w:tt)*]
+        [$($builder_methods:tt)*]
         [[[] $field:ident yield $field_ty:ty] $($fields:tt)*]
     ) => {
         $crate::dep_type_impl! {
@@ -3216,12 +2909,10 @@ macro_rules! dep_type_impl {
             [
                 $($update_handlers)*
             ]
-            [$(
-                [$BaseBuilder] [$($bc_g)*] [$($bc_r)*] [$($bc_w)*]
-                [
-                    $($builder_methods)*
-                ]
-            )?]
+            [$BaseBuilder] [$($bc_g)*] [$($bc_r)*] [$($bc_w)*]
+            [
+                $($builder_methods)*
+            ]
             [$($fields)*]
         }
     };
@@ -3237,10 +2928,8 @@ macro_rules! dep_type_impl {
         [$($core_bindings:tt)*]
         [$($core_handlers:tt)*]
         [$($update_handlers:tt)*]
-        [$(
-            [$BaseBuilder:ty] [$($bc_g:tt)*] [$($bc_r:tt)*] [$($bc_w:tt)*]
-            [$($builder_methods:tt)*]
-        )?]
+        [$BaseBuilder:ident] [$($bc_g:tt)*] [$($bc_r:tt)*] [$($bc_w:tt)*]
+        [$($builder_methods:tt)*]
         [[[$($inherits:tt)*] $field:ident yield $field_ty:ty] $($fields:tt)*]
     ) => {
         $crate::std_compile_error!($crate::std_concat!(
@@ -3261,10 +2950,8 @@ macro_rules! dep_type_impl {
         [$($core_bindings:tt)*]
         [$($core_handlers:tt)*]
         [$($update_handlers:tt)*]
-        [$(
-            [$BaseBuilder:ty] [$($bc_g:tt)*] [$($bc_r:tt)*] [$($bc_w:tt)*]
-            [$($builder_methods:tt)*]
-        )?]
+        [$BaseBuilder:ident] [$($bc_g:tt)*] [$($bc_r:tt)*] [$($bc_w:tt)*]
+        [$($builder_methods:tt)*]
         [[[] $field:ident [$field_ty:ty]] $($fields:tt)*]
     ) => {
         $crate::dep_type_impl! {
@@ -3303,12 +2990,10 @@ macro_rules! dep_type_impl {
             [
                 $($update_handlers)*
             ]
-            [$(
-                [$BaseBuilder] [$($bc_g)*] [$($bc_r)*] [$($bc_w)*]
-                [
-                    $($builder_methods)*
-                ]
-            )?]
+            [$BaseBuilder] [$($bc_g)*] [$($bc_r)*] [$($bc_w)*]
+            [
+                $($builder_methods)*
+            ]
             [$($fields)*]
         }
     };
@@ -3324,10 +3009,8 @@ macro_rules! dep_type_impl {
         [$($core_bindings:tt)*]
         [$($core_handlers:tt)*]
         [$($update_handlers:tt)*]
-        [$(
-            [$BaseBuilder:ty] [$($bc_g:tt)*] [$($bc_r:tt)*] [$($bc_w:tt)*]
-            [$($builder_methods:tt)*]
-        )?]
+        [$BaseBuilder:ident] [$($bc_g:tt)*] [$($bc_r:tt)*] [$($bc_w:tt)*]
+        [$($builder_methods:tt)*]
         [[[$($inherits:tt)*] $field:ident [$field_ty:ty]] $($fields:tt)*]
     ) => {
         $crate::std_compile_error!($crate::std_concat!(
@@ -3348,10 +3031,8 @@ macro_rules! dep_type_impl {
         [$($core_bindings:tt)*]
         [$($core_handlers:tt)*]
         [$($update_handlers:tt)*]
-        [$(
-            [$BaseBuilder:ty] [$($bc_g:tt)*] [$($bc_r:tt)*] [$($bc_w:tt)*]
-            [$($builder_methods:tt)*]
-        )?]
+        [$BaseBuilder:ident] [$($bc_g:tt)*] [$($bc_r:tt)*] [$($bc_w:tt)*]
+        [$($builder_methods:tt)*]
         [[[$($inherits:tt)*] $field:ident $delim:tt $field_ty:ty $(= $field_val:expr)?] $($fields:tt)*]
     ) => {
         $crate::std_compile_error!($crate::std_concat!(
@@ -3381,10 +3062,8 @@ macro_rules! dep_type_impl {
         [$($core_bindings:tt)*]
         [$($core_handlers:tt)*]
         [$($update_handlers:tt)*]
-        [$(
-            [$BaseBuilder:ty] [$($bc_g:tt)*] [$($bc_r:tt)*] [$($bc_w:tt)*]
-            [$($builder_methods:tt)*]
-        )?]
+        [$BaseBuilder:ident] [$($bc_g:tt)*] [$($bc_r:tt)*] [$($bc_w:tt)*]
+        [$($builder_methods:tt)*]
         []
     ) => {
         $crate::paste_paste! {
@@ -3457,82 +3136,55 @@ macro_rules! dep_type_impl {
                 }
             }
 
-            $(
-                $vis struct [< $name Builder >] $($bc_g)* $($bc_w)* {
-                    base: $BaseBuilder,
+            $vis struct [< $name Builder >] $($bc_g)* $($bc_w)* {
+                base: $BaseBuilder,
+            }
+
+            impl $($bc_g)* $crate::DepObjBuilder for [< $name Builder >] $($bc_r)* $($bc_w)* {
+                type Id = $Id;
+
+                fn state(&self) -> &dyn $crate::dyn_context_State {
+                    < $BaseBuilder as $crate::DepObjBuilder >::state(&self.base)
                 }
 
-                impl $($bc_g)* $crate::DepObjBuilder < $Id > for [< $name Builder >] $($bc_r)* $($bc_w)* {
-                    fn state(&self) -> &dyn $crate::dyn_context_State { self.base.state() }
-
-                    fn state_mut(&mut self) -> &mut dyn $crate::dyn_context_State { self.base.state_mut() }
-
-                    fn id(&self) -> $Id { self.base.id() }
+                fn state_mut(&mut self) -> &mut dyn $crate::dyn_context_State {
+                    < $BaseBuilder as $crate::DepObjBuilder >::state_mut(&mut self.base)
                 }
 
-                impl $($bc_g)* [< $name Builder >] $($bc_r)* $($bc_w)* {
-                    fn new_priv(base: $BaseBuilder) -> Self {
-                        Self { base }
-                    }
-
-                    #[allow(dead_code)]
-                    fn base_priv(self) -> $BaseBuilder { self.base }
-
-                    #[allow(dead_code)]
-                    fn base_priv_ref(&self) -> &$BaseBuilder { &self.base }
-
-                    #[allow(dead_code)]
-                    fn base_priv_mut(&mut self) -> &mut $BaseBuilder { &mut self.base }
-
-                    $($builder_methods)*
+                fn id(&self) -> $Id {
+                    < $BaseBuilder as $crate::DepObjBuilder >::id(&self.base)
                 }
-            )?
+            }
+
+            impl $($bc_g)* [< $name Builder >] $($bc_r)* $($bc_w)* {
+                fn new_priv(base: $BaseBuilder) -> Self {
+                    Self { base }
+                }
+
+                #[allow(dead_code)]
+                fn base_priv(self) -> $BaseBuilder { self.base }
+
+                #[allow(dead_code)]
+                fn base_priv_ref(&self) -> &$BaseBuilder { &self.base }
+
+                #[allow(dead_code)]
+                fn base_priv_mut(&mut self) -> &mut $BaseBuilder { &mut self.base }
+
+                $($builder_methods)*
+            }
         }
     };
     (
         $($token:tt)*
     ) => {
         $crate::std_compile_error!($crate::indoc_indoc!("
-            invalid dep_type macro input, allowed forms are
+            invalid dep_type macro input, allowed form is
 
             $(#[$attr:meta])* $vis:vis struct $name:ident
             $(
-                in $Id:ty
+                [$Id:ty]
             |
-                <$generics> in $Id:ty $(where $where_clause)?
-            )
-            {
-                $($(
-                    $(#[$field_attr:meta])* $field_name:ident
-                    $(
-                        : $field_type:ty = $field_value:expr
-                    |
-                        [$vec_field_item_type:ty]
-                    |
-                        yield $event_field_type:ty
-                    )
-                ),+ $(,)?)?
-            }
-
-            $($(
-                type BaseBuilder = $base_builder_type:ty;
-            |
-                type BaseBuilder<$generics> = $base_builder_type:ty $(where $where_clause)?;
-            ))?
-
-            and
-
-            $(
-                type BaseBuilder = $base_builder_type:ty;
-            |
-                type BaseBuilder<$generics> = $base_builder_type:ty $(where $where_clause)?;
-            )
-
-            $(#[$attr:meta])* $vis:vis struct $name:ident
-            $(
-                in $Id:ty
-            |
-                <$generics> in $Id:ty $(where $where_clause)?
+                <$generics> [$Id:ty] $(where $where_clause)?
             )
             {
                 $($(
