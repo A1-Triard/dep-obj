@@ -3484,8 +3484,8 @@ macro_rules! impl_dep_obj_impl {
                 $($opt_tr)*
                 [
                     [$Obj] [$DepObjKey] [$StatePart] [this] [state_part]
-                    [ state_part.0[this.0] . $component_field .as_mut().as_mut() ]
-                    [ state_part.0[this.0] . $component_field .as_ref().as_ref() ]
+                    [ state_part.0[this.0] . $component_field .as_deref_mut() ]
+                    [ state_part.0[this.0] . $component_field .as_deref() ]
                 ]
             ]
             [$($tail)*]
@@ -3507,8 +3507,8 @@ macro_rules! impl_dep_obj_impl {
                 $($opt_tr)*
                 [
                     [$Obj] [$DepObjKey] [$StatePart] [this] [state_part]
-                    [ state_part. $state_part_field [this.0] . $component_field .as_mut().as_mut() ]
-                    [ state_part. $state_part_field [this.0] . $component_field .as_ref().as_ref() ]
+                    [ state_part. $state_part_field [this.0] . $component_field .as_deref_mut() ]
+                    [ state_part. $state_part_field [this.0] . $component_field .as_deref() ]
                 ]
             ]
             [$($tail)*]
