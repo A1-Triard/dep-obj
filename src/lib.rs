@@ -3878,7 +3878,96 @@ macro_rules! impl_dep_obj_impl {
             [$($tail)*]
         }
     };
-    /*
+    (
+        @objs
+        [$($g:tt)*] [$($r:tt)*] [$($w:tt)*] [$Id:ty]
+        [$($ty:tt)*] [$($opt_ty:tt)*] [$($tr:tt)*] [$($opt_tr:tt)*]
+        [
+            fn<$DepObjKey:tt>(
+                self as $this:ident,
+                $state_part:ident : $StatePart:ty
+            ) -> ($Obj:ty) {
+                if mut { $field_mut:expr } else { $field:expr }
+            }
+            $($tail:tt)*
+        ]
+    ) => {
+        $crate::impl_dep_obj_impl! {
+            @objs
+            [$($g)*] [$($r)*] [$($w)*] [$Id]
+            [
+                $($ty)*
+                [
+                    [$Obj] [$DepObjKey] [$StatePart] [$this] [$state_part]
+                    [$field] [$field_mut]
+                ]
+            ]
+            [$($opt_ty)*]
+            [$($tr)*]
+            [$($opt_tr)*]
+            [$($tail)*]
+        }
+    };
+    (
+        @objs
+        [$($g:tt)*] [$($r:tt)*] [$($w:tt)*] [$Id:ty]
+        [$($ty:tt)*] [$($opt_ty:tt)*] [$($tr:tt)*] [$($opt_tr:tt)*]
+        [
+            fn<$DepObjKey:tt>(
+                self as $this:ident,
+                $state_part:ident : $StatePart:ty
+            ) -> optional ($Obj:ty) {
+                if mut { $field_mut:expr } else { $field:expr }
+            }
+            $($tail:tt)*
+        ]
+    ) => {
+        $crate::impl_dep_obj_impl! {
+            @objs
+            [$($g)*] [$($r)*] [$($w)*] [$Id]
+            [$($ty)*]
+            [
+                $($opt_ty)*
+                [
+                    [$Obj] [$DepObjKey] [$StatePart] [$this] [$state_part]
+                    [$field] [$field_mut]
+                ]
+            ]
+            [$($tr)*]
+            [$($opt_tr)*]
+            [$($tail)*]
+        }
+    };
+    (
+        @objs
+        [$($g:tt)*] [$($r:tt)*] [$($w:tt)*] [$Id:ty]
+        [$($ty:tt)*] [$($opt_ty:tt)*] [$($tr:tt)*] [$($opt_tr:tt)*]
+        [
+            fn<$DepObjKey:tt>(
+                self as $this:ident,
+                $state_part:ident : $StatePart:ty
+            ) -> dyn($Obj:path) {
+                if mut { $field_mut:expr } else { $field:expr }
+            }
+            $($tail:tt)*
+        ]
+    ) => {
+        $crate::impl_dep_obj_impl! {
+            @objs
+            [$($g)*] [$($r)*] [$($w)*] [$Id]
+            [$($ty)*]
+            [$($opt_ty)*]
+            [
+                $($tr)*
+                [
+                    [$Obj] [$DepObjKey] [$StatePart] [$this] [$state_part]
+                    [$field] [$field_mut]
+                ]
+            ]
+            [$($opt_tr)*]
+            [$($tail)*]
+        }
+    };
     (
         @objs
         [$($g:tt)*] [$($r:tt)*] [$($w:tt)*] [$Id:ty]
@@ -3899,11 +3988,16 @@ macro_rules! impl_dep_obj_impl {
             [$($ty)*]
             [$($opt_ty)*]
             [$($tr)*]
-            [$($opt_tr)* [[$Obj] [$DepObjKey] [$StatePart] [. $state_part_field] [. $component_field]]]
+            [
+                $($opt_tr)*
+                [
+                    [$Obj] [$DepObjKey] [$StatePart] [$this] [$state_part]
+                    [$field] [$field_mut]
+                ]
+            ]
             [$($tail)*]
         }
     };
-    */
     (
         @objs
         $g:tt $r:tt $w:tt [$Id:ty]
@@ -3991,10 +4085,17 @@ macro_rules! impl_dep_obj_impl {
             $crate::std_stringify!($token $($tail)*),
             "\n\n",
             $crate::indoc_indoc!("
-                allowed form is
+                allowed forms are
 
                 fn<$DepObjKey:ty>() -> $(optional)? $(($ty:ty) | dyn($tr:path)) {
                     $StatePart:ty $({ . $state_part_field:tt })? | . $component_field:tt
+                }
+
+                fn<$DepObjKey:ty>(
+                    self as $this:ident,
+                    $state_part:ident : $StatePart:ty
+                ) -> $(optional)? $(($ty:ty) | dyn($tr:path)) {
+                    if mut { $field_mut:expr } else { $field:expr }
                 }
 
             ")
