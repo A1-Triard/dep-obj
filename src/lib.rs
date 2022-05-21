@@ -3414,7 +3414,7 @@ macro_rules! impl_dep_obj_impl {
                 [
                     [$Obj] [$DepObjKey] [$StatePart] [this] [state_part]
                     [ state_part. $state_part_field [this.0] . $component_field .as_mut() ]
-                    [ state_part. $state_part_fielf [this.0] . $component_field .as_ref() ]
+                    [ state_part. $state_part_field [this.0] . $component_field .as_ref() ]
                 ]
             ]
             [$($tr)*]
