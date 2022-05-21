@@ -3703,7 +3703,17 @@ macro_rules! impl_dep_obj_impl {
         $crate::impl_dep_obj_impl! {
             @objs
             [$($g)*] [$($r)*] [$($w)*] [$Id]
-            [$($ty)* [[$Obj] [$DepObjKey] [$StatePart] [.0] [. $component_field]]] [$($opt_ty)*] [$($tr)*] [$($opt_tr)*]
+            [
+                $($ty)*
+                [
+                    [$Obj] [$DepObjKey] [$StatePart] [this] [state_part]
+                    [ &mut state_part.0[this.0] . $component_field ]
+                    [ &state_part.0[this.0] . $component_field ]
+                ]
+            ]
+            [$($opt_ty)*]
+            [$($tr)*]
+            [$($opt_tr)*]
             [$($tail)*]
         }
     };
@@ -3716,7 +3726,17 @@ macro_rules! impl_dep_obj_impl {
         $crate::impl_dep_obj_impl! {
             @objs
             [$($g)*] [$($r)*] [$($w)*] [$Id]
-            [$($ty)* [[$Obj] [$DepObjKey] [$StatePart] [. $state_part_field] [. $component_field]]] [$($opt_ty)*] [$($tr)*] [$($opt_tr)*]
+            [
+                $($ty)*
+                [
+                    [$Obj] [$DepObjKey] [$StatePart] [this] [state_part]
+                    [ &mut state_part. $state_part_field [this.0] . $component_field ]
+                    [ &state_part. $state_part_field [this.0] . $component_field ]
+                ]
+            ]
+            [$($opt_ty)*]
+            [$($tr)*]
+            [$($opt_tr)*]
             [$($tail)*]
         }
     };
@@ -3729,7 +3749,17 @@ macro_rules! impl_dep_obj_impl {
         $crate::impl_dep_obj_impl! {
             @objs
             [$($g)*] [$($r)*] [$($w)*] [$Id]
-            [$($ty)*] [$($opt_ty)* [[$Obj] [$DepObjKey] [$StatePart] [.0] [. $component_field]]] [$($tr)*] [$($opt_tr)*]
+            [$($ty)*]
+            [
+                $($opt_ty)*
+                [
+                    [$Obj] [$DepObjKey] [$StatePart] [this] [state_part]
+                    [ state_part.0[this.0] . $component_field .as_mut() ]
+                    [ state_part.0[this.0] . $component_field .as_ref() ]
+                ]
+            ]
+            [$($tr)*]
+            [$($opt_tr)*]
             [$($tail)*]
         }
     };
@@ -3742,7 +3772,17 @@ macro_rules! impl_dep_obj_impl {
         $crate::impl_dep_obj_impl! {
             @objs
             [$($g)*] [$($r)*] [$($w)*] [$Id]
-            [$($ty)*] [$($opt_ty)* [[$Obj] [$DepObjKey] [$StatePart] [. $state_part_field] [. $component_field]]] [$($tr)*] [$($opt_tr)*]
+            [$($ty)*]
+            [
+                $($opt_ty)*
+                [
+                    [$Obj] [$DepObjKey] [$StatePart] [this] [state_part]
+                    [ state_part. $state_part_field [this.0] . $component_field .as_mut() ]
+                    [ state_part. $state_part_fielf [this.0] . $component_field .as_ref() ]
+                ]
+            ]
+            [$($tr)*]
+            [$($opt_tr)*]
             [$($tail)*]
         }
     };
@@ -3755,7 +3795,17 @@ macro_rules! impl_dep_obj_impl {
         $crate::impl_dep_obj_impl! {
             @objs
             [$($g)*] [$($r)*] [$($w)*] [$Id]
-            [$($ty)*] [$($opt_ty)*] [$($tr)* [[$Obj] [$DepObjKey] [$StatePart] [.0] [. $component_field]]] [$($opt_tr)*]
+            [$($ty)*]
+            [$($opt_ty)*]
+            [
+                $($tr)*
+                [
+                    [$Obj] [$DepObjKey] [$StatePart] [this] [state_part]
+                    [ state_part.0[this.0] . $component_field .as_mut() ]
+                    [ state_part.0[this.0] . $component_field .as_ref() ]
+                ]
+            ]
+            [$($opt_tr)*]
             [$($tail)*]
         }
     };
@@ -3768,7 +3818,17 @@ macro_rules! impl_dep_obj_impl {
         $crate::impl_dep_obj_impl! {
             @objs
             [$($g)*] [$($r)*] [$($w)*] [$Id]
-            [$($ty)*] [$($opt_ty)*] [$($tr)* [[$Obj] [$DepObjKey] [$StatePart] [. $state_part_field] [. $component_field]]] [$($opt_tr)*]
+            [$($ty)*]
+            [$($opt_ty)*]
+            [
+                $($tr)*
+                [
+                    [$Obj] [$DepObjKey] [$StatePart] [this] [state_part]
+                    [ state_part. $state_part_field [this.0] . $component_field .as_mut() ]
+                    [ state_part. $state_part_field [this.0] . $component_field .as_ref() ]
+                ]
+            ]
+            [$($opt_tr)*]
             [$($tail)*]
         }
     };
@@ -3781,7 +3841,17 @@ macro_rules! impl_dep_obj_impl {
         $crate::impl_dep_obj_impl! {
             @objs
             [$($g)*] [$($r)*] [$($w)*] [$Id]
-            [$($ty)*] [$($opt_ty)*] [$($tr)*] [$($opt_tr)* [[$Obj] [$DepObjKey] [$StatePart] [.0] [. $component_field]]]
+            [$($ty)*]
+            [$($opt_ty)*]
+            [$($tr)*]
+            [
+                $($opt_tr)*
+                [
+                    [$Obj] [$DepObjKey] [$StatePart] [this] [state_part]
+                    [ state_part.0[this.0] . $component_field .as_mut().as_mut() ]
+                    [ state_part.0[this.0] . $component_field .as_ref().as_ref() ]
+                ]
+            ]
             [$($tail)*]
         }
     };
@@ -3794,17 +3864,65 @@ macro_rules! impl_dep_obj_impl {
         $crate::impl_dep_obj_impl! {
             @objs
             [$($g)*] [$($r)*] [$($w)*] [$Id]
-            [$($ty)*] [$($opt_ty)*] [$($tr)*] [$($opt_tr)* [[$Obj] [$DepObjKey] [$StatePart] [. $state_part_field] [. $component_field]]]
+            [$($ty)*]
+            [$($opt_ty)*]
+            [$($tr)*]
+            [
+                $($opt_tr)*
+                [
+                    [$Obj] [$DepObjKey] [$StatePart] [this] [state_part]
+                    [ state_part. $state_part_field [this.0] . $component_field .as_mut().as_mut() ]
+                    [ state_part. $state_part_field [this.0] . $component_field .as_ref().as_ref() ]
+                ]
+            ]
             [$($tail)*]
         }
     };
+    /*
+    (
+        @objs
+        [$($g:tt)*] [$($r:tt)*] [$($w:tt)*] [$Id:ty]
+        [$($ty:tt)*] [$($opt_ty:tt)*] [$($tr:tt)*] [$($opt_tr:tt)*]
+        [
+            fn<$DepObjKey:tt>(
+                self as $this:ident,
+                $state_part:ident : $StatePart:ty
+            ) -> optional dyn($Obj:path) {
+                if mut { $field_mut:expr } else { $field:expr }
+            }
+            $($tail:tt)*
+        ]
+    ) => {
+        $crate::impl_dep_obj_impl! {
+            @objs
+            [$($g)*] [$($r)*] [$($w)*] [$Id]
+            [$($ty)*]
+            [$($opt_ty)*]
+            [$($tr)*]
+            [$($opt_tr)* [[$Obj] [$DepObjKey] [$StatePart] [. $state_part_field] [. $component_field]]]
+            [$($tail)*]
+        }
+    };
+    */
     (
         @objs
         $g:tt $r:tt $w:tt [$Id:ty]
-        [$([[$ty_Obj:ty] [$ty_Key:ty] [$ty_StatePart:ty] [$($ty_state_part_field:tt)*] [$($ty_component_field:tt)*]])*]
-        [$([[$opt_ty_Obj:ty] [$opt_ty_Key:ty] [$opt_ty_StatePart:ty] [$($opt_ty_state_part_field:tt)*] [$($opt_ty_component_field:tt)*]])*]
-        [$([[$tr_Obj:path] [$tr_Key:ty] [$tr_StatePart:ty] [$($tr_state_part_field:tt)*] [$($tr_component_field:tt)*]])*]
-        [$([[$opt_tr_Obj:path] [$opt_tr_Key:ty] [$opt_tr_StatePart:ty] [$($opt_tr_state_part_field:tt)*] [$($opt_tr_component_field:tt)*]])*]
+        [$([
+            [$ty_Obj:ty] [$ty_Key:ty] [$ty_StatePart:ty] [$ty_this:ident] [$ty_state_part:ident]
+            [$ty_field:expr] [$ty_field_mut:expr]
+        ])*]
+        [$([
+            [$opt_ty_Obj:ty] [$opt_ty_Key:ty] [$opt_ty_StatePart:ty] [$opt_ty_this:ident] [$opt_ty_state_part:ident]
+            [$opt_ty_field:expr] [$opt_ty_field_mut:expr]
+        ])*]
+        [$([
+            [$tr_Obj:path] [$tr_Key:ty] [$tr_StatePart:ty] [$tr_this:ident] [$tr_state_part:ident]
+            [$tr_field:expr] [$tr_field_mut:expr]
+        ])*]
+        [$([
+            [$opt_tr_Obj:path] [$opt_tr_Key:ty] [$opt_tr_StatePart:ty] [$opt_tr_this:ident] [$opt_tr_state_part:ident]
+            [$opt_tr_field:expr] [$opt_tr_field_mut:expr]
+        ])*]
         []
     ) => {
         $crate::dep_obj_impl! {
@@ -3812,24 +3930,20 @@ macro_rules! impl_dep_obj_impl {
             $g $r $w [$Id]
             [
                 $(
-                    [this] [state_part] [$ty_StatePart] [] [] [] [$ty_Obj]
-                    [ &mut state_part $($ty_state_part_field)* [this.0] $($ty_component_field)* ]
-                    [ &state_part $($ty_state_part_field)* [this.0] $($ty_component_field)* ]
+                    [$ty_this] [$ty_state_part] [$ty_StatePart] [] [] [] [$ty_Obj]
+                    [ $ty_field ] [ $ty_field_mut ]
                 )*
                 $(
-                    [this] [state_part] [$opt_ty_StatePart] [] [] [$opt_ty_Obj] []
-                    [ state_part $($opt_ty_state_part_field)* [this.0] $($opt_ty_component_field)* .as_mut() ]
-                    [ state_part $($opt_ty_state_part_field)* [this.0] $($opt_ty_component_field)* .as_ref() ]
+                    [$opt_ty_this] [$opt_ty_state_part] [$opt_ty_StatePart] [] [] [$opt_ty_Obj] []
+                    [ $opt_ty_field ] [ $opt_ty_field_mut ]
                 )*
                 $(
-                    [this] [state_part] [$tr_StatePart] [] [$tr_Obj] [] []
-                    [ state_part $($tr_state_part_field)* [this.0] $($tr_component_field)* .as_mut() ]
-                    [ state_part $($tr_state_part_field)* [this.0] $($tr_component_field)* .as_ref() ]
+                    [$tr_this] [$tr_state_part] [$tr_StatePart] [] [$tr_Obj] [] []
+                    [ $tr_field ] [ $tr_field_mut ]
                 )*
                 $(
-                    [this] [state_part] [$opt_tr_StatePart] [$opt_tr_Obj] [] [] []
-                    [ state_part $($opt_tr_state_part_field)* [this.0] $($opt_tr_component_field)* .as_mut().as_mut() ]
-                    [ state_part $($opt_tr_state_part_field)* [this.0] $($opt_tr_component_field)* .as_ref().as_ref() ]
+                    [$opt_tr_this] [$opt_tr_state_part] [$opt_tr_StatePart] [$opt_tr_Obj] [] [] []
+                    [ $opt_tr_field ] [ $opt_tr_field_mut ]
                 )*
             ]
         }
@@ -3837,36 +3951,32 @@ macro_rules! impl_dep_obj_impl {
             $crate::dep_obj_impl! {
                 @impl
                 $g $w [$Id]
-                [this] [state_part] [$ty_StatePart] [] [] [] [$ty_Obj] [$ty_Key]
-                [ &mut state_part $($ty_state_part_field)* [this.0] $($ty_component_field)* ]
-                [ &state_part $($ty_state_part_field)* [this.0] $($ty_component_field)* ]
+                [$ty_this] [$ty_state_part] [$ty_StatePart] [] [] [] [$ty_Obj] [$ty_Key]
+                [ $ty_field ] [ $ty_field_mut ]
             }
         )*
         $(
             $crate::dep_obj_impl! {
                 @impl
                 $g $w [$Id]
-                [this] [state_part] [$opt_ty_StatePart] [] [] [$opt_ty_Obj] [] [$opt_ty_Key]
-                [ state_part $($opt_ty_state_part_field)* [this.0] $($opt_ty_component_field)* .as_mut() ]
-                [ state_part $($opt_ty_state_part_field)* [this.0] $($opt_ty_component_field)* .as_ref() ]
+                [$opt_ty_this] [$opt_ty_state_part] [$opt_ty_StatePart] [] [] [$opt_ty_Obj] [] [$opt_ty_Key]
+                [ $opt_ty_field ] [ $opt_ty_field_mut ]
             }
         )*
         $(
             $crate::dep_obj_impl! {
                 @impl
                 $g $w [$Id]
-                [this] [state_part] [$tr_StatePart] [] [$tr_Obj] [] [] [$tr_Key]
-                [ state_part $($tr_state_part_field)* [this.0] $($tr_component_field)* .as_mut() ]
-                [ state_part $($tr_state_part_field)* [this.0] $($tr_component_field)* .as_ref() ]
+                [$tr_this] [$tr_state_part] [$tr_StatePart] [] [$tr_Obj] [] [] [$tr_Key]
+                [ $tr_field ] [ $tr_field_mut ]
             }
         )*
         $(
             $crate::dep_obj_impl! {
                 @impl
                 $g $w [$Id]
-                [this] [state_part] [$opt_tr_StatePart] [$opt_tr_Obj] [] [] [] [$opt_tr_Key]
-                [ state_part $($opt_tr_state_part_field)* [this.0] $($opt_tr_component_field)* .as_mut().as_mut() ]
-                [ state_part $($opt_tr_state_part_field)* [this.0] $($opt_tr_component_field)* .as_ref().as_ref() ]
+                [$opt_tr_this] [$opt_tr_state_part] [$opt_tr_StatePart] [$opt_tr_Obj] [] [] [] [$opt_tr_Key]
+                [ $opt_tr_field ] [ $opt_tr_field_mut ]
             }
         )*
     };
