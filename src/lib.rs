@@ -917,8 +917,9 @@ impl<Owner: DepType, PropType: Convenient> DepProp<Owner, PropType> {
 
     #[doc(hidden)]
     pub fn update_parent_children_has_handlers(
-        self, state: &mut dyn State, mut id: Owner::Id
+        self, state: &mut dyn State, id: RawId
     ) where Owner::Id: DepObj<Owner::DepObjKey, Owner> {
+        let mut id = Owner::Id::from_raw(id);
         while let Some(parent) = id.parent(state) {
             id = parent;
             let children_has_handlers = if let Some(first_child) = id.first_child(state) {
@@ -1573,7 +1574,7 @@ impl<Owner: DepType, PropType: Convenient> HandlerId for DepPropHandledValueSour
         let entry_mut = self.prop.entry_mut(&mut obj);
         entry_mut.handlers.value_handlers.remove(self.handler_id);
         if entry_mut.inherits() && entry_mut.handlers.is_empty() {
-            self.prop.update_parent_children_has_handlers(state, self.id);
+            self.prop.update_parent_children_has_handlers(state, self.id.into_raw());
         }
     }
 }
@@ -1594,7 +1595,7 @@ impl<Owner: DepType, PropType: Convenient> HandlerId for DepPropHandledChangeIni
         let handler = entry_mut.handlers.change_initial_handler.take();
         debug_assert!(handler.is_some());
         if entry_mut.inherits() && entry_mut.handlers.is_empty() {
-            self.prop.update_parent_children_has_handlers(state, self.id);
+            self.prop.update_parent_children_has_handlers(state, self.id.into_raw());
         }
     }
 }
@@ -1615,7 +1616,7 @@ impl<Owner: DepType, PropType: Convenient> HandlerId for DepPropHandledChangeFin
         let handler = entry_mut.handlers.change_final_handler.take();
         debug_assert!(handler.is_some());
         if entry_mut.inherits() && entry_mut.handlers.is_empty() {
-            self.prop.update_parent_children_has_handlers(state, self.id);
+            self.prop.update_parent_children_has_handlers(state, self.id.into_raw());
         }
     }
 }
@@ -1636,7 +1637,7 @@ impl<Owner: DepType, PropType: Convenient> HandlerId for DepPropHandledChangeSou
         let entry_mut = self.prop.entry_mut(&mut obj);
         entry_mut.handlers.change_handlers.remove(self.handler_id);
         if entry_mut.inherits() && entry_mut.handlers.is_empty() {
-            self.prop.update_parent_children_has_handlers(state, self.id);
+            self.prop.update_parent_children_has_handlers(state, self.id.into_raw());
         }
     }
 }
@@ -1660,7 +1661,7 @@ impl<Owner: DepType + 'static, PropType: Convenient> Source for DepPropValueSour
         let update_parent_children_has_handlers = entry.inherits() && entry.handlers.is_empty();
         let handler_id = entry.handlers.value_handlers.insert(|handler_id| (BoxedHandler(handler), handler_id));
         if update_parent_children_has_handlers {
-            self.prop.update_parent_children_has_handlers(state, self.id);
+            self.prop.update_parent_children_has_handlers(state, self.id.into_raw());
         }
         let value = self.prop.current_value(state, self.id, |x| x.clone());
         let prop = self.prop;
@@ -1702,7 +1703,7 @@ impl<Owner: DepType + 'static, PropType: Convenient> Source for DepPropChangeSou
         let update_parent_children_has_handlers = entry.inherits() && entry.handlers.is_empty();
         let handler_id = entry.handlers.change_handlers.insert(|handler_id| (BoxedHandler(handler), handler_id));
         if update_parent_children_has_handlers {
-            self.prop.update_parent_children_has_handlers(state, self.id);
+            self.prop.update_parent_children_has_handlers(state, self.id.into_raw());
         }
         let change = self.prop.current_value(state, self.id, |value| {
             if value == default_value {
@@ -1753,7 +1754,7 @@ impl<Owner: DepType + 'static, PropType: Convenient> Source for DepPropChangeIni
         let handler = entry.handlers.change_initial_handler.replace(handler);
         assert!(handler.is_none(), "duplicate initial handler");
         if update_parent_children_has_handlers {
-            self.prop.update_parent_children_has_handlers(state, self.id);
+            self.prop.update_parent_children_has_handlers(state, self.id.into_raw());
         }
         let change = self.prop.current_value(state, self.id, |value| {
             if value == default_value {
@@ -1804,7 +1805,7 @@ impl<Owner: DepType + 'static, PropType: Convenient> Source for DepPropChangeFin
         let handler = entry.handlers.change_final_handler.replace(handler);
         assert!(handler.is_none(), "duplicate final handler");
         if update_parent_children_has_handlers {
-            self.prop.update_parent_children_has_handlers(state, self.id);
+            self.prop.update_parent_children_has_handlers(state, self.id.into_raw());
         }
         let change = self.prop.current_value(state, self.id, |value| {
             if value == default_value {
