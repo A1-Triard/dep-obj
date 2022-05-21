@@ -3248,40 +3248,6 @@ macro_rules! dep_type_impl {
     };
 }
 
-/// Specifies dependency objects list and accessing methods.
-///
-/// Accepts input in the following form:
-///
-/// ```ignore
-/// $(
-///     impl $Id:ty
-/// |
-///     impl <$generics> $Id:ty $(where $where_clause)?
-/// )
-/// {
-///     $(
-///         fn<$DepObjKey:ty>(
-///             self as $this:ident,
-///             $state_part:ident : $StatePart:ty
-///         ) -> $(optional)? $(dyn ($tr:path) | ($ty:ty)) {
-///             if mut { $field_mut:expr } else { $field:expr }
-///         }
-///     )*
-/// }
-/// ```
-#[macro_export]
-macro_rules! dep_obj {
-    (
-        impl $($token:tt)+
-    ) => {
-        $crate::generics_parse! {
-            $crate::dep_obj_impl {
-                @generics_parsed
-            }
-            $($token)+
-        }
-    };
-}
 
 #[doc(hidden)]
 #[macro_export]
@@ -3626,7 +3592,7 @@ macro_rules! dep_obj_impl {
     };
 }
 
-/// Specifies dependency objects list and component_fielding methods in simplified form.
+/// Specifies dependency objects list and accessing methods.
 ///
 /// Accepts input in the following form:
 ///
@@ -3638,9 +3604,17 @@ macro_rules! dep_obj_impl {
 /// )
 /// {
 ///     $(
+///         fn<$DepObjKey:ty>(
+///             self as $this:ident,
+///             $state_part:ident : $StatePart:ty
+///         ) -> $(optional)? $(dyn ($tr:path) | ($ty:ty)) {
+///             if mut { $field_mut:expr } else { $field:expr }
+///         }
+///     |
 ///         fn<$DepObjKey:tt>() -> $(optional)? $(($ty:ty) | dyn($tr:path)) {
 ///             $StatePart:ty $({ . $state_part_field:tt })? | . $component_field:tt
 ///         }
+///
 ///     )*
 /// }
 /// ```
