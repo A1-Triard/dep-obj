@@ -2214,7 +2214,7 @@ macro_rules! ext_builder_impl {
         @generics
         [$($g:tt)*] [$($r:tt)*] [$($w:tt)*]
         $base_builder:ty as $ext:ident [$Id:ty] {
-            $fn_name:ident -> ($builder:ident $(in $($builder_path:tt)+)?)
+            fn $fn_name:ident () -> ($builder:ident $(in $($builder_path:tt)+)?);
         }
     ) => {
         $crate::generics_concat! {
@@ -2395,9 +2395,8 @@ macro_rules! dep_type_impl {
         [$BaseBuilder:ident]
         [$([$attr:meta])*] [$vis:vis] [$name:ident]
         [$($g:tt)*] [$($r:tt)*] [$($w:tt)*]
-        $token:tt $($tail:tt)*
+        $($token:tt)+
     ) => {
-        $crate::unexpected_token!($token);
         $crate::std_compile_error!($crate::indoc_indoc!("
             invalid dep type definition, allowed form is
 
@@ -3676,29 +3675,7 @@ macro_rules! impl_dep_obj_impl {
     };
     (
         [$($g:tt)*] [$($r:tt)*] [$($w:tt)*]
-        $token:tt $($tail:tt)*
-    ) => {
-        $crate::unexpected_token!($token);
-        $crate::std_compile_error!($crate::indoc_indoc!("
-            invalid dep obj implementation, allowed form is
-
-            $(
-                $Id:ty
-            |
-                <$generics> $Id:ty $(where $where_clause)?
-            )
-            {
-                $(
-                    fn<$DepObjKey:tt>() -> $(optional)? $(($ty:ty) | dyn($tr:path)) {
-                        $StatePart:ty $({ . $state_part_field:tt })? | . $component_field:tt
-                    }
-                )*
-            }
-
-        "));
-    };
-    (
-        [$($g:tt)*] [$($r:tt)*] [$($w:tt)*]
+        $($token:tt)*
     ) => {
         $crate::std_compile_error!($crate::indoc_indoc!("
             invalid dep obj implementation, allowed form is
@@ -3876,9 +3853,8 @@ macro_rules! impl_dep_obj_impl {
         @objs
         [$($g:tt)*] [$($r:tt)*] [$($w:tt)*] [$Id:ty]
         [$($ty:tt)*] [$($opt_ty:tt)*] [$($tr:tt)*] [$($opt_tr:tt)*]
-        [$token:tt $($tail:tt)*]
+        [($token:tt)+]
     ) => {
-        $crate::unexpected_token($token);
         $crate::std_compile_error!($crate::std_concat!(
             "invalid dep obj component_field function definition\n\n",
             $crate::std_stringify!($token $($tail)*),
