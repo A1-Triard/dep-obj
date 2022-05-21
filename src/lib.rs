@@ -2266,7 +2266,7 @@ macro_rules! ext_builder_impl {
                         let $state $(: $State)? = <Self as $crate::DepObjBuilder>::state_mut(&mut self);
                         $($e)*
                     }
-                    f(<$($($builder_path)+ ::)? [< $builder Builder >] <Self> >::new_priv(self)).base_priv()
+                    f($($($builder_path)+ ::)? [< $builder Builder >] ::<Self> (self)).0
                 }
             }
         }
@@ -2301,9 +2301,8 @@ macro_rules! with_builder {
             ) -> Self {
                 let base_builder = $crate::Builder { state, id: self };
                 f(
-                    <
-                        $($($builder_path)+ ::)? [< $builder Builder >] < $crate::Builder <'_, Self> >
-                    >::new_priv(base_builder)
+                    $($($builder_path)+ ::)? [< $builder Builder >] ::< $crate::Builder <'_, Self> >
+                    (base_builder)
                 );
                 self
             }
@@ -2551,8 +2550,8 @@ macro_rules! dep_type_impl {
                 $($builder_methods)*
 
                 $vis fn [< $field _ref >] (mut self, value: $field_ty) -> Self {
-                    let id = <$BaseBuilder as $crate::DepObjBuilder>::id(&self.base);
-                    let state = <$BaseBuilder as $crate::DepObjBuilder>::state_mut(&mut self.base);
+                    let id = <Self as $crate::DepObjBuilder>::id(&self);
+                    let state = <Self as $crate::DepObjBuilder>::state_mut(&mut self);
                     $name:: [< $field:upper >] .set(state, id, value).immediate();
                     self
                 }
@@ -2621,8 +2620,8 @@ macro_rules! dep_type_impl {
                 $($builder_methods)*
 
                 $vis fn [< $field _ref >] (mut self, value: $field_ty) -> Self {
-                    let id = <$BaseBuilder as $crate::DepObjBuilder>::id(&self.base);
-                    let state = <$BaseBuilder as $crate::DepObjBuilder>::state_mut(&mut self.base);
+                    let id = <Self as $crate::DepObjBuilder>::id(&self);
+                    let state = <Self as $crate::DepObjBuilder>::state_mut(&mut self);
                     $name:: [< $field:upper >] .set(state, id, value).immediate();
                     self
                 }
@@ -2691,8 +2690,8 @@ macro_rules! dep_type_impl {
                 $($builder_methods)*
 
                 $vis fn $field(mut self, value: $field_ty) -> Self {
-                    let id = <$BaseBuilder as $crate::DepObjBuilder>::id(&self.base);
-                    let state = <$BaseBuilder as $crate::DepObjBuilder>::state_mut(&mut self.base);
+                    let id = <Self as $crate::DepObjBuilder>::id(&self);
+                    let state = <Self as $crate::DepObjBuilder>::state_mut(&mut self);
                     $name:: [< $field:upper >] .set(state, id, value).immediate();
                     self
                 }
@@ -2760,8 +2759,8 @@ macro_rules! dep_type_impl {
                 $($builder_methods)*
 
                 $vis fn [< $field _ref >] (mut self, value: $field_ty) -> Self {
-                    let id = <$BaseBuilder as $crate::DepObjBuilder>::id(&self.base);
-                    let state = <$BaseBuilder as $crate::DepObjBuilder>::state_mut(&mut self.base);
+                    let id = <Self as $crate::DepObjBuilder>::id(&self);
+                    let state = <Self as $crate::DepObjBuilder>::state_mut(&mut self);
                     $name:: [< $field:upper >] .set(state, id, value).immediate();
                     self
                 }
@@ -2829,8 +2828,8 @@ macro_rules! dep_type_impl {
                 $($builder_methods)*
 
                 $vis fn $field(mut self, value: $field_ty) -> Self {
-                    let id = <$BaseBuilder as $crate::DepObjBuilder>::id(&self.base);
-                    let state = <$BaseBuilder as $crate::DepObjBuilder>::state_mut(&mut self.base);
+                    let id = <Self as $crate::DepObjBuilder>::id(&self);
+                    let state = <Self as $crate::DepObjBuilder>::state_mut(&mut self);
                     $name:: [< $field:upper >] .set(state, id, value).immediate();
                     self
                 }
@@ -3199,40 +3198,26 @@ macro_rules! dep_type_impl {
                 }
             }
 
-            $vis struct [< $name Builder >] $($bc_g)* $($bc_w)* {
-                base: $BaseBuilder,
-            }
+            $vis struct [< $name Builder >] $($bc_g)* $($bc_w)* (pub $BaseBuilder);
 
+            // TODO: use #[derive(NewtypeDepObjBuilder!)]
             impl $($bc_g)* $crate::DepObjBuilder for [< $name Builder >] $($bc_r)* $($bc_w)* {
                 type Id = $Id;
 
                 fn state(&self) -> &dyn $crate::dyn_context_State {
-                    < $BaseBuilder as $crate::DepObjBuilder >::state(&self.base)
+                    < $BaseBuilder as $crate::DepObjBuilder >::state(&self.0)
                 }
 
                 fn state_mut(&mut self) -> &mut dyn $crate::dyn_context_State {
-                    < $BaseBuilder as $crate::DepObjBuilder >::state_mut(&mut self.base)
+                    < $BaseBuilder as $crate::DepObjBuilder >::state_mut(&mut self.0)
                 }
 
                 fn id(&self) -> $Id {
-                    < $BaseBuilder as $crate::DepObjBuilder >::id(&self.base)
+                    < $BaseBuilder as $crate::DepObjBuilder >::id(&self.0)
                 }
             }
 
             impl $($bc_g)* [< $name Builder >] $($bc_r)* $($bc_w)* {
-                fn new_priv(base: $BaseBuilder) -> Self {
-                    Self { base }
-                }
-
-                #[allow(dead_code)]
-                fn base_priv(self) -> $BaseBuilder { self.base }
-
-                #[allow(dead_code)]
-                fn base_priv_ref(&self) -> &$BaseBuilder { &self.base }
-
-                #[allow(dead_code)]
-                fn base_priv_mut(&mut self) -> &mut $BaseBuilder { &mut self.base }
-
                 $($builder_methods)*
             }
         }
