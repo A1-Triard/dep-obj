@@ -24,7 +24,7 @@ pub mod binding;
 
 #[cfg(docsrs)]
 pub mod example {
-    //! The [`dep_type`], [`dep_obj`](crate::dep_obj) / [`impl_dep_obj`], and [`with_builder`]
+    //! The [`dep_type`], [`impl_dep_obj`], and [`with_builder`]
     //! macro expansion example.
     //!
     //! ```ignore
@@ -84,19 +84,17 @@ pub mod example {
     //!     fn<MyDepType>() -> (MyDepType) { MyApp { .my_dep_types } | .dep_data }
     //! });
     //!
-    //! // OR equvalent `dep_obj!` call:
+    //! // OR equvalent:
     //!
-    //! dep_obj! {
-    //!     impl MyDepTypeId {
-    //!         fn<MyDepType>(self as this, app: MyApp) -> (MyDepType) {
-    //!             if mut {
-    //!                 &mut app.my_dep_types[this.0].dep_data
-    //!             } else {
-    //!                 &app.my_dep_types[this.0].dep_data
-    //!             }
+    //! impl_dep_obj!(MyDepTypeId {
+    //!     fn<MyDepType>(self as this, app: MyApp) -> (MyDepType) {
+    //!         if mut {
+    //!             &mut app.my_dep_types[this.0].dep_data
+    //!         } else {
+    //!             &app.my_dep_types[this.0].dep_data
     //!         }
     //!     }
-    //! }
+    //! });
     //! ```
 
     use crate::{DetachedDepObjId, impl_dep_obj, dep_type, with_builder};
@@ -3248,350 +3246,6 @@ macro_rules! dep_type_impl {
     };
 }
 
-
-#[doc(hidden)]
-#[macro_export]
-macro_rules! dep_obj_impl {
-    (
-        @generics_parsed
-        $g:tt $r:tt $w:tt $Id:ty {
-            $(
-                fn<$DepObjKey:ty>(
-                    self as $this:ident,
-                    $state_part:ident : $StatePart:ty
-                ) -> $(optional dyn($opt_tr:path))? $(dyn ($tr:path))? $(optional($opt_ty:ty))? $(($ty:ty))? {
-                    if mut { $field_mut:expr } else { $field:expr }
-                }
-            )*
-        }
-    ) => {
-        $crate::dep_obj_impl! {
-            @drop_bindings
-            $g $r $w [$Id]
-            [
-                $(
-                    [$this] [$state_part] [$StatePart] [$($opt_tr)?] [$($tr)?] [$($opt_ty)?] [$($ty)?]
-                    [$field_mut] [$field]
-                )*
-            ]
-        }
-        $(
-            $crate::dep_obj_impl! {
-                @impl
-                $g $w [$Id]
-                [$this] [$state_part] [$StatePart] [$($opt_tr)?] [$($tr)?] [$($opt_ty)?] [$($ty)?] [$DepObjKey]
-                [$field_mut] [$field]
-            }
-        )*
-    };
-    (
-        @generics_parsed
-        [$($g:tt)*] [$($r:tt)*] [$($w:tt)*] $($body:tt)*
-    ) => {
-        $crate::std_compile_error!($crate::indoc_indoc!("
-            invalid dep obj implementation, allowed form is
-
-            $(
-                impl $Id:ty
-            |
-                impl <$generics> $Id:ty $(where $where_clause)?
-            )
-            {
-                $(
-                    fn<$DepObjKey:ty>(
-                        self as $this:ident,
-                        $state_part:ident : $StatePart:ty
-                    ) -> $(optional)? $(dyn ($tr:path) | ($ty:ty)) {
-                        if mut { $field_mut:expr } else { $field:expr }
-                    }
-                )*
-            }
-
-        "));
-    };
-    (
-        @impl
-        [$($g:tt)*] [$($w:tt)*] [$Id:ty]
-        [$this:ident] [$state_part:ident] [$StatePart:ty] [$opt_tr:path] [] [] [] [$DepObjKey:ty]
-        [$field_mut:expr] [$field:expr]
-    ) => {
-        $crate::dep_obj_impl! {
-            @add_parameter_to_optional
-            [DepObjType]
-            [$($g)*] [$($w)*] [$Id]
-            [$this] [$state_part] [$StatePart] [$opt_tr] [$DepObjKey]
-            [$field_mut] [$field]
-        }
-    };
-    (
-        @add_parameter_to_optional
-        [$p:ident]
-        [$($g:tt)*] [$($w:tt)*] [$Id:ty]
-        [$this:ident] [$state_part:ident] [$StatePart:ty] [$opt_tr:path] [$DepObjKey:ty]
-        [$field_mut:expr] [$field:expr]
-    ) => {
-        $crate::generics_concat! {
-            $crate::dep_obj_impl {
-                @impl_optional_with_parameter
-                [$p] [$($g)*] [$($w)*] [$Id]
-                [$this] [$state_part] [$StatePart] [$DepObjKey]
-                [$field_mut] [$field]
-            }
-            [$($g)*] [] [],
-            [ < $p : $opt_tr + $crate::DepType<Id=Self> > ] [] []
-        }
-    };
-    (
-        @impl_optional_with_parameter
-        [$p:ident] [$($g:tt)*] [$($w:tt)*] [$Id:ty]
-        [$this:ident] [$state_part:ident] [$StatePart:ty] [$DepObjKey:ty]
-        [$field_mut:expr] [$field:expr]
-        [$($gp:tt)*] [] []
-    ) => {
-        $crate::paste_paste! {
-            impl $($gp)* $crate::DepObj <$DepObjKey, $p> for $Id $($w)* {
-                const STATE_PART: $crate::std_any_TypeId = $crate::std_any_TypeId::of::<$StatePart>();
-
-                fn get_raw <'state_part_lifetime>(
-                    $state_part: &'state_part_lifetime dyn $crate::std_any_Any,
-                    $this: $crate::components_arena_RawId,
-                ) -> &'state_part_lifetime $p {
-                    let $this = <Self as $crate::components_arena_ComponentId>::from_raw($this);
-                    let $state_part = $state_part.downcast_ref::<$StatePart>().expect("invalid state part cast");
-                    ($field)
-                        .expect($crate::std_concat!("missing ", $crate::std_stringify!($name)))
-                        .downcast_ref::<DepObjType>().expect("invalid cast")
-                }
-
-                fn get_raw_mut <'state_part_lifetime>(
-                    $state_part: &'state_part_lifetime mut dyn $crate::std_any_Any,
-                    $this: $crate::components_arena_RawId,
-                ) -> &'state_part_lifetime mut $p {
-                    let $this = <Self as $crate::components_arena_ComponentId>::from_raw($this);
-                    let $state_part = $state_part.downcast_mut::<$StatePart>().expect("invalid state part cast");
-                    ($field_mut)
-                        .expect($crate::std_concat!("missing ", $crate::std_stringify!($name)))
-                        .downcast_mut::<DepObjType>().expect("invalid cast")
-                }
-
-            }
-        }
-    };
-    (
-        @impl
-        [$($g:tt)*] [$($w:tt)*] [$Id:ty]
-        [$this:ident] [$state_part:ident] [$StatePart:ty] [] [$tr:path] [] [] [$DepObjKey:ty]
-        [$field_mut:expr] [$field:expr]
-    ) => {
-        $crate::dep_obj_impl! {
-            @add_parameter
-            [DepObjType]
-            [$($g)*] [$($w)*] [$Id]
-            [$this] [$state_part] [$StatePart] [$tr] [$DepObjKey]
-            [$field_mut] [$field]
-        }
-    };
-    (
-        @add_parameter
-        [$p:ident]
-        [$($g:tt)*] [$($w:tt)*] [$Id:ty]
-        [$this:ident] [$state_part:ident] [$StatePart:ty] [$tr:path] [$DepObjKey:ty]
-        [$field_mut:expr] [$field:expr]
-    ) => {
-        $crate::generics_concat! {
-            $crate::dep_obj_impl {
-                @impl_with_parameter
-                [$p] [$($g)*] [$($w)*] [$Id]
-                [$this] [$state_part] [$StatePart] [$DepObjKey]
-                [$field_mut] [$field]
-            }
-            [$($g)*] [] [],
-            [ < $p : $tr + $crate::DepType<Id=Self> > ] [] []
-        }
-    };
-    (
-        @impl_with_parameter
-        [$p:ident] [$($g:tt)*] [$($w:tt)*] [$Id:ty]
-        [$this:ident] [$state_part:ident] [$StatePart:ty] [$DepObjKey:ty]
-        [$field_mut:expr] [$field:expr]
-        [$($gp:tt)*] [] []
-    ) => {
-        $crate::paste_paste! {
-            impl $($gp)* $crate::DepObj<$DepObjKey, $p> for $Id $($w)* {
-                const STATE_PART: $crate::std_any_TypeId = $crate::std_any_TypeId::of::<$StatePart>();
-
-                fn get_raw <'state_part_lifetime>(
-                    $state_part: &'state_part_lifetime dyn $crate::std_any_Any,
-                    $this: $crate::components_arena_RawId,
-                ) -> &'state_part_lifetime $p {
-                    let $this = <Self as $crate::components_arena_ComponentId>::from_raw($this);
-                    let $state_part = $state_part.downcast_ref::<$StatePart>().expect("invalid state part cast");
-                    ($field).downcast_ref::<DepObjType>().expect("invalid cast")
-                }
-
-                fn get_raw_mut <'state_part_lifetime>(
-                    $state_part: &'state_part_lifetime mut dyn $crate::std_any_Any,
-                    $this: $crate::components_arena_RawId,
-                ) -> &'state_part_lifetime mut $p {
-                    let $this = <Self as $crate::components_arena_ComponentId>::from_raw($this);
-                    let $state_part = $state_part.downcast_mut::<$StatePart>().expect("invalid state part cast");
-                    ($field_mut).downcast_mut::<DepObjType>().expect("invalid cast")
-                }
-            }
-        }
-    };
-    (
-        @impl
-        [$($g:tt)*] [$($w:tt)*] [$Id:ty]
-        [$this:ident] [$state_part:ident] [$StatePart:ty] [] [] [$opt_ty:ty] [] [$DepObjKey:ty]
-        [$field_mut:expr] [$field:expr]
-    ) => {
-        $crate::paste_paste! {
-            impl $($g)* $crate::DepObj<$DepObjKey, $opt_ty> for $Id $($w)* {
-                const STATE_PART: $crate::std_any_TypeId = $crate::std_any_TypeId::of::<$StatePart>();
-
-                fn get_raw <'state_part_lifetime>(
-                    $state_part: &'state_part_lifetime dyn $crate::std_any_Any,
-                    $this: $crate::components_arena_RawId,
-                ) -> &'state_part_lifetime $opt_ty {
-                    let $this = <Self as $crate::components_arena_ComponentId>::from_raw($this);
-                    let $state_part = $state_part.downcast_ref::<$StatePart>().expect("invalid state part cast");
-                    ($field).expect($crate::std_concat!("missing ", $crate::std_stringify!($name)))
-                }
-
-                fn get_raw_mut <'state_part_lifetime>(
-                    $state_part: &'state_part_lifetime mut dyn $crate::std_any_Any,
-                    $this: $crate::components_arena_RawId,
-                ) -> &'state_part_lifetime mut $opt_ty {
-                    let $this = <Self as $crate::components_arena_ComponentId>::from_raw($this);
-                    let $state_part = $state_part.downcast_mut::<$StatePart>().expect("invalid state part cast");
-                    ($field_mut).expect($crate::std_concat!("missing ", $crate::std_stringify!($name)))
-                }
-            }
-        }
-    };
-    (
-        @impl
-        [$($g:tt)*] [$($w:tt)*] [$Id:ty]
-        [$this:ident] [$state_part:ident] [$StatePart:ty] [] [] [] [$ty:ty] [$DepObjKey:ty]
-        [$field_mut:expr] [$field:expr]
-    ) => {
-        $crate::paste_paste! {
-            impl $($g)* $crate::DepObj<$DepObjKey, $ty> for $Id $($w)* {
-                const STATE_PART: $crate::std_any_TypeId = $crate::std_any_TypeId::of::<$StatePart>();
-
-                fn get_raw <'state_part_lifetime>(
-                    $state_part: &'state_part_lifetime dyn $crate::std_any_Any,
-                    $this: $crate::components_arena_RawId,
-                ) -> &'state_part_lifetime $ty {
-                    let $this = <Self as $crate::components_arena_ComponentId>::from_raw($this);
-                    let $state_part = $state_part.downcast_ref::<$StatePart>().expect("invalid state part cast");
-                    $field
-                }
-
-                fn get_raw_mut <'state_part_lifetime>(
-                    $state_part: &'state_part_lifetime mut dyn $crate::std_any_Any,
-                    $this: $crate::components_arena_RawId,
-                ) -> &'state_part_lifetime mut $ty {
-                    let $this = <Self as $crate::components_arena_ComponentId>::from_raw($this);
-                    let $state_part = $state_part.downcast_mut::<$StatePart>().expect("invalid state part cast");
-                    $field_mut
-                }
-            }
-        }
-    };
-    (
-        @impl
-        [$($g:tt)*] [$($w:tt)*] [$Id:ty]
-        [$this:ident] [$state_part:ident] [$StatePart:ty] -> [$($opt_tr:path)?] [$($tr:path)?] [$($opt_ty:ty)?] [$($ty:ty)?] [$DepObjKey:ty]
-    ) => {
-        $crate::std_compile_error!($crate::std_concat!(
-            "invalid dep obj return type\n\n",
-            $crate::std_stringify!($(optional dyn($opt_tr))? $((trait $tr))? $(optional($opt_ty))? $(($ty))?),
-            "\
-                \n\n\
-                allowed forms are \
-                '($ty:ty)', \
-                'dyn($tr:path)', \
-                'optional($ty:ty)', and \
-                'optional dyn($tr:path)'\
-            "
-        ));
-    };
-    (
-        @drop_bindings
-        [$($g:tt)*] [$($r:tt)*] [$($w:tt)*] [$Id:ty]
-        [
-            $(
-                [$this:ident] [$state_part:ident] [$StatePart:ty] [$($opt_tr:path)?] [$($tr:path)?] [$($opt_ty:ty)?] [$($ty:ty)?]
-                [$field_mut:expr] [$field:expr]
-            )*
-        ]
-    ) => {
-        impl $($g)* $Id $($w)* {
-            fn drop_bindings_priv(self, state: &mut dyn $crate::dyn_context_State) {
-                $(
-                    let $this = self;
-                    let $state_part: &mut $StatePart = <dyn $crate::dyn_context_State as $crate::dyn_context_StateExt>::get_mut(state);
-                    $(
-                        let bindings = <dyn $tr as $crate::DepType>::collect_all_bindings($field);
-                    )?
-                    $(
-                        let bindings = if let $crate::std_option_Option::Some(f) = $field {
-                            <dyn $opt_tr as $crate::DepType>::collect_all_bindings(f)
-                        } else {
-                            $crate::std_vec_Vec::new()
-                        };
-                    )?
-                    $(
-                        let bindings = <$ty as $crate::DepType>::collect_all_bindings($field);
-                    )?
-                    $(
-                        let bindings = if let $crate::std_option_Option::Some(f) = $field {
-                            <$opt_ty as $crate::DepType>::collect_all_bindings(f)
-                        } else {
-                            $crate::std_vec_Vec::new()
-                        };
-                    )?
-                    for binding in bindings {
-                        binding.drop_self(state);
-                    }
-                )*
-                $(
-                    let $this = self;
-                    let $state_part: &mut $StatePart = <dyn $crate::dyn_context_State as $crate::dyn_context_StateExt>::get_mut(state);
-                    $(
-                        let handlers = <dyn $tr as $crate::DepType>::take_all_handlers($field_mut);
-                    )?
-                    $(
-                        let handlers = if let $crate::std_option_Option::Some(f) = $field_mut {
-                            <dyn $opt_tr as $crate::DepType>::take_all_handlers(f)
-                        } else {
-                            $crate::std_vec_Vec::new()
-                        };
-                    )?
-                    $(
-                        let handlers = <$ty as $crate::DepType>::take_all_handlers($field_mut);
-                        if !handlers.is_empty() {
-                            <$ty as $crate::DepType>::update_parent_children_has_handlers(state, <Self as $crate::components_arena_ComponentId>::into_raw(self));
-                        }
-                    )?
-                    $(
-                        let handlers = if let $crate::std_option_Option::Some(f) = $field_mut {
-                            <$opt_ty as $crate::DepType>::take_all_handlers(f)
-                        } else {
-                            $crate::std_vec_Vec::new()
-                        };
-                    )?
-                    for handler in handlers {
-                        handler.clear(state);
-                    }
-                )*
-            }
-        }
-    };
-}
-
 /// Specifies dependency objects list and accessing methods.
 ///
 /// Accepts input in the following form:
@@ -3631,6 +3285,7 @@ macro_rules! impl_dep_obj {
     };
 }
 
+#[doc(hidden)]
 #[macro_export]
 macro_rules! impl_dep_obj_impl {
     (
@@ -3662,6 +3317,13 @@ macro_rules! impl_dep_obj_impl {
                 $(
                     fn<$DepObjKey:tt>() -> $(optional)? $(($ty:ty) | dyn($tr:path)) {
                         $StatePart:ty $({ . $state_part_field:tt })? | . $component_field:tt
+                    }
+                |
+                    fn<$DepObjKey:ty>(
+                        self as $this:ident,
+                        $state_part:ident : $StatePart:ty
+                    ) -> $(optional)? $(($ty:ty) | dyn($tr:path)) {
+                        if mut { $field_mut:expr } else { $field:expr }
                     }
                 )*
             }
@@ -3993,7 +3655,7 @@ macro_rules! impl_dep_obj_impl {
         ])*]
         []
     ) => {
-        $crate::dep_obj_impl! {
+        $crate::impl_dep_obj_impl! {
             @drop_bindings
             $g $r $w [$Id]
             [
@@ -4016,7 +3678,7 @@ macro_rules! impl_dep_obj_impl {
             ]
         }
         $(
-            $crate::dep_obj_impl! {
+            $crate::impl_dep_obj_impl! {
                 @impl
                 $g $w [$Id]
                 [$ty_this] [$ty_state_part] [$ty_StatePart] [] [] [] [$ty_Obj] [$ty_Key]
@@ -4024,7 +3686,7 @@ macro_rules! impl_dep_obj_impl {
             }
         )*
         $(
-            $crate::dep_obj_impl! {
+            $crate::impl_dep_obj_impl! {
                 @impl
                 $g $w [$Id]
                 [$opt_ty_this] [$opt_ty_state_part] [$opt_ty_StatePart] [] [] [$opt_ty_Obj] [] [$opt_ty_Key]
@@ -4032,7 +3694,7 @@ macro_rules! impl_dep_obj_impl {
             }
         )*
         $(
-            $crate::dep_obj_impl! {
+            $crate::impl_dep_obj_impl! {
                 @impl
                 $g $w [$Id]
                 [$tr_this] [$tr_state_part] [$tr_StatePart] [] [$tr_Obj] [] [] [$tr_Key]
@@ -4040,7 +3702,7 @@ macro_rules! impl_dep_obj_impl {
             }
         )*
         $(
-            $crate::dep_obj_impl! {
+            $crate::impl_dep_obj_impl! {
                 @impl
                 $g $w [$Id]
                 [$opt_tr_this] [$opt_tr_state_part] [$opt_tr_StatePart] [$opt_tr_Obj] [] [] [] [$opt_tr_Key]
@@ -4074,6 +3736,269 @@ macro_rules! impl_dep_obj_impl {
 
             ")
         ));
+    };
+    (
+        @impl
+        [$($g:tt)*] [$($w:tt)*] [$Id:ty]
+        [$this:ident] [$state_part:ident] [$StatePart:ty] [$opt_tr:path] [] [] [] [$DepObjKey:ty]
+        [$field_mut:expr] [$field:expr]
+    ) => {
+        $crate::impl_dep_obj_impl! {
+            @add_parameter_to_optional
+            [DepObjType]
+            [$($g)*] [$($w)*] [$Id]
+            [$this] [$state_part] [$StatePart] [$opt_tr] [$DepObjKey]
+            [$field_mut] [$field]
+        }
+    };
+    (
+        @add_parameter_to_optional
+        [$p:ident]
+        [$($g:tt)*] [$($w:tt)*] [$Id:ty]
+        [$this:ident] [$state_part:ident] [$StatePart:ty] [$opt_tr:path] [$DepObjKey:ty]
+        [$field_mut:expr] [$field:expr]
+    ) => {
+        $crate::generics_concat! {
+            $crate::impl_dep_obj_impl {
+                @impl_optional_with_parameter
+                [$p] [$($g)*] [$($w)*] [$Id]
+                [$this] [$state_part] [$StatePart] [$DepObjKey]
+                [$field_mut] [$field]
+            }
+            [$($g)*] [] [],
+            [ < $p : $opt_tr + $crate::DepType<Id=Self> > ] [] []
+        }
+    };
+    (
+        @impl_optional_with_parameter
+        [$p:ident] [$($g:tt)*] [$($w:tt)*] [$Id:ty]
+        [$this:ident] [$state_part:ident] [$StatePart:ty] [$DepObjKey:ty]
+        [$field_mut:expr] [$field:expr]
+        [$($gp:tt)*] [] []
+    ) => {
+        $crate::paste_paste! {
+            impl $($gp)* $crate::DepObj <$DepObjKey, $p> for $Id $($w)* {
+                const STATE_PART: $crate::std_any_TypeId = $crate::std_any_TypeId::of::<$StatePart>();
+
+                fn get_raw <'state_part_lifetime>(
+                    $state_part: &'state_part_lifetime dyn $crate::std_any_Any,
+                    $this: $crate::components_arena_RawId,
+                ) -> &'state_part_lifetime $p {
+                    let $this = <Self as $crate::components_arena_ComponentId>::from_raw($this);
+                    let $state_part = $state_part.downcast_ref::<$StatePart>().expect("invalid state part cast");
+                    ($field)
+                        .expect($crate::std_concat!("missing ", $crate::std_stringify!($name)))
+                        .downcast_ref::<DepObjType>().expect("invalid cast")
+                }
+
+                fn get_raw_mut <'state_part_lifetime>(
+                    $state_part: &'state_part_lifetime mut dyn $crate::std_any_Any,
+                    $this: $crate::components_arena_RawId,
+                ) -> &'state_part_lifetime mut $p {
+                    let $this = <Self as $crate::components_arena_ComponentId>::from_raw($this);
+                    let $state_part = $state_part.downcast_mut::<$StatePart>().expect("invalid state part cast");
+                    ($field_mut)
+                        .expect($crate::std_concat!("missing ", $crate::std_stringify!($name)))
+                        .downcast_mut::<DepObjType>().expect("invalid cast")
+                }
+
+            }
+        }
+    };
+    (
+        @impl
+        [$($g:tt)*] [$($w:tt)*] [$Id:ty]
+        [$this:ident] [$state_part:ident] [$StatePart:ty] [] [$tr:path] [] [] [$DepObjKey:ty]
+        [$field_mut:expr] [$field:expr]
+    ) => {
+        $crate::impl_dep_obj_impl! {
+            @add_parameter
+            [DepObjType]
+            [$($g)*] [$($w)*] [$Id]
+            [$this] [$state_part] [$StatePart] [$tr] [$DepObjKey]
+            [$field_mut] [$field]
+        }
+    };
+    (
+        @add_parameter
+        [$p:ident]
+        [$($g:tt)*] [$($w:tt)*] [$Id:ty]
+        [$this:ident] [$state_part:ident] [$StatePart:ty] [$tr:path] [$DepObjKey:ty]
+        [$field_mut:expr] [$field:expr]
+    ) => {
+        $crate::generics_concat! {
+            $crate::impl_dep_obj_impl {
+                @impl_with_parameter
+                [$p] [$($g)*] [$($w)*] [$Id]
+                [$this] [$state_part] [$StatePart] [$DepObjKey]
+                [$field_mut] [$field]
+            }
+            [$($g)*] [] [],
+            [ < $p : $tr + $crate::DepType<Id=Self> > ] [] []
+        }
+    };
+    (
+        @impl_with_parameter
+        [$p:ident] [$($g:tt)*] [$($w:tt)*] [$Id:ty]
+        [$this:ident] [$state_part:ident] [$StatePart:ty] [$DepObjKey:ty]
+        [$field_mut:expr] [$field:expr]
+        [$($gp:tt)*] [] []
+    ) => {
+        $crate::paste_paste! {
+            impl $($gp)* $crate::DepObj<$DepObjKey, $p> for $Id $($w)* {
+                const STATE_PART: $crate::std_any_TypeId = $crate::std_any_TypeId::of::<$StatePart>();
+
+                fn get_raw <'state_part_lifetime>(
+                    $state_part: &'state_part_lifetime dyn $crate::std_any_Any,
+                    $this: $crate::components_arena_RawId,
+                ) -> &'state_part_lifetime $p {
+                    let $this = <Self as $crate::components_arena_ComponentId>::from_raw($this);
+                    let $state_part = $state_part.downcast_ref::<$StatePart>().expect("invalid state part cast");
+                    ($field).downcast_ref::<DepObjType>().expect("invalid cast")
+                }
+
+                fn get_raw_mut <'state_part_lifetime>(
+                    $state_part: &'state_part_lifetime mut dyn $crate::std_any_Any,
+                    $this: $crate::components_arena_RawId,
+                ) -> &'state_part_lifetime mut $p {
+                    let $this = <Self as $crate::components_arena_ComponentId>::from_raw($this);
+                    let $state_part = $state_part.downcast_mut::<$StatePart>().expect("invalid state part cast");
+                    ($field_mut).downcast_mut::<DepObjType>().expect("invalid cast")
+                }
+            }
+        }
+    };
+    (
+        @impl
+        [$($g:tt)*] [$($w:tt)*] [$Id:ty]
+        [$this:ident] [$state_part:ident] [$StatePart:ty] [] [] [$opt_ty:ty] [] [$DepObjKey:ty]
+        [$field_mut:expr] [$field:expr]
+    ) => {
+        $crate::paste_paste! {
+            impl $($g)* $crate::DepObj<$DepObjKey, $opt_ty> for $Id $($w)* {
+                const STATE_PART: $crate::std_any_TypeId = $crate::std_any_TypeId::of::<$StatePart>();
+
+                fn get_raw <'state_part_lifetime>(
+                    $state_part: &'state_part_lifetime dyn $crate::std_any_Any,
+                    $this: $crate::components_arena_RawId,
+                ) -> &'state_part_lifetime $opt_ty {
+                    let $this = <Self as $crate::components_arena_ComponentId>::from_raw($this);
+                    let $state_part = $state_part.downcast_ref::<$StatePart>().expect("invalid state part cast");
+                    ($field).expect($crate::std_concat!("missing ", $crate::std_stringify!($name)))
+                }
+
+                fn get_raw_mut <'state_part_lifetime>(
+                    $state_part: &'state_part_lifetime mut dyn $crate::std_any_Any,
+                    $this: $crate::components_arena_RawId,
+                ) -> &'state_part_lifetime mut $opt_ty {
+                    let $this = <Self as $crate::components_arena_ComponentId>::from_raw($this);
+                    let $state_part = $state_part.downcast_mut::<$StatePart>().expect("invalid state part cast");
+                    ($field_mut).expect($crate::std_concat!("missing ", $crate::std_stringify!($name)))
+                }
+            }
+        }
+    };
+    (
+        @impl
+        [$($g:tt)*] [$($w:tt)*] [$Id:ty]
+        [$this:ident] [$state_part:ident] [$StatePart:ty] [] [] [] [$ty:ty] [$DepObjKey:ty]
+        [$field_mut:expr] [$field:expr]
+    ) => {
+        $crate::paste_paste! {
+            impl $($g)* $crate::DepObj<$DepObjKey, $ty> for $Id $($w)* {
+                const STATE_PART: $crate::std_any_TypeId = $crate::std_any_TypeId::of::<$StatePart>();
+
+                fn get_raw <'state_part_lifetime>(
+                    $state_part: &'state_part_lifetime dyn $crate::std_any_Any,
+                    $this: $crate::components_arena_RawId,
+                ) -> &'state_part_lifetime $ty {
+                    let $this = <Self as $crate::components_arena_ComponentId>::from_raw($this);
+                    let $state_part = $state_part.downcast_ref::<$StatePart>().expect("invalid state part cast");
+                    $field
+                }
+
+                fn get_raw_mut <'state_part_lifetime>(
+                    $state_part: &'state_part_lifetime mut dyn $crate::std_any_Any,
+                    $this: $crate::components_arena_RawId,
+                ) -> &'state_part_lifetime mut $ty {
+                    let $this = <Self as $crate::components_arena_ComponentId>::from_raw($this);
+                    let $state_part = $state_part.downcast_mut::<$StatePart>().expect("invalid state part cast");
+                    $field_mut
+                }
+            }
+        }
+    };
+    (
+        @drop_bindings
+        [$($g:tt)*] [$($r:tt)*] [$($w:tt)*] [$Id:ty]
+        [
+            $(
+                [$this:ident] [$state_part:ident] [$StatePart:ty] [$($opt_tr:path)?] [$($tr:path)?] [$($opt_ty:ty)?] [$($ty:ty)?]
+                [$field_mut:expr] [$field:expr]
+            )*
+        ]
+    ) => {
+        impl $($g)* $Id $($w)* {
+            fn drop_bindings_priv(self, state: &mut dyn $crate::dyn_context_State) {
+                $(
+                    let $this = self;
+                    let $state_part: &mut $StatePart = <dyn $crate::dyn_context_State as $crate::dyn_context_StateExt>::get_mut(state);
+                    $(
+                        let bindings = <dyn $tr as $crate::DepType>::collect_all_bindings($field);
+                    )?
+                    $(
+                        let bindings = if let $crate::std_option_Option::Some(f) = $field {
+                            <dyn $opt_tr as $crate::DepType>::collect_all_bindings(f)
+                        } else {
+                            $crate::std_vec_Vec::new()
+                        };
+                    )?
+                    $(
+                        let bindings = <$ty as $crate::DepType>::collect_all_bindings($field);
+                    )?
+                    $(
+                        let bindings = if let $crate::std_option_Option::Some(f) = $field {
+                            <$opt_ty as $crate::DepType>::collect_all_bindings(f)
+                        } else {
+                            $crate::std_vec_Vec::new()
+                        };
+                    )?
+                    for binding in bindings {
+                        binding.drop_self(state);
+                    }
+                )*
+                $(
+                    let $this = self;
+                    let $state_part: &mut $StatePart = <dyn $crate::dyn_context_State as $crate::dyn_context_StateExt>::get_mut(state);
+                    $(
+                        let handlers = <dyn $tr as $crate::DepType>::take_all_handlers($field_mut);
+                    )?
+                    $(
+                        let handlers = if let $crate::std_option_Option::Some(f) = $field_mut {
+                            <dyn $opt_tr as $crate::DepType>::take_all_handlers(f)
+                        } else {
+                            $crate::std_vec_Vec::new()
+                        };
+                    )?
+                    $(
+                        let handlers = <$ty as $crate::DepType>::take_all_handlers($field_mut);
+                        if !handlers.is_empty() {
+                            <$ty as $crate::DepType>::update_parent_children_has_handlers(state, <Self as $crate::components_arena_ComponentId>::into_raw(self));
+                        }
+                    )?
+                    $(
+                        let handlers = if let $crate::std_option_Option::Some(f) = $field_mut {
+                            <$opt_ty as $crate::DepType>::take_all_handlers(f)
+                        } else {
+                            $crate::std_vec_Vec::new()
+                        };
+                    )?
+                    for handler in handlers {
+                        handler.clear(state);
+                    }
+                )*
+            }
+        }
     };
 }
 
