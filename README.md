@@ -69,7 +69,7 @@ Now we are ready to specify the dependency type itself:
 ```rust
 dep_type! {
     #[derive(Debug)]
-    pub struct ItemProps[Item] {
+    pub struct ItemProps = Item[ItemProps] {
         name: Cow<'static, str> = Cow::Borrowed(""),
         base_weight: f32 = 0.0,
         weight: f32 = 0.0,
@@ -107,7 +107,7 @@ the `props` field:
 
 ```rust
 impl_dep_obj!(Item {
-    type ItemProps => Items | .props,
+    fn<ItemProps>() -> (ItemProps) { Items | .props }
 });
 ```
 
@@ -152,7 +152,7 @@ mod items {
     }
 
     impl_dep_obj!(Item {
-        type ItemProps => Items | .props,
+        fn<ItemProps>() -> (ItemProps) { Items | .props }
     });
 
     #[derive(Debug)]
@@ -162,7 +162,7 @@ mod items {
 
     dep_type! {
         #[derive(Debug)]
-        pub struct ItemProps in Item {
+        pub struct ItemProps = Item[ItemProps] {
             name: Cow<'static, str> = Cow::Borrowed(""),
             base_weight: f32 = 0.0,
             weight: f32 = 0.0,
@@ -278,7 +278,7 @@ mod items {
     }
 
     impl_dep_obj!(Item {
-        type ItemProps => Items | .props,
+        fn<ItemProps>() -> (ItemProps) { Items | .props }
     });
 
     #[derive(Debug, Stop)]
@@ -294,7 +294,7 @@ mod items {
 
     dep_type! {
         #[derive(Debug)]
-        pub struct ItemProps in Item as ItemProps {
+        pub struct ItemProps = Item[ItemProps] {
             name: Cow<'static, str> = Cow::Borrowed(""),
             base_weight: f32 = 0.0,
             weight: f32 = 0.0,
@@ -448,8 +448,8 @@ all dirty work including downcasting):
 
 ```rust
 impl_dep_obj!(Item {
-    type ItemProps => Items | .props,
-    trait ItemObj => Items | .obj,
+    fn<ItemProps>() -> (ItemProps) { Items | .props }
+    fn<ItemObjKey>() -> dyn(ItemObj) { Items | .obj }
 });
 ```
 
@@ -464,7 +464,7 @@ mod weapon {
 
     dep_type! {
         #[derive(Debug)]
-        pub struct Weapon in Item as ItemObjKey {
+        pub struct Weapon = Item[ItemObjKey] {
             base_damage: f32 = 0.0,
             damage: f32 = 0.0,
         }

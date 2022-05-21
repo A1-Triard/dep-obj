@@ -3911,4 +3911,51 @@ macro_rules! impl_dep_obj_impl {
 
 #[cfg(test)]
 mod test {
+    use components_arena::{Arena, Component, ComponentStop, NewtypeComponentId, with_arena_in_state_part};
+    use downcast_rs::{Downcast, impl_downcast};
+    use dyn_context::Stop;
+    use crate::*;
+
+    enum Obj1Key { }
+
+    enum Obj2Key { }
+
+    trait Obj1: Downcast + DepType<Id=Item, DepObjKey=Obj1Key> { }
+
+    impl_downcast!(Obj1);
+
+    trait Obj2: Downcast + DepType<Id=Item, DepObjKey=Obj2Key> { }
+
+    impl_downcast!(Obj2);
+
+    macro_attr! {
+        #[derive(Debug, Component!(stop=ItemStop))]
+        struct ItemComponent {
+            obj_1: Box<dyn Obj1>,
+            obj_2: Box<dyn Obj2>,
+        }
+    }
+
+    impl ComponentStop for ItemStop {
+        with_arena_in_state_part!(Items);
+
+        fn stop(&self, state: &mut dyn State, id: Id<ItemComponent>) {
+            Item(id).drop_bindings_priv(state);
+        }
+    }
+
+    #[derive(Debug, Stop)]
+    struct Items(Arena<ItemComponent>);
+
+    macro_attr! {
+        #[derive(Debug, Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash, NewtypeComponentId!)]
+        pub struct Item(Id<ItemComponent>);
+    }
+
+    impl DetachedDepObjId for Item { }
+
+    impl_dep_obj!(Item {
+        fn<Obj1Key>() -> dyn(Obj1) { Items | .obj_1 }
+        fn<Obj2Key>() -> dyn(Obj2) { Items | .obj_2 }
+    });
 }
