@@ -3199,7 +3199,6 @@ macro_rules! dep_type_impl {
 
             $vis struct [< $name Builder >] $($bc_g)* $($bc_w)* (pub $BaseBuilder);
 
-            // TODO: use #[derive(NewtypeDepObjBuilder!)]
             impl $($bc_g)* $crate::DepObjBuilder for [< $name Builder >] $($bc_r)* $($bc_w)* {
                 type Id = $Id;
 
