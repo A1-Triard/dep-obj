@@ -3535,7 +3535,7 @@ macro_rules! impl_dep_obj_impl {
                 $($ty)*
                 [
                     [$Obj] [$DepObjKey] [$StatePart] [$this] [$state_part]
-                    [$field] [$field_mut]
+                    [$field_mut] [$field]
                 ]
             ]
             [$($opt_ty)*]
@@ -3566,7 +3566,7 @@ macro_rules! impl_dep_obj_impl {
                 $($opt_ty)*
                 [
                     [$Obj] [$DepObjKey] [$StatePart] [$this] [$state_part]
-                    [$field] [$field_mut]
+                    [$field_mut] [$field]
                 ]
             ]
             [$($tr)*]
@@ -3597,7 +3597,7 @@ macro_rules! impl_dep_obj_impl {
                 $($tr)*
                 [
                     [$Obj] [$DepObjKey] [$StatePart] [$this] [$state_part]
-                    [$field] [$field_mut]
+                    [$field_mut] [$field]
                 ]
             ]
             [$($opt_tr)*]
@@ -3628,7 +3628,7 @@ macro_rules! impl_dep_obj_impl {
                 $($opt_tr)*
                 [
                     [$Obj] [$DepObjKey] [$StatePart] [$this] [$state_part]
-                    [$field] [$field_mut]
+                    [$field_mut] [$field]
                 ]
             ]
             [$($tail)*]
