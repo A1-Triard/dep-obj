@@ -78,7 +78,7 @@ mod items {
     });
 
     ext_builder!(<'a> Builder<'a, Item> as BuilderItemPropsExt[Item] {
-        props -> (ItemProps)
+        fn props() -> (ItemProps);
     });
 
     #[derive(Debug, Stop)]
@@ -119,7 +119,7 @@ mod weapon {
     }
     
     ext_builder!(<'a> Builder<'a, Item> as BuilderWeaponExt[Item] {
-        weapon -> (Weapon)
+        fn weapon() -> (Weapon);
     });
 
     impl ItemObj for Weapon { }
