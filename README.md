@@ -1,3 +1,5 @@
+![maintenance: experimental](https://img.shields.io/badge/maintenance-experimental-blue.svg)
+
 # dep-obj
 
 Dependency object: effective reactive heterogeneous container.
