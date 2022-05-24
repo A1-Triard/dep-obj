@@ -12,109 +12,48 @@ env:
   CARGO_TERM_COLOR: always
 
 jobs:
-  build:
+  main:
     strategy:
       fail-fast: false
       matrix:
         include:
         - os: ubuntu-latest
-          rust: nightly
           triple: x86_64-unknown-linux-gnu
         - os: windows-latest
-          rust: nightly
           triple: x86_64-pc-windows-msvc
         - os: macOS-latest
-          rust: nightly
           triple: x86_64-apple-darwin
     runs-on: ${{ matrix.os }}
     steps:
     - uses: actions-rs/toolchain@v1
       with:
-        toolchain: ${{ matrix.rust }}
+        toolchain: nightly
         override: true
+    - run: "rustup component add clippy"
+    - run: "rustup component add rust-src --toolchain nightly-${{ matrix.triple }}"
     - uses: actions/checkout@v2
-    - name: build
-      uses: actions-rs/cargo@v1
-      with:
-        command: build
-        args: "--verbose"
-    - name: test --tests
-      uses: actions-rs/cargo@v1
-      with:
-        command: test
-        args: "--verbose --tests"
-    - name: test --doc
-      uses: actions-rs/cargo@v1
-      with:
-        command: test
-        args: "--verbose --doc"
-    - name: doc
-      uses: actions-rs/cargo@v1
-      with:
-        command: doc
-        args: "--verbose"
-    - name: test --docsrs
-      uses: actions-rs/cargo@v1
-      with:
-        command: test
-        args: "--verbose --doc"
+    - run: "cargo build --verbose"
+    - run: "cargo test --verbose --tests"
+    - run: "cargo test --verbose --doc"
+    - run: "cargo doc --verbose"
+    - name: cargo test --docsrs
+      run: "cargo test --verbose --doc"
       env:
         RUSTFLAGS: "--cfg docsrs"
         RUSTDOCFLAGS: "--cfg docsrs"
-    - name: --docsrs
-      uses: actions-rs/cargo@v1
-      with:
-        command: doc
-        args: "--verbose"
+    - name: cargo --docsrs
+      run: "cargo doc --verbose"
       env:
         RUSTFLAGS: "--cfg docsrs"
         RUSTDOCFLAGS: "--cfg docsrs"
-    - name: build --release
-      uses: actions-rs/cargo@v1
-      with:
-        command: build
-        args: "--verbose --release"
-    - name: rustup component add rust-src
-      run: "rustup component add rust-src --toolchain nightly-${{ matrix.triple }}"
-    - name: ensure_no_std build
-      run: "cargo +nightly build --verbose -Z build-std=core,alloc,panic_abort --target ${{ matrix.triple }} --release"
+    - run: "cargo build --verbose --release"
+    - run: "cargo run --verbose --example rs_trigger"
+    - run: "cargo run --verbose --example inventory"
+    - run: "cargo run --verbose --example item"
+    - run: "cargo run --verbose --example item_with_builder"
+    - run: "cargo run --verbose --example item_obj"
+    - run: "cargo outdated --verbose --aggresssive --root-deps-only --exit-code 1"
+    - run: "cargo clippy --verbose"
+    - run: "cargo +nightly build --verbose -Z build-std=core,alloc,panic_abort --target ${{ matrix.triple }} --release"
       working-directory: ensure_no_std
-    - name: ensure_no_std run
-      run: "./ensure_no_std/target/${{ matrix.triple }}/release/ensure_no_std"
-    - name: run --example rs_trigger
-      uses: actions-rs/cargo@v1
-      with:
-        command: run
-        args: "--verbose --example rs_trigger"
-    - name: run --example inventory
-      uses: actions-rs/cargo@v1
-      with:
-        command: run
-        args: "--verbose --example inventory"
-    - name: run --example item
-      uses: actions-rs/cargo@v1
-      with:
-        command: run
-        args: "--verbose --example item"
-    - name: run --example item_with_builder
-      uses: actions-rs/cargo@v1
-      with:
-        command: run
-        args: "--verbose --example item_with_builder"
-    - name: run --example item_obj
-      uses: actions-rs/cargo@v1
-      with:
-        command: run
-        args: "--verbose --example item_obj"
-    - name: outdated
-      uses: actions-rs/cargo@v1
-      with:
-        command: outdated
-        args: "--verbose --aggresssive --root-deps-only --exit-code 1"
-    - name: rustup component add clippy
-      run: "rustup component add clippy"
-    - name: clippy
-      uses: actions-rs/cargo@v1
-      with:
-        command: clippy
-        args: "--verbose"
+    - run: "./ensure_no_std/target/${{ matrix.triple }}/release/ensure_no_std"
