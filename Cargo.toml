@@ -29,6 +29,7 @@ memoffset = { version = "0.6.5", features = ["unstable_const"] }
 panicking = { version = "0.1.0", default-features = false }
 paste = "1.0.0"
 phantom-type = { version = "0.4.1", default-features = false }
+static_assertions = "1.1.0"
 
 [badges]
 maintenance = { status = "experimental" }
