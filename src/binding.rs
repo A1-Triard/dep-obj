@@ -10,6 +10,8 @@ use dyn_clone::{DynClone, clone_trait_object};
 use dyn_context::{SelfState, State, StateExt};
 use educe::Educe;
 use macro_attr_2018::macro_attr;
+#[cfg(not(debug_assertions))]
+use no_panic::no_panic;
 use panicking::panicking;
 use phantom_type::PhantomType;
 
@@ -260,10 +262,16 @@ macro_attr! {
     }
 }
 
-const _BINDING_NODE_ITEM_SIZE_ASSERT: () = assert!(ArenaItems::<AnyBindingNode>::item_size() <= 160);
+#[cfg_attr(not(debug_assertions), no_panic)]
+fn assert_binding_node_item_size() {
+    // there is no real sence in concrete value
+    // I just want to know how much memory bindings cost
+    assert!(ArenaItems::<AnyBindingNode>::item_size() <= 160);
+}
 
 impl<T: Convenient> From<BindingNode<T>> for AnyBindingNode {
     fn from(node: BindingNode<T>) -> Self {
+        assert_binding_node_item_size();
         AnyBindingNode {
             buf: BindingNodeBufNew::<T>::new(node),
             vtable: &BindingNode::<T>::VTABLE
@@ -346,18 +354,33 @@ struct BindingNode<T: Convenient> {
 
 const BINDING_NODE_SIZE: usize = size_of::<BindingNode<!>>();
 
-#[repr(C, align(8))]
+#[cfg_attr(target_pointer_width="64", repr(C, align(8)))]
+#[cfg_attr(target_pointer_width="32", repr(C, align(4)))]
+#[cfg_attr(not(any(target_pointer_width="32", target_pointer_width="64")), repr(C, align(1)))]
 struct BindingNodeBuf([MaybeUninit<u8>; BINDING_NODE_SIZE]);
 
-const _BINDING_NODE_BUF_ALIGN_ASSERT: () = assert!(align_of::<BindingNodeBuf>() == align_of::<BindingNode<!>>());
+#[cfg_attr(not(debug_assertions), no_panic)]
+fn binding_node_buf_align_assert() {
+    assert!(align_of::<BindingNodeBuf>() == align_of::<BindingNode<!>>());
+}
 
 struct BindingNodeBufNew<T>(PhantomType<T>);
 
 impl<T: Convenient> BindingNodeBufNew<T> {
-    const _SIZE_ASSERT: () = assert!(size_of::<BindingNode<T>>() == BINDING_NODE_SIZE);
-    const _ALIGN_ASSERT: () = assert!(align_of::<BindingNode<T>>() == align_of::<BindingNodeSourcesBuf>());
+    #[cfg_attr(not(debug_assertions), no_panic)]
+    fn size_assert() {
+        assert!(size_of::<BindingNode<T>>() == BINDING_NODE_SIZE);
+    }
+
+    #[cfg_attr(not(debug_assertions), no_panic)]
+    fn align_assert() {
+        assert!(align_of::<BindingNode<T>>() == align_of::<BindingNodeSourcesBuf>());
+    }
 
     fn new(node: BindingNode<T>) -> BindingNodeBuf {
+        Self::size_assert();
+        Self::align_assert();
+        binding_node_buf_align_assert();
         let mut buf = BindingNodeBuf(unsafe { MaybeUninit::uninit().assume_init() });
         unsafe { ptr::write(buf.as_mut_ptr(), node); }
         buf
@@ -525,17 +548,27 @@ impl<T: Convenient> From<BindingBase<T>> for AnyBindingBase {
 
 const BINDING_NODE_SOURCES_MAX_SIZE: usize = 96;
 
-#[repr(C, align(4))]
+#[cfg_attr(target_pointer_width="64", repr(C, align(8)))]
+#[cfg_attr(target_pointer_width="32", repr(C, align(4)))]
+#[cfg_attr(not(any(target_pointer_width="32", target_pointer_width="64")), repr(C, align(1)))]
 struct BindingNodeSourcesBuf([MaybeUninit<u8>; BINDING_NODE_SOURCES_MAX_SIZE]);
 
 struct BindingNodeSourcesBufNew<T>(PhantomType<T>);
 
 impl<T> BindingNodeSourcesBufNew<T> {
-    const _SIZE_ASSERT: () = assert!(size_of::<T>() <= BINDING_NODE_SOURCES_MAX_SIZE);
+    #[cfg_attr(not(debug_assertions), no_panic)]
+    fn size_assert() {
+        assert!(size_of::<T>() <= BINDING_NODE_SOURCES_MAX_SIZE);
+    }
 
-    const _ALIGN_ASSERT: () = assert!(align_of::<T>() <= align_of::<BindingNodeSourcesBuf>());
+    #[cfg_attr(not(debug_assertions), no_panic)]
+    fn align_assert() {
+        assert!(align_of::<T>() <= align_of::<BindingNodeSourcesBuf>());
+    }
 
     fn new(sources: T) -> BindingNodeSourcesBuf {
+        Self::size_assert();
+        Self::align_assert();
         let mut buf = BindingNodeSourcesBuf(unsafe { MaybeUninit::uninit().assume_init() });
         unsafe { ptr::write(buf.as_mut_ptr(), sources); }
         buf
