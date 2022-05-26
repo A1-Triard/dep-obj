@@ -18,7 +18,6 @@ rustdoc-args = ["--cfg", "docsrs"]
 
 [dependencies]
 components-arena = { version = "3.0.0", features = ["dyn-context"] }
-downcast-rs = { version = "1.2.0", default-features = false }
 dyn-clone = "1.0.2"
 dyn-context = "0.17.0"
 educe = "0.4.13"
@@ -29,7 +28,9 @@ memoffset = { version = "0.6.5", features = ["unstable_const"] }
 panicking = { version = "0.1.0", default-features = false }
 paste = "1.0.0"
 phantom-type = { version = "0.4.1", default-features = false }
-static_assertions = "1.1.0"
+
+[dev-dependencies]
+downcast-rs = { version = "1.2.0", default-features = false }
 
 [badges]
 maintenance = { status = "experimental" }
