@@ -21,6 +21,8 @@ jobs:
           triple: x86_64-unknown-linux-gnu
         - os: windows-latest
           triple: x86_64-pc-windows-msvc
+        - os: windows-latest
+          triple: i686-pc-windows-msvc
         - os: macOS-latest
           triple: x86_64-apple-darwin
     runs-on: ${{ matrix.os }}
@@ -32,26 +34,26 @@ jobs:
     - run: "rustup component add clippy"
     - run: "rustup component add rust-src --toolchain nightly-${{ matrix.triple }}"
     - uses: actions/checkout@v2
-    - run: "cargo build --verbose"
-    - run: "cargo test --verbose --tests"
-    - run: "cargo test --verbose --doc"
-    - run: "cargo doc --verbose"
+    - run: "cargo build --verbose --target ${{ matrix.triple }}"
+    - run: "cargo test --verbose --tests --target ${{ matrix.triple }}"
+    - run: "cargo test --verbose --doc --target ${{ matrix.triple }}"
+    - run: "cargo doc --verbose --target ${{ matrix.triple }}"
     - name: cargo test --docsrs
-      run: "cargo test --verbose --doc"
+      run: "cargo test --verbose --doc --target ${{ matrix.triple }}"
       env:
         RUSTFLAGS: "--cfg docsrs"
         RUSTDOCFLAGS: "--cfg docsrs"
     - name: cargo --docsrs
-      run: "cargo doc --verbose"
+      run: "cargo doc --verbose --target ${{ matrix.triple }}"
       env:
         RUSTFLAGS: "--cfg docsrs"
         RUSTDOCFLAGS: "--cfg docsrs"
-    - run: "cargo build --verbose --release"
-    - run: "cargo run --verbose --example rs_trigger"
-    - run: "cargo run --verbose --example inventory"
-    - run: "cargo run --verbose --example item"
-    - run: "cargo run --verbose --example item_with_builder"
-    - run: "cargo run --verbose --example item_obj"
+    - run: "cargo build --verbose --release --target ${{ matrix.triple }}"
+    - run: "cargo run --verbose --example rs_trigger --target ${{ matrix.triple }}"
+    - run: "cargo run --verbose --example inventory --target ${{ matrix.triple }}"
+    - run: "cargo run --verbose --example item --target ${{ matrix.triple }}"
+    - run: "cargo run --verbose --example item_with_builder --target ${{ matrix.triple }}"
+    - run: "cargo run --verbose --example item_obj --target ${{ matrix.triple }}"
     - run: "cargo outdated --verbose --aggresssive --root-deps-only --exit-code 1"
     - run: "cargo clippy --verbose"
     - run: "cargo +nightly build --verbose -Z build-std=core,alloc,panic_abort --target ${{ matrix.triple }} --release"
