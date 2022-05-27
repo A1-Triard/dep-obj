@@ -39,7 +39,7 @@ jobs:
     - run: "cargo build --verbose"
     - run: "cargo test --verbose --tests"
     - run: "cargo test --verbose --doc"
-    - run: "cargo doc --verbose --target"
+    - run: "cargo doc --verbose"
     - name: cargo test --docsrs
       run: "cargo test --verbose --doc"
       env:
