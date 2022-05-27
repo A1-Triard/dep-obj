@@ -2,6 +2,7 @@
 #![feature(const_mut_refs)]
 #![feature(const_ptr_offset_from)]
 #![feature(const_type_id)]
+#![feature(explicit_generic_args_with_impl_trait)]
 #![feature(never_type)]
 #![feature(unchecked_math)]
 
@@ -170,6 +171,10 @@ pub use components_arena::ComponentId as components_arena_ComponentId;
 #[doc(hidden)]
 pub use components_arena::RawId as components_arena_RawId;
 #[doc(hidden)]
+pub use composable_allocators;
+#[doc(hidden)]
+pub use core::alloc::Allocator as std_alloc_Allocator;
+#[doc(hidden)]
 pub use core::any::Any as std_any_Any;
 #[doc(hidden)]
 pub use core::any::TypeId as std_any_TypeId;
@@ -209,6 +214,10 @@ use alloc::boxed::Box;
 use alloc::collections::{TryReserveError, VecDeque};
 use alloc::vec::Vec;
 use components_arena::{Arena, ArenaItemsIntoValues, Component, ComponentId, Id, RawId};
+use composable_allocators::Global;
+use composable_allocators::or::Or;
+use composable_allocators::stacked::{self};
+use core::alloc::Allocator;
 use core::any::{Any, TypeId};
 use core::fmt::Debug;
 use core::iter::once;
@@ -358,7 +367,7 @@ impl<PropType: Convenient> DepPropHandlers<PropType> {
             self.change_final_handler.is_none()
     }
 
-    fn take_all(&mut self, handlers: &mut Vec<Box<dyn AnyHandler>>) {
+    fn take_all<A: Allocator>(&mut self, handlers: &mut Vec<Box<dyn AnyHandler>, A>) {
         handlers.extend(take(&mut self.value_handlers).into_items().into_values().map(|x| x.0.into_any()));
         handlers.extend(take(&mut self.change_handlers).into_items().into_values().map(|x| x.0.into_any()));
         self.change_initial_handler.take().map(|x| handlers.push(x.into_any()));
@@ -429,7 +438,7 @@ impl<PropType: Convenient> DepPropEntry<PropType> {
     fn inherits(&self) -> bool { self.handlers.children_has_handlers.is_some() }
 
     #[doc(hidden)]
-    pub fn take_all_handlers(&mut self, handlers: &mut Vec<Box<dyn AnyHandler>>) {
+    pub fn take_all_handlers<A: Allocator>(&mut self, handlers: &mut Vec<Box<dyn AnyHandler>, A>) {
         self.handlers.take_all(handlers);
     }
 
@@ -454,7 +463,7 @@ impl<ArgsType: DepEventArgs> DepEventEntry<ArgsType> {
     }
 
     #[doc(hidden)]
-    pub fn take_all_handlers(&mut self, handlers: &mut Vec<Box<dyn AnyHandler>>) {
+    pub fn take_all_handlers<A: Allocator>(&mut self, handlers: &mut Vec<Box<dyn AnyHandler>, A>) {
         handlers.extend(take(&mut self.handlers).into_items().into_values().map(|x| x.0.into_any()));
     }
 }
@@ -476,7 +485,7 @@ impl<ItemType: Convenient> DepVecHandlers<ItemType> {
         }
     }
 
-    fn take_all(&mut self, handlers: &mut Vec<Box<dyn AnyHandler>>) {
+    fn take_all<A: Allocator>(&mut self, handlers: &mut Vec<Box<dyn AnyHandler>, A>) {
         handlers.extend(take(&mut self.changed_handlers).into_items().into_values().map(|x| x.0.into_any()));
         handlers.extend(take(&mut self.item_handlers).into_items().into_values().map(|x| x.handler.into_any()));
         self.item_initial_final_handler.take().map(|x| handlers.push(x.handler.into_any()));
@@ -559,12 +568,12 @@ impl<ItemType: Convenient> DepVecEntry<ItemType> {
     }
 
     #[doc(hidden)]
-    pub fn take_all_handlers(&mut self, handlers: &mut Vec<Box<dyn AnyHandler>>) {
+    pub fn take_all_handlers<A: Allocator>(&mut self, handlers: &mut Vec<Box<dyn AnyHandler>, A>) {
         self.handlers.take_all(handlers);
     }
 
     #[doc(hidden)]
-    pub fn collect_all_bindings(&self, bindings: &mut Vec<AnyBindingBase>) {
+    pub fn collect_all_bindings<A: Allocator>(&self, bindings: &mut Vec<AnyBindingBase, A>) {
         bindings.extend(
             self.handlers.item_handlers.items().values().filter_map(|x| x.update).map(|x| {
                 let x: AnyBindingBase = x.into();
@@ -592,7 +601,7 @@ impl<Owner: DepType> BaseDepObjCore<Owner> {
     }
 
     #[doc(hidden)]
-    pub fn collect_bindings(&self, bindings: &mut Vec<AnyBindingBase>) {
+    pub fn collect_bindings<A: Allocator>(&self, bindings: &mut Vec<AnyBindingBase, A>) {
         bindings.extend(self.added_bindings.items().values().copied());
     }
 }
@@ -621,36 +630,38 @@ pub trait DepObjId: ComponentId {
         state: &mut dyn State,
         style: Option<Style<Owner>>,
     ) -> Option<Style<Owner>> where Owner::Id: DepObj<Owner::DepObjKey, Owner> {
-        let mut on_changed = Vec::new();
-        let mut obj = <Owner::Id as DepObj<Owner::DepObjKey, Owner>>::get_mut(state, self.into_raw());
-        let old = obj.core_base_priv_mut().style.take();
-        if let Some(old) = old.as_ref() {
-            old.setters
-                .iter()
-                .filter(|setter| style.as_ref().map_or(
-                    true,
-                    |new| new.setters.binary_search_by_key(
-                        &setter.prop_offset(),
-                        |x| x.prop_offset()
-                    ).is_err()
-                ))
-                .filter_map(|setter| setter.un_apply(state, self, true))
-                .for_each(|x| on_changed.push(x))
-            ;
-        }
-        if let Some(new) = style.as_ref() {
-            new.setters
-                .iter()
-                .filter_map(|setter| setter.un_apply(state, self, false))
-                .for_each(|x| on_changed.push(x))
-            ;
-        }
-        let mut obj = <Owner::Id as DepObj<Owner::DepObjKey, Owner>>::get_mut(state, self.into_raw());
-        obj.core_base_priv_mut().style = style;
-        for on_changed in on_changed {
-            on_changed(state);
-        }
-        old
+        stacked::with_size::<256, _>(|alloc| {
+            let mut on_changed = Vec::new_in(Or(alloc, Global));
+            let mut obj = <Owner::Id as DepObj<Owner::DepObjKey, Owner>>::get_mut(state, self.into_raw());
+            let old = obj.core_base_priv_mut().style.take();
+            if let Some(old) = old.as_ref() {
+                old.setters
+                    .iter()
+                    .filter(|setter| style.as_ref().map_or(
+                        true,
+                        |new| new.setters.binary_search_by_key(
+                            &setter.prop_offset(),
+                            |x| x.prop_offset()
+                        ).is_err()
+                    ))
+                    .filter_map(|setter| setter.un_apply(state, self, true))
+                    .for_each(|x| on_changed.push(x))
+                ;
+            }
+            if let Some(new) = style.as_ref() {
+                new.setters
+                    .iter()
+                    .filter_map(|setter| setter.un_apply(state, self, false))
+                    .for_each(|x| on_changed.push(x))
+                ;
+            }
+            let mut obj = <Owner::Id as DepObj<Owner::DepObjKey, Owner>>::get_mut(state, self.into_raw());
+            obj.core_base_priv_mut().style = style;
+            for on_changed in on_changed {
+                on_changed(state);
+            }
+            old
+        })
     }
 }
 
@@ -670,8 +681,10 @@ impl<T: DetachedDepObjId> DepObjId for T {
 /// # Examples
 ///
 /// ```rust
+/// # #![feature(allocator_api)]
 /// # #![feature(const_ptr_offset_from)]
 /// # #![feature(const_type_id)]
+/// # #![feature(explicit_generic_args_with_impl_trait)]
 /// use components_arena::{Arena, Component, NewtypeComponentId, Id};
 /// use dep_obj::{DetachedDepObjId, dep_type, impl_dep_obj};
 /// use dep_obj::binding::{Bindings, Binding, Binding1};
@@ -756,10 +769,10 @@ pub trait DepType: Debug {
     fn core_base_priv_mut(&mut self) -> &mut BaseDepObjCore<Self> where Self: Sized;
 
     #[doc(hidden)]
-    fn take_all_handlers(&mut self, handlers: &mut Vec<Box<dyn AnyHandler>>);
+    fn take_all_handlers(&mut self, handlers: &mut Vec<Box<dyn AnyHandler>, &dyn Allocator>);
 
     #[doc(hidden)]
-    fn collect_all_bindings(&self, bindings: &mut Vec<AnyBindingBase>);
+    fn collect_all_bindings(&self, bindings: &mut Vec<AnyBindingBase, &dyn Allocator>);
 
     #[doc(hidden)]
     fn update_parent_children_has_handlers(&self) -> fn(state: &mut dyn State, id: RawId);
@@ -3144,7 +3157,10 @@ macro_rules! dep_type_impl {
 
                 fn dep_type_core_take_all_handlers(
                     &mut self,
-                    $handlers: &mut $crate::std_vec_Vec<$crate::std_boxed_Box<dyn $crate::binding::AnyHandler>>
+                    $handlers: &mut $crate::std_vec_Vec<
+                        $crate::std_boxed_Box<dyn $crate::binding::AnyHandler>,
+                        &dyn $crate::std_alloc_Allocator
+                    >
                 ) {
                     let $this = self;
                     $($core_handlers)*
@@ -3152,7 +3168,10 @@ macro_rules! dep_type_impl {
 
                 fn dep_type_core_collect_all_bindings(
                     &self,
-                    $bindings: &mut $crate::std_vec_Vec<$crate::binding::AnyBindingBase>
+                    $bindings: &mut $crate::std_vec_Vec<
+                        $crate::binding::AnyBindingBase,
+                        &dyn $crate::std_alloc_Allocator
+                    >
                 ) {
                     self.dep_type_core_base.collect_bindings($bindings);
                     let $this = self;
@@ -3195,12 +3214,21 @@ macro_rules! dep_type_impl {
 
                 fn take_all_handlers(
                     &mut self,
-                    $handlers: &mut $crate::std_vec_Vec<$crate::std_boxed_Box<dyn $crate::binding::AnyHandler>>
+                    $handlers: &mut $crate::std_vec_Vec<
+                        $crate::std_boxed_Box<dyn $crate::binding::AnyHandler>,
+                        &dyn $crate::std_alloc_Allocator
+                    >
                 ) {
                     self.core.dep_type_core_take_all_handlers($handlers);
                 }
 
-                fn collect_all_bindings(&self, $bindings: &mut $crate::std_vec_Vec<$crate::binding::AnyBindingBase>) {
+                fn collect_all_bindings(
+                    &self,
+                    $bindings: &mut $crate::std_vec_Vec<
+                        $crate::binding::AnyBindingBase,
+                        &dyn $crate::std_alloc_Allocator
+                    >
+                ) {
                     self.core.dep_type_core_collect_all_bindings($bindings);
                 }
 
@@ -3957,87 +3985,101 @@ macro_rules! impl_dep_obj_impl {
         impl $($g)* $Id $($w)* {
             fn drop_bindings_priv(self, state: &mut dyn $crate::dyn_context_State) {
                 $(
-                    let mut bindings = $crate::std_vec_Vec::new();
-                    let $this = self;
-                    let $state_part: &mut $StatePart =
-                        <dyn $crate::dyn_context_State as $crate::dyn_context_StateExt>::get_mut(state);
-                    $(
-                        <dyn $tr as $crate::DepType>::collect_all_bindings($field, &mut bindings);
-                    )?
-                    $(
-                        if let $crate::std_option_Option::Some(f) = $field {
-                            <dyn $opt_tr as $crate::DepType>::collect_all_bindings(f, &mut bindings);
+                    $crate::composable_allocators::stacked::with_size::<256, _>(|alloc| {
+                        let alloc = $crate::composable_allocators::or::Or(
+                            alloc,
+                            $crate::composable_allocators::Global
+                        );
+                        let alloc: &dyn $crate::std_alloc_Allocator = &alloc;
+                        let mut bindings = $crate::std_vec_Vec::new_in(alloc);
+                        let $this = self;
+                        let $state_part: &mut $StatePart =
+                            <dyn $crate::dyn_context_State as $crate::dyn_context_StateExt>::get_mut(state);
+                        $(
+                            <dyn $tr as $crate::DepType>::collect_all_bindings($field, &mut bindings);
+                        )?
+                        $(
+                            if let $crate::std_option_Option::Some(f) = $field {
+                                <dyn $opt_tr as $crate::DepType>::collect_all_bindings(f, &mut bindings);
+                            }
+                        )?
+                        $(
+                            <$ty as $crate::DepType>::collect_all_bindings($field, &mut bindings);
+                        )?
+                        $(
+                            if let $crate::std_option_Option::Some(f) = $field {
+                                <$opt_ty as $crate::DepType>::collect_all_bindings(f, &mut bindings)
+                            }
+                        )?
+                        for binding in bindings {
+                            binding.drop_self(state);
                         }
-                    )?
-                    $(
-                        <$ty as $crate::DepType>::collect_all_bindings($field, &mut bindings);
-                    )?
-                    $(
-                        if let $crate::std_option_Option::Some(f) = $field {
-                            <$opt_ty as $crate::DepType>::collect_all_bindings(f, &mut bindings)
-                        }
-                    )?
-                    for binding in bindings {
-                        binding.drop_self(state);
-                    }
+                    });
                 )*
                 $(
-                    let mut handlers = $crate::std_vec_Vec::new();
-                    let $this = self;
-                    let $state_part: &mut $StatePart = <dyn $crate::dyn_context_State as $crate::dyn_context_StateExt>::get_mut(state);
-                    $(
-                        let f = $field_mut;
-                        <dyn $tr as $crate::DepType>::take_all_handlers(f, &mut handlers);
-                        let update_parent_children_has_handlers =
-                            <dyn $tr as $crate::DepType>::update_parent_children_has_handlers(f);
-                        if !handlers.is_empty() {
-                            update_parent_children_has_handlers(
-                                state,
-                                <Self as $crate::components_arena_ComponentId>::into_raw(self)
-                            );
-                        }
-                    )?
-                    $(
-                        if let $crate::std_option_Option::Some(f) = $field_mut {
-                            <dyn $opt_tr as $crate::DepType>::take_all_handlers(f, &mut handlers);
+                    $crate::composable_allocators::stacked::with_size::<256, _>(|alloc| {
+                        let alloc = $crate::composable_allocators::or::Or(
+                            alloc,
+                            $crate::composable_allocators::Global
+                        );
+                        let alloc: &dyn $crate::std_alloc_Allocator = &alloc;
+                        let mut handlers = $crate::std_vec_Vec::new_in(alloc);
+                        let $this = self;
+                        let $state_part: &mut $StatePart = <dyn $crate::dyn_context_State as $crate::dyn_context_StateExt>::get_mut(state);
+                        $(
+                            let f = $field_mut;
+                            <dyn $tr as $crate::DepType>::take_all_handlers(f, &mut handlers);
                             let update_parent_children_has_handlers =
-                                <dyn $opt_tr as $crate::DepType>::update_parent_children_has_handlers(f);
+                                <dyn $tr as $crate::DepType>::update_parent_children_has_handlers(f);
                             if !handlers.is_empty() {
                                 update_parent_children_has_handlers(
                                     state,
                                     <Self as $crate::components_arena_ComponentId>::into_raw(self)
                                 );
                             }
-                        }
-                    )?
-                    $(
-                        let f = $field_mut;
-                        <$ty as $crate::DepType>::take_all_handlers(f, &mut handlers);
-                        let update_parent_children_has_handlers =
-                            <$ty as $crate::DepType>::update_parent_children_has_handlers(f);
-                        if !handlers.is_empty() {
-                            update_parent_children_has_handlers(
-                                state,
-                                <Self as $crate::components_arena_ComponentId>::into_raw(self)
-                            );
-                        }
-                    )?
-                    $(
-                        if let $crate::std_option_Option::Some(f) = $field_mut {
-                            <$opt_ty as $crate::DepType>::take_all_handlers(f, &mut handlers);
+                        )?
+                        $(
+                            if let $crate::std_option_Option::Some(f) = $field_mut {
+                                <dyn $opt_tr as $crate::DepType>::take_all_handlers(f, &mut handlers);
+                                let update_parent_children_has_handlers =
+                                    <dyn $opt_tr as $crate::DepType>::update_parent_children_has_handlers(f);
+                                if !handlers.is_empty() {
+                                    update_parent_children_has_handlers(
+                                        state,
+                                        <Self as $crate::components_arena_ComponentId>::into_raw(self)
+                                    );
+                                }
+                            }
+                        )?
+                        $(
+                            let f = $field_mut;
+                            <$ty as $crate::DepType>::take_all_handlers(f, &mut handlers);
                             let update_parent_children_has_handlers =
-                                <$opt_ty as $crate::DepType>::update_parent_children_has_handlers(f);
+                                <$ty as $crate::DepType>::update_parent_children_has_handlers(f);
                             if !handlers.is_empty() {
                                 update_parent_children_has_handlers(
                                     state,
                                     <Self as $crate::components_arena_ComponentId>::into_raw(self)
                                 );
                             }
+                        )?
+                        $(
+                            if let $crate::std_option_Option::Some(f) = $field_mut {
+                                <$opt_ty as $crate::DepType>::take_all_handlers(f, &mut handlers);
+                                let update_parent_children_has_handlers =
+                                    <$opt_ty as $crate::DepType>::update_parent_children_has_handlers(f);
+                                if !handlers.is_empty() {
+                                    update_parent_children_has_handlers(
+                                        state,
+                                        <Self as $crate::components_arena_ComponentId>::into_raw(self)
+                                    );
+                                }
+                            }
+                        )?
+                        for handler in handlers {
+                            handler.clear(state);
                         }
-                    )?
-                    for handler in handlers {
-                        handler.clear(state);
-                    }
+                    });
                 )*
             }
         }
