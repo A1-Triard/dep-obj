@@ -1,6 +1,8 @@
 use crate::base::*;
+use core::alloc::Allocator;
 use alloc::boxed::Box;
 use components_arena::{ArenaItems, Component, ComponentId, Id, Arena, NewtypeComponentId, RawId};
+use composable_allocators::Global;
 use core::any::{Any, TypeId};
 use core::fmt::Debug;
 use core::mem::{MaybeUninit, align_of, size_of};
@@ -10,8 +12,6 @@ use dyn_clone::{DynClone, clone_trait_object};
 use dyn_context::{SelfState, State, StateExt};
 use educe::Educe;
 use macro_attr_2018::macro_attr;
-#[cfg(not(debug_assertions))]
-use no_panic::no_panic;
 use panicking::panicking;
 use phantom_type::PhantomType;
 
@@ -255,23 +255,18 @@ struct AnyBindingNodeVtable {
 }
 
 macro_attr! {
-    #[derive(Component!)]
+    #[derive(Component!(alloc=&'static dyn Allocator))]
     struct AnyBindingNode {
         buf: BindingNodeBuf,
         vtable: &'static AnyBindingNodeVtable,
     }
 }
 
-#[cfg_attr(not(debug_assertions), no_panic)]
-fn assert_binding_node_item_size() {
-    // there is no real sence in concrete value
-    // I just want to know how much memory bindings cost
-    assert!(ArenaItems::<AnyBindingNode>::item_size() <= 160);
-}
-
 impl<T: Convenient> From<BindingNode<T>> for AnyBindingNode {
     fn from(node: BindingNode<T>) -> Self {
-        assert_binding_node_item_size();
+        // there is no real sence in concrete value
+        // I just want to know how much memory bindings cost
+        assert!(ArenaItems::<AnyBindingNode>::item_size() <= 160);
         AnyBindingNode {
             buf: BindingNodeBufNew::<T>::new(node),
             vtable: &BindingNode::<T>::VTABLE
@@ -303,8 +298,12 @@ pub struct Bindings(Arena<AnyBindingNode>);
 
 impl SelfState for Bindings { }
 
+const GLOBAL: Global = Global;
+
 impl Bindings {
-    pub const fn new() -> Self { Bindings(Arena::new()) }
+    pub const fn new_in(alloc: &'static dyn Allocator) -> Self { Bindings(Arena::new_in(alloc)) }
+
+    pub const fn new() -> Self { Self::new_in(&GLOBAL) }
 }
 
 impl Drop for Bindings {
@@ -359,28 +358,13 @@ const BINDING_NODE_SIZE: usize = size_of::<BindingNode<!>>();
 #[cfg_attr(not(any(target_pointer_width="32", target_pointer_width="64")), repr(C, align(1)))]
 struct BindingNodeBuf([MaybeUninit<u8>; BINDING_NODE_SIZE]);
 
-#[cfg_attr(not(debug_assertions), no_panic)]
-fn binding_node_buf_align_assert() {
-    assert!(align_of::<BindingNodeBuf>() == align_of::<BindingNode<!>>());
-}
-
 struct BindingNodeBufNew<T>(PhantomType<T>);
 
 impl<T: Convenient> BindingNodeBufNew<T> {
-    #[cfg_attr(not(debug_assertions), no_panic)]
-    fn size_assert() {
-        assert!(size_of::<BindingNode<T>>() == BINDING_NODE_SIZE);
-    }
-
-    #[cfg_attr(not(debug_assertions), no_panic)]
-    fn align_assert() {
-        assert!(align_of::<BindingNode<T>>() == align_of::<BindingNodeSourcesBuf>());
-    }
-
     fn new(node: BindingNode<T>) -> BindingNodeBuf {
-        Self::size_assert();
-        Self::align_assert();
-        binding_node_buf_align_assert();
+        assert!(size_of::<BindingNode<T>>() == BINDING_NODE_SIZE);
+        assert!(align_of::<BindingNode<T>>() == align_of::<BindingNodeSourcesBuf>());
+        assert!(align_of::<BindingNodeBuf>() == align_of::<BindingNode<!>>());
         let mut buf = BindingNodeBuf(unsafe { MaybeUninit::uninit().assume_init() });
         unsafe { ptr::write(buf.as_mut_ptr(), node); }
         buf
@@ -556,19 +540,9 @@ struct BindingNodeSourcesBuf([MaybeUninit<u8>; BINDING_NODE_SOURCES_MAX_SIZE]);
 struct BindingNodeSourcesBufNew<T>(PhantomType<T>);
 
 impl<T> BindingNodeSourcesBufNew<T> {
-    #[cfg_attr(not(debug_assertions), no_panic)]
-    fn size_assert() {
-        assert!(size_of::<T>() <= BINDING_NODE_SOURCES_MAX_SIZE);
-    }
-
-    #[cfg_attr(not(debug_assertions), no_panic)]
-    fn align_assert() {
-        assert!(align_of::<T>() <= align_of::<BindingNodeSourcesBuf>());
-    }
-
     fn new(sources: T) -> BindingNodeSourcesBuf {
-        Self::size_assert();
-        Self::align_assert();
+        assert!(size_of::<T>() <= BINDING_NODE_SOURCES_MAX_SIZE);
+        assert!(align_of::<T>() <= align_of::<BindingNodeSourcesBuf>());
         let mut buf = BindingNodeSourcesBuf(unsafe { MaybeUninit::uninit().assume_init() });
         unsafe { ptr::write(buf.as_mut_ptr(), sources); }
         buf
