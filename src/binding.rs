@@ -268,7 +268,7 @@ impl<T: Convenient> From<BindingNode<T>> for AnyBindingNode {
         // I just want to know how much memory bindings cost
         assert!(ArenaItems::<AnyBindingNode>::item_size() <= 160);
         AnyBindingNode {
-            buf: BindingNodeBufNew::<T>::new(node),
+            buf: BindingNodeBuf::new(node),
             vtable: &BindingNode::<T>::VTABLE
         }
     }
@@ -358,20 +358,16 @@ const BINDING_NODE_SIZE: usize = size_of::<BindingNode<!>>();
 #[cfg_attr(not(any(target_pointer_width="32", target_pointer_width="64")), repr(C, align(1)))]
 struct BindingNodeBuf([MaybeUninit<u8>; BINDING_NODE_SIZE]);
 
-struct BindingNodeBufNew<T>(PhantomType<T>);
-
-impl<T: Convenient> BindingNodeBufNew<T> {
-    fn new(node: BindingNode<T>) -> BindingNodeBuf {
+impl BindingNodeBuf {
+    fn new<T: Convenient>(node: BindingNode<T>) -> BindingNodeBuf {
         assert!(size_of::<BindingNode<T>>() == BINDING_NODE_SIZE);
-        assert!(align_of::<BindingNode<T>>() == align_of::<BindingNodeSourcesBuf>());
+        assert!(align_of::<BindingNode<T>>() == align_of::<BindingNodeBuf>());
         assert!(align_of::<BindingNodeBuf>() == align_of::<BindingNode<!>>());
         let mut buf = BindingNodeBuf(unsafe { MaybeUninit::uninit().assume_init() });
         unsafe { ptr::write(buf.as_mut_ptr(), node); }
         buf
     }
-}
 
-impl BindingNodeBuf {
     fn as_ptr<T: Convenient>(&self) -> *const BindingNode<T> {
         self.0.as_ptr() as _
     }
@@ -537,19 +533,15 @@ const BINDING_NODE_SOURCES_MAX_SIZE: usize = 96;
 #[cfg_attr(not(any(target_pointer_width="32", target_pointer_width="64")), repr(C, align(1)))]
 struct BindingNodeSourcesBuf([MaybeUninit<u8>; BINDING_NODE_SOURCES_MAX_SIZE]);
 
-struct BindingNodeSourcesBufNew<T>(PhantomType<T>);
-
-impl<T> BindingNodeSourcesBufNew<T> {
-    fn new(sources: T) -> BindingNodeSourcesBuf {
+impl BindingNodeSourcesBuf {
+    fn new<T>(sources: T) -> BindingNodeSourcesBuf {
         assert!(size_of::<T>() <= BINDING_NODE_SOURCES_MAX_SIZE);
         assert!(align_of::<T>() <= align_of::<BindingNodeSourcesBuf>());
         let mut buf = BindingNodeSourcesBuf(unsafe { MaybeUninit::uninit().assume_init() });
         unsafe { ptr::write(buf.as_mut_ptr(), sources); }
         buf
     }
-}
 
-impl BindingNodeSourcesBuf {
     fn as_ptr<T>(&self) -> *const T {
         self.0.as_ptr() as _
     }
@@ -603,7 +595,7 @@ macro_rules! binding_n {
             > From< [< BindingExt $n NodeSources >] <P, $( [< S $i >] , )* T> > for AnyBindingNodeSources<T> {
                 fn from(sources: [< BindingExt $n NodeSources >] <P, $( [< S $i >] , )* T>) -> Self {
                     AnyBindingNodeSources {
-                        buf: BindingNodeSourcesBufNew::new(sources),
+                        buf: BindingNodeSourcesBuf::new(sources),
                         vtable: & < [< BindingExt $n NodeSources >] <P, $( [< S $i >] , )* T> > ::VTABLE
                     }
                 }
@@ -874,7 +866,7 @@ macro_rules! binding_n {
             > From< [< Binding $n NodeSources >] <P, $( [< S $i >] , )* T> > for AnyBindingNodeSources<T> {
                 fn from(sources: [< Binding $n NodeSources >] <P, $( [< S $i >] , )* T>) -> Self {
                     AnyBindingNodeSources {
-                        buf: BindingNodeSourcesBufNew::new(sources),
+                        buf: BindingNodeSourcesBuf::new(sources),
                         vtable: & < [< Binding $n NodeSources >] <P, $( [< S $i >] , )* T> > ::VTABLE
                     }
                 }
