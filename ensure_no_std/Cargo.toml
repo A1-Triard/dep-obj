@@ -11,7 +11,7 @@ panic = "abort"
 panic = "abort"
 
 [dependencies]
-components-arena = { version = "3.0.0", features = ["dyn-context"] }
+components-arena = { version = "3.2.0", features = ["dyn-context"] }
 dep-obj = { path = ".." }
 dyn-context = "0.17.0"
 libc_alloc = "1.0.3"

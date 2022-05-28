@@ -1,6 +1,8 @@
+#![feature(allocator_api)]
 #![feature(const_ptr_offset_from)]
 #![feature(const_type_id)]
 #![feature(default_alloc_error_handler)]
+#![feature(explicit_generic_args_with_impl_trait)]
 #![feature(start)]
 
 #![deny(warnings)]
