@@ -1,6 +1,7 @@
 #![feature(allocator_api)]
 #![feature(const_mut_refs)]
 #![feature(const_ptr_offset_from)]
+#![feature(const_trait_impl)]
 #![feature(const_type_id)]
 #![feature(explicit_generic_args_with_impl_trait)]
 #![feature(never_type)]
@@ -411,6 +412,103 @@ impl<PropType: Convenient> DepPropHandlersCopy<PropType> {
     }
 }
 
+mod one_stack {
+    use alloc::collections::VecDeque;
+    use either::{Either, Left, Right};
+
+    pub trait Cont: Default {
+        type Item;
+        fn with_capacity(capacity: usize) -> Self;
+        fn push_back(&mut self, value: Self::Item);
+    }
+
+    pub trait Deque: Cont {
+        fn pop_front(&mut self) -> Option<Self::Item>;
+    }
+
+    impl<T> Cont for VecDeque<T> {
+        type Item = T;
+
+        fn with_capacity(capacity: usize) -> Self {
+            VecDeque::with_capacity(capacity)
+        }
+
+        fn push_back(&mut self, value: Self::Item) {
+            self.push_back(value);
+        }
+    }
+
+    impl<T> Deque for VecDeque<T> {
+        fn pop_front(&mut self) -> Option<Self::Item> {
+            self.pop_front()
+        }
+    }
+
+    #[derive(Debug)]
+    pub struct OneStack<C: Cont>(Option<Either<C::Item, C>>);
+
+    impl<C: Cont> OneStack<C> {
+        pub const fn new() -> Self {
+            OneStack(None)
+        }
+    }
+
+    impl<C: Cont> const Default for OneStack<C> {
+        fn default() -> Self { OneStack::new() }
+    }
+
+    impl<C: Cont> Cont for OneStack<C> {
+        type Item = C::Item;
+
+        fn with_capacity(capacity: usize) -> Self {
+            OneStack(match capacity {
+                0 ..= 1 => None,
+                capacity => Some(Right(C::with_capacity(capacity)))
+            })
+        }
+
+        fn push_back(&mut self, value: Self::Item) {
+            let this = if let Some(this) = self.0.take() {
+                match this {
+                    Left(one_item) => {
+                        let mut cont = C::with_capacity(2);
+                        cont.push_back(one_item);
+                        cont.push_back(value);
+                        Some(Right(cont))
+                    },
+                    Right(mut cont) => {
+                        cont.push_back(value);
+                        Some(Right(cont))
+                    }
+                }
+            } else {
+                Some(Left(value))
+            };
+            self.0 = this;
+        }
+    }
+
+    impl<C: Deque> Deque for OneStack<C> {
+        fn pop_front(&mut self) -> Option<Self::Item> {
+            let (this, res) = if let Some(this) = self.0.take() {
+                match this {
+                    Left(one_item) => (None, Some(one_item)),
+                    Right(mut cont) => {
+                        let res = cont.pop_front();
+                        (Some(Right(cont)), res)
+                    }
+                }
+            } else {
+                (None, None)
+            };
+            self.0 = this;
+            res
+        }
+    }
+}
+
+use one_stack::*;
+
 #[derive(Debug)]
 pub struct DepPropEntry<PropType: Convenient> {
     default: &'static PropType,
@@ -418,7 +516,7 @@ pub struct DepPropEntry<PropType: Convenient> {
     local: Option<PropType>,
     handlers: DepPropHandlers<PropType>,
     binding: Option<BindingBase<PropType>>,
-    queue: Option<VecDeque<Option<PropType>>>,
+    queue: OneStack<VecDeque<Option<PropType>>>,
     enqueue: bool,
 }
 
@@ -430,7 +528,7 @@ impl<PropType: Convenient> DepPropEntry<PropType> {
             style: None,
             local: None,
             binding: None,
-            queue: None,
+            queue: OneStack::new(),
             enqueue: false,
         }
     }
@@ -1012,19 +1110,14 @@ impl<Owner: DepType, PropType: Convenient> DepProp<Owner, PropType> {
         let mut obj = <Owner::Id as DepObj<Owner::DepObjKey, Owner>>::get_mut(state, id.into_raw());
         let entry_mut = self.entry_mut(&mut obj);
         if replace(&mut entry_mut.enqueue, true) {
-            let queue = entry_mut.queue.get_or_insert_with(VecDeque::new);
-            queue.push_back(value);
+            entry_mut.queue.push_back(value);
             return;
         }
         loop {
             self.un_set_core(state, id, value);
             let mut obj = <Owner::Id as DepObj<Owner::DepObjKey, Owner>>::get_mut(state, id.into_raw());
             let entry_mut = self.entry_mut(&mut obj);
-            if let Some(queue) = entry_mut.queue.as_mut() {
-                if let Some(queue_head) = queue.pop_front() { value = queue_head; } else { break; }
-            } else {
-                break;
-            }
+            if let Some(queue_head) = entry_mut.queue.pop_front() { value = queue_head; } else { break; }
         }
         let mut obj = <Owner::Id as DepObj<Owner::DepObjKey, Owner>>::get_mut(state, id.into_raw());
         let entry_mut = self.entry_mut(&mut obj);
