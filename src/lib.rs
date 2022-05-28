@@ -1506,6 +1506,9 @@ mod arraybox {
     use core::ops::{Deref, DerefMut};
     use core::ptr::{self, Pointee, null};
 
+    /// # Safety
+    ///
+    /// This trait cannot be implemented outside of this module.
     pub unsafe trait Buf: Default {
         fn as_ptr(&self) -> *const u8;
         fn as_mut_ptr(&mut self) -> *mut u8;
@@ -1600,8 +1603,31 @@ mod arraybox {
         fn borrow_mut(&mut self) -> &mut T { self.as_mut() }
     }
 
+    /// # Safety
+    ///
+    /// If the [`dyn_clone_write`](DynClone::dyn_clone_write)
+    /// function did not panic,
+    /// `target as *mut Self` should point to an object in the valid state.
+    ///
+    /// If the [`dyn_clone_replace_drop`](DynClone::dyn_clone_replace_drop)
+    /// function did no panic,
+    /// `target as *mut Self` should point to an object in the valid state.
     pub unsafe trait DynClone {
+        /// # Safety
+        ///
+        /// `target as *mut Self` should be a non-null, non-dangled
+        /// properly aligned pointer.
+        /// The memory it points should allow writing.
+        /// It may not points to `self`,
+        /// or any other legally accessible object.
         unsafe fn dyn_clone_write(&self, target: *mut u8);
+        /// # Safety
+        ///
+        /// `target as *mut Self` should be a non-null, non-dangled
+        /// properly aligned pointer, pointing to a object in valid state.
+        /// The memory it points should allow writing.
+        /// It may not points to `self`,
+        /// or any other legally accessible object.
         unsafe fn dyn_clone_replace_drop(&self, target: *mut u8);
     }
 
