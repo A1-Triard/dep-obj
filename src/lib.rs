@@ -223,7 +223,7 @@ use alloc::vec::Vec;
 use arrayvec::ArrayVec;
 use components_arena::{Arena, ArenaItemsIntoValues, Component, ComponentId, Id, RawId};
 use composable_allocators::Global;
-use composable_allocators::or::Or;
+use composable_allocators::fallbacked::Fallbacked;
 use composable_allocators::stacked::{self};
 use core::alloc::Allocator;
 use core::any::{Any, TypeId};
@@ -735,7 +735,7 @@ pub trait DepObjId: ComponentId {
         style: Option<Style<Owner>>,
     ) -> Option<Style<Owner>> where Owner::Id: DepObj<Owner::DepObjKey, Owner> {
         stacked::with_size::<256, _>(|alloc| {
-            let mut on_changed = Vec::new_in(Or(alloc, Global));
+            let mut on_changed = Vec::new_in(Fallbacked(alloc, Global));
             let mut obj = <Owner::Id as DepObj<Owner::DepObjKey, Owner>>::get_mut(state, self.into_raw());
             let old = obj.core_base_priv_mut().style.take();
             if let Some(old) = old.as_ref() {
@@ -1499,6 +1499,8 @@ impl<Owner: DepType + 'static> Holder for AddedBindingHolder<Owner> where
 }
 
 mod arraybox {
+    //use ::alloc::boxed::Box;
+    use core::alloc::{self /*, Allocator*/};
     use core::borrow::{Borrow, BorrowMut};
     use core::fmt::{self, Debug, Display, Formatter};
     use core::marker::Unsize;
@@ -1612,6 +1614,9 @@ mod arraybox {
     /// If the [`dyn_clone_replace_drop`](DynClone::dyn_clone_replace_drop)
     /// function did no panic,
     /// `target as *mut Self` should point to an object in the valid state.
+    ///
+    /// The [`layout`](DynClone::layout) function should return
+    /// `Layout::from_size_align_unchecked(size_of::<Self>(), align_of::<Self>())`
     pub unsafe trait DynClone {
         /// # Safety
         ///
@@ -1621,6 +1626,7 @@ mod arraybox {
         /// It may not points to `self`,
         /// or any other legally accessible object.
         unsafe fn dyn_clone_write(&self, target: *mut u8);
+
         /// # Safety
         ///
         /// `target as *mut Self` should be a non-null, non-dangled
@@ -1629,7 +1635,13 @@ mod arraybox {
         /// It may not points to `self`,
         /// or any other legally accessible object.
         unsafe fn dyn_clone_replace_drop(&self, target: *mut u8);
+
+        fn layout(&self) -> alloc::Layout;
     }
+
+    //pub trait Downcast {
+
+    //}
 
     impl<T: ?Sized + 'static, B: Buf> Deref for ArrayBox<T, B> {
         type Target = T;
@@ -1649,6 +1661,10 @@ mod arraybox {
         unsafe fn dyn_clone_replace_drop(&self, target: *mut u8) {
             (*(target as *mut T)).clone_from(self)
         }
+
+        fn layout(&self) -> alloc::Layout {
+            unsafe { alloc::Layout::from_size_align_unchecked(size_of::<Self>(), align_of::<Self>()) }
+        }
     }
 
     impl<T: DynClone + ?Sized + 'static, B: Buf> Clone for ArrayBox<T, B> {
@@ -1662,6 +1678,24 @@ mod arraybox {
             unsafe { source.as_ref().dyn_clone_replace_drop(self.buf.as_mut_ptr()) };
         }
     }
+
+    /*
+    impl<T: DynClone + ?Sized + 'static, A: Allocator + Clone> Clone for Box<T, A> {
+        fn clone(&self) -> Self {
+            let allocator = Box::allocator(self).clone();
+            let res = allocator.allocate(self.layout()).unwrap().as_ptr();
+            unsafe { self.as_ref().dyn_clone_write(res) };
+            let res = res.with_metadata_of(self.as_ref() as *const _);
+            Box::from_raw_in(res, allocator)
+        }
+
+        fn clone_from(&mut self, source: &Self) {
+            let this = self.as_mut() as *mut _;
+            let (this, metadata) = this.to_raw_parts();
+            unsafe { source.as_ref().dyn_clone_replace_drop(this) };
+        }
+    }
+    */
 
     impl<T: Debug + ?Sized + 'static, B: Buf> Debug for ArrayBox<T, B> {
         fn fmt(&self, f: &mut Formatter) -> fmt::Result {
