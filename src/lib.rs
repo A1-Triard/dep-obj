@@ -651,7 +651,7 @@ impl<ItemType: Convenient> DepVecHandlersCopy<ItemType> {
 pub struct DepVecEntry<ItemType: Convenient> {
     items: Vec<ItemType>,
     handlers: DepVecHandlers<ItemType>,
-    queue: Option<VecDeque<DepVecModification<ItemType>>>,
+    queue: OneStack<VecDeque<DepVecModification<ItemType>>>,
     enqueue: bool,
 }
 
@@ -660,7 +660,7 @@ impl<ItemType: Convenient> DepVecEntry<ItemType> {
         DepVecEntry {
             items: Vec::new(),
             handlers: DepVecHandlers::new(),
-            queue: None,
+            queue: OneStack::new(),
             enqueue: false,
         }
     }
@@ -1329,8 +1329,7 @@ impl<Owner: DepType, ItemType: Convenient> DepVec<Owner, ItemType> {
         let mut obj = <Owner::Id as DepObj<Owner::DepObjKey, Owner>>::get_mut(state, id.into_raw());
         let entry_mut = self.entry_mut(&mut obj);
         if replace(&mut entry_mut.enqueue, true) {
-            let queue = entry_mut.queue.get_or_insert_with(VecDeque::new);
-            queue.push_back(modification);
+            entry_mut.queue.push_back(modification);
             return;
         }
         loop {
@@ -1389,11 +1388,7 @@ impl<Owner: DepType, ItemType: Convenient> DepVec<Owner, ItemType> {
             };
             let mut obj = <Owner::Id as DepObj<Owner::DepObjKey, Owner>>::get_mut(state, id.into_raw());
             let entry_mut = self.entry_mut(&mut obj);
-            if let Some(queue) = entry_mut.queue.as_mut() {
-                if let Some(queue_head) = queue.pop_front() { modification = queue_head; } else { break; }
-            } else {
-                break;
-            }
+            if let Some(queue_head) = entry_mut.queue.pop_front() { modification = queue_head; } else { break; }
         }
         let mut obj = <Owner::Id as DepObj<Owner::DepObjKey, Owner>>::get_mut(state, id.into_raw());
         let entry_mut = self.entry_mut(&mut obj);
