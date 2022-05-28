@@ -212,8 +212,9 @@ pub use paste::paste as paste_paste;
 
 use crate::binding::*;
 use alloc::boxed::Box;
-use alloc::collections::{TryReserveError, VecDeque};
+use alloc::collections::VecDeque;
 use alloc::vec::Vec;
+use arrayvec::ArrayVec;
 use components_arena::{Arena, ArenaItemsIntoValues, Component, ComponentId, Id, RawId};
 use composable_allocators::Global;
 use composable_allocators::or::Or;
@@ -1554,7 +1555,7 @@ impl<Owner: DepType + 'static, PropType: Convenient> AnySetter<Owner> for Setter
 #[derive(Educe)]
 #[educe(Debug, Clone)]
 pub struct Style<Owner: DepType> {
-    setters: Vec<Box<dyn AnySetter<Owner>>>,
+    setters: ArrayVec<Box<dyn AnySetter<Owner>>, 64>,
 }
 
 impl<Owner: DepType> const Default for Style<Owner> {
@@ -1562,11 +1563,9 @@ impl<Owner: DepType> const Default for Style<Owner> {
 }
 
 impl<Owner: DepType> Style<Owner> {
-    pub const fn new() -> Self { Style { setters: Vec::new() } }
+    pub const fn new() -> Self { Style { setters: ArrayVec::new_const() } }
 
-    pub fn with_capacity(capacity: usize) -> Self { Style { setters: Vec::with_capacity(capacity) } }
-
-    pub fn capacity(&self) -> usize { self.setters.capacity() }
+    pub const fn capacity(&self) -> usize { self.setters.capacity() }
 
     pub fn clear(&mut self) { self.setters.clear(); }
 
@@ -1595,16 +1594,6 @@ impl<Owner: DepType> Style<Owner> {
             Ok(index) => { self.setters.remove(index); true }
             Err(_) => false
         }
-    }
-
-    pub fn reserve(&mut self, additional: usize) { self.setters.reserve(additional) }
-
-    pub fn shrink_to(&mut self, min_capacity: usize) { self.setters.shrink_to(min_capacity) }
-
-    pub fn shrink_to_fit(&mut self) { self.setters.shrink_to_fit() }
-
-    pub fn try_reserve(&mut self, additional: usize) -> Result<(), TryReserveError> {
-        self.setters.try_reserve(additional)
     }
 }
 
