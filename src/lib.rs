@@ -4295,7 +4295,7 @@ macro_rules! impl_dep_obj_impl {
             fn drop_bindings_priv(self, state: &mut dyn $crate::dyn_context_State) {
                 $(
                     $crate::composable_allocators::stacked::with_size::<256, _>(|alloc| {
-                        let alloc = $crate::composable_allocators::or::Or(
+                        let alloc = $crate::composable_allocators::fallbacked::Fallbacked(
                             alloc,
                             $crate::composable_allocators::Global
                         );
@@ -4327,7 +4327,7 @@ macro_rules! impl_dep_obj_impl {
                 )*
                 $(
                     $crate::composable_allocators::stacked::with_size::<256, _>(|alloc| {
-                        let alloc = $crate::composable_allocators::or::Or(
+                        let alloc = $crate::composable_allocators::fallbacked::Fallbacked(
                             alloc,
                             $crate::composable_allocators::Global
                         );
