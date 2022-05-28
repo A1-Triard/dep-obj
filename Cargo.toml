@@ -20,7 +20,7 @@ rustdoc-args = ["--cfg", "docsrs"]
 arrayvec = { version = "0.7.2", default-features = false }
 components-arena = { version = "3.0.0", features = ["dyn-context"] }
 composable-allocators = "0.0.2"
-dyn-clone = "1.0.2"
+dyn-clone = "1.0.5"
 dyn-context = "0.17.0"
 educe = "0.4.13"
 either = { version = "1.6.1", default-features = false }

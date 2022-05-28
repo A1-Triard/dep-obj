@@ -1,11 +1,17 @@
 #![feature(allocator_api)]
+#![feature(const_maybe_uninit_as_mut_ptr)]
 #![feature(const_mut_refs)]
 #![feature(const_ptr_offset_from)]
+#![feature(const_ptr_write)]
+#![feature(const_refs_to_cell)]
 #![feature(const_trait_impl)]
 #![feature(const_type_id)]
 #![feature(explicit_generic_args_with_impl_trait)]
 #![feature(never_type)]
+#![feature(ptr_metadata)]
+#![feature(raw_ref_op)]
 #![feature(unchecked_math)]
+#![feature(unsize)]
 
 #![deny(warnings)]
 #![doc(test(attr(deny(warnings))))]
@@ -225,7 +231,6 @@ use core::fmt::Debug;
 use core::iter::once;
 use core::mem::{replace, take};
 use core::ops::{Deref, DerefMut};
-use dyn_clone::{DynClone, clone_trait_object};
 use dyn_context::State;
 use educe::Educe;
 use macro_attr_2018::macro_attr;
@@ -686,7 +691,7 @@ impl<ItemType: Convenient> DepVecEntry<ItemType> {
 }
 
 #[derive(Debug)]
-pub struct BaseDepObjCore<Owner: DepType> {
+pub struct BaseDepObjCore<Owner: DepType + 'static> {
     style: Option<Style<Owner>>,
     added_bindings: Arena<AnyBindingBase>,
 }
@@ -1484,7 +1489,7 @@ struct AddedBindingHolder<Owner: DepType> {
     binding_id: Id<AnyBindingBase>,
 }
 
-impl<Owner: DepType> Holder for AddedBindingHolder<Owner> where
+impl<Owner: DepType + 'static> Holder for AddedBindingHolder<Owner> where
     Owner::Id: DepObj<Owner::DepObjKey, Owner> {
 
     fn release(&self, state: &mut dyn State) {
@@ -1492,6 +1497,146 @@ impl<Owner: DepType> Holder for AddedBindingHolder<Owner> where
         obj.core_base_priv_mut().added_bindings.remove(self.binding_id);
     }
 }
+
+mod arraybox {
+    use core::borrow::{Borrow, BorrowMut};
+    use core::fmt::{self, Debug, Display, Formatter};
+    use core::marker::Unsize;
+    use core::mem::{MaybeUninit, align_of, size_of};
+    use core::ops::{Deref, DerefMut};
+    use core::ptr::{self, Pointee, null};
+
+    pub unsafe trait Buf: Default {
+        fn as_ptr(&self) -> *const u8;
+        fn as_mut_ptr(&mut self) -> *mut u8;
+        fn align() -> usize;
+        fn len() -> usize;
+    }
+
+    #[repr(C, align(8))]
+    pub struct Align8<const LEN: usize>([MaybeUninit<u8>; LEN]);
+
+    impl<const LEN: usize> const Default for Align8<LEN> {
+        fn default() -> Self { Align8(unsafe { MaybeUninit::uninit().assume_init() }) }
+    }
+
+    unsafe impl<const LEN: usize> const Buf for Align8<LEN> {
+        fn align() -> usize { align_of::<Self>() }
+
+        fn len() -> usize { LEN }
+
+        fn as_ptr(&self) -> *const u8 {
+            &raw const self.0 as *const u8
+        }
+
+        fn as_mut_ptr(&mut self) -> *mut u8 {
+            &raw mut self.0 as *mut u8
+        }
+    }
+
+    pub struct ArrayBox<T: ?Sized + 'static, B: Buf> {
+        buf: B,
+        metadata: <T as Pointee>::Metadata,
+    }
+
+    impl<T: ?Sized + 'static, B: Buf> Drop for ArrayBox<T, B> {
+        fn drop(&mut self) {
+            unsafe { ptr::drop_in_place(self.as_mut_ptr()) };
+        }
+    }
+
+    impl<T: ?Sized + 'static, B: Buf> ArrayBox<T, B> {
+        pub const fn new<S: Unsize<T>>(source: S) -> Self where B: ~const Buf + ~const Default {
+            assert!(B::align() >= align_of::<S>());
+            assert!(B::len() >= size_of::<S>());
+            let source_null_ptr: *const T = null::<S>();
+            let metadata = source_null_ptr.to_raw_parts().1;
+            let mut res = ArrayBox { buf: B::default(), metadata };
+            unsafe { ptr::write(res.buf.as_mut_ptr() as *mut S, source) };
+            res
+        }
+
+        pub fn as_ptr(&self) -> *const T {
+            let metadata = self.metadata;
+            ptr::from_raw_parts(self.buf.as_ptr() as *const (), metadata)
+        }
+
+        pub fn as_mut_ptr(&mut self) -> *mut T {
+            let metadata = self.metadata;
+            ptr::from_raw_parts_mut(self.buf.as_mut_ptr() as *mut (), metadata)
+        }
+    }
+
+    impl<T: ?Sized + 'static, B: Buf> AsRef<T> for ArrayBox<T, B> {
+        fn as_ref(&self) -> &T {
+            unsafe { &*self.as_ptr() }
+        }
+    }
+
+    impl<T: ?Sized + 'static, B: Buf> AsMut<T> for ArrayBox<T, B> {
+        fn as_mut(&mut self) -> &mut T {
+            unsafe { &mut *self.as_mut_ptr() }
+        }
+    }
+    impl<T: ?Sized + 'static, B: Buf> Borrow<T> for ArrayBox<T, B> {
+        fn borrow(&self) -> &T { self.as_ref() }
+    }
+
+    impl<T: ?Sized + 'static, B: Buf> BorrowMut<T> for ArrayBox<T, B> {
+        fn borrow_mut(&mut self) -> &mut T { self.as_mut() }
+    }
+
+    pub unsafe trait DynClone {
+        unsafe fn dyn_clone_write(&self, target: *mut u8);
+        unsafe fn dyn_clone_replace_drop(&self, target: *mut u8);
+    }
+
+    impl<T: ?Sized + 'static, B: Buf> Deref for ArrayBox<T, B> {
+        type Target = T;
+
+        fn deref(&self) -> &T { self.as_ref() }
+    }
+
+    impl<T: ?Sized + 'static, B: Buf> DerefMut for ArrayBox<T, B> {
+        fn deref_mut(&mut self) -> &mut T { self.as_mut() }
+    }
+
+    unsafe impl<T: Clone> DynClone for T {
+        unsafe fn dyn_clone_write(&self, target: *mut u8) {
+            ptr::write(target as *mut T, self.clone())
+        }
+
+        unsafe fn dyn_clone_replace_drop(&self, target: *mut u8) {
+            (*(target as *mut T)).clone_from(self)
+        }
+    }
+
+    impl<T: DynClone + ?Sized + 'static, B: Buf> Clone for ArrayBox<T, B> {
+        fn clone(&self) -> Self {
+            let mut res = ArrayBox { buf: B::default(), metadata: self.metadata };
+            unsafe { self.as_ref().dyn_clone_write(res.buf.as_mut_ptr()) };
+            res
+        }
+
+        fn clone_from(&mut self, source: &Self) {
+            unsafe { source.as_ref().dyn_clone_replace_drop(self.buf.as_mut_ptr()) };
+        }
+    }
+
+    impl<T: Debug + ?Sized + 'static, B: Buf> Debug for ArrayBox<T, B> {
+        fn fmt(&self, f: &mut Formatter) -> fmt::Result {
+            self.as_ref().fmt(f)
+        }
+    }
+
+    impl<T: Display + ?Sized + 'static, B: Buf> Display for ArrayBox<T, B> {
+        fn fmt(&self, f: &mut Formatter) -> fmt::Result {
+            self.as_ref().fmt(f)
+        }
+    }
+}
+
+use arraybox::*;
 
 #[derive(Educe)]
 #[educe(Debug, Clone)]
@@ -1509,8 +1654,6 @@ trait AnySetter<Owner: DepType>: Debug + DynClone {
         unapply: bool
     ) -> Option<Box<dyn for<'a> FnOnce(&'a mut dyn State)>>;
 }
-
-clone_trait_object!(<Owner: DepType> AnySetter<Owner>);
 
 impl<Owner: DepType + 'static, PropType: Convenient> AnySetter<Owner> for Setter<Owner, PropType> where
     Owner::Id: 'static, Owner::Id: DepObj<Owner::DepObjKey, Owner> {
@@ -1554,8 +1697,8 @@ impl<Owner: DepType + 'static, PropType: Convenient> AnySetter<Owner> for Setter
 /// To switch an applied style, use the [`DepObjId::apply_style`] function.
 #[derive(Educe)]
 #[educe(Debug, Clone)]
-pub struct Style<Owner: DepType> {
-    setters: ArrayVec<Box<dyn AnySetter<Owner>>, 64>,
+pub struct Style<Owner: DepType + 'static> {
+    setters: ArrayVec<ArrayBox<dyn AnySetter<Owner>, Align8<64>>, 16>,
 }
 
 impl<Owner: DepType> const Default for Style<Owner> {
@@ -1578,7 +1721,7 @@ impl<Owner: DepType> Style<Owner> {
         prop: DepProp<Owner, PropType>,
         value: PropType
     ) -> bool where Owner: 'static, Owner::Id: DepObj<Owner::DepObjKey, Owner> {
-        let setter = Box::new(Setter { prop, value });
+        let setter = ArrayBox::new(Setter { prop, value });
         match self.setters.binary_search_by_key(&prop.offset, |x| x.prop_offset()) {
             Ok(index) => { self.setters[index] = setter; true }
             Err(index) => { self.setters.insert(index, setter); false }
