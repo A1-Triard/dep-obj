@@ -1513,26 +1513,40 @@ mod arraybox {
         fn len() -> usize;
     }
 
-    #[repr(C, align(8))]
-    pub struct Align8<const LEN: usize>([MaybeUninit<u8>; LEN]);
+    macro_rules! align_n {
+        (
+            $n:literal
+        ) => {
+            $crate::paste_paste! {
+                #[repr(C, align($n))]
+                pub struct [< Align $n >] <const LEN: usize>([MaybeUninit<u8>; LEN]);
 
-    impl<const LEN: usize> const Default for Align8<LEN> {
-        fn default() -> Self { Align8(unsafe { MaybeUninit::uninit().assume_init() }) }
+                impl<const LEN: usize> const Default for [< Align $n >] <LEN> {
+                    fn default() -> Self { Self(unsafe { MaybeUninit::uninit().assume_init() }) }
+                }
+
+                unsafe impl<const LEN: usize> const Buf for [< Align $n >] <LEN> {
+                    fn align() -> usize { align_of::<Self>() }
+
+                    fn len() -> usize { LEN }
+
+                    fn as_ptr(&self) -> *const u8 {
+                        &raw const self.0 as *const u8
+                    }
+
+                    fn as_mut_ptr(&mut self) -> *mut u8 {
+                        &raw mut self.0 as *mut u8
+                    }
+                }
+            }
+        };
     }
 
-    unsafe impl<const LEN: usize> const Buf for Align8<LEN> {
-        fn align() -> usize { align_of::<Self>() }
-
-        fn len() -> usize { LEN }
-
-        fn as_ptr(&self) -> *const u8 {
-            &raw const self.0 as *const u8
-        }
-
-        fn as_mut_ptr(&mut self) -> *mut u8 {
-            &raw mut self.0 as *mut u8
-        }
-    }
+    align_n!(1);
+    align_n!(2);
+    align_n!(4);
+    align_n!(8);
+    align_n!(16);
 
     pub struct ArrayBox<T: ?Sized + 'static, B: Buf> {
         buf: B,
@@ -1692,13 +1706,19 @@ impl<Owner: DepType + 'static, PropType: Convenient> AnySetter<Owner> for Setter
     }
 }
 
+#[cfg(target_pointer_width="32")]
+type AnySetterBuf = Align4<64>;
+
+#[cfg(target_pointer_width="64")]
+type AnySetterBuf = Align8<128>;
+
 /// A dictionary mapping a subset of target type properties to the values.
 /// Every dependency object can have an applied style at every moment.
 /// To switch an applied style, use the [`DepObjId::apply_style`] function.
 #[derive(Educe)]
 #[educe(Debug, Clone)]
 pub struct Style<Owner: DepType + 'static> {
-    setters: ArrayVec<ArrayBox<dyn AnySetter<Owner>, Align8<64>>, 16>,
+    setters: ArrayVec<ArrayBox<dyn AnySetter<Owner>, AnySetterBuf>, 16>,
 }
 
 impl<Owner: DepType> const Default for Style<Owner> {
@@ -2784,6 +2804,7 @@ macro_rules! dep_type_impl {
             [
                 $($builder_methods)*
 
+                #[allow(dead_code)]
                 $vis fn [< $field _ref >] (mut self, value: $field_ty) -> Self {
                     let id = <Self as $crate::DepObjBuilder>::id(&self);
                     let state = <Self as $crate::DepObjBuilder>::state_mut(&mut self);
@@ -2854,6 +2875,7 @@ macro_rules! dep_type_impl {
             [
                 $($builder_methods)*
 
+                #[allow(dead_code)]
                 $vis fn [< $field _ref >] (mut self, value: $field_ty) -> Self {
                     let id = <Self as $crate::DepObjBuilder>::id(&self);
                     let state = <Self as $crate::DepObjBuilder>::state_mut(&mut self);
@@ -2924,6 +2946,7 @@ macro_rules! dep_type_impl {
             [
                 $($builder_methods)*
 
+                #[allow(dead_code)]
                 $vis fn $field(mut self, value: $field_ty) -> Self {
                     let id = <Self as $crate::DepObjBuilder>::id(&self);
                     let state = <Self as $crate::DepObjBuilder>::state_mut(&mut self);
@@ -2993,6 +3016,7 @@ macro_rules! dep_type_impl {
             [
                 $($builder_methods)*
 
+                #[allow(dead_code)]
                 $vis fn [< $field _ref >] (mut self, value: $field_ty) -> Self {
                     let id = <Self as $crate::DepObjBuilder>::id(&self);
                     let state = <Self as $crate::DepObjBuilder>::state_mut(&mut self);
@@ -3062,6 +3086,7 @@ macro_rules! dep_type_impl {
             [
                 $($builder_methods)*
 
+                #[allow(dead_code)]
                 $vis fn $field(mut self, value: $field_ty) -> Self {
                     let id = <Self as $crate::DepObjBuilder>::id(&self);
                     let state = <Self as $crate::DepObjBuilder>::state_mut(&mut self);
@@ -4312,51 +4337,163 @@ macro_rules! impl_dep_obj_impl {
 
 #[cfg(test)]
 mod test {
+    use alloc::borrow::Cow;
     use components_arena::{Arena, Component, ComponentStop, NewtypeComponentId, with_arena_in_state_part};
     use downcast_rs::{Downcast, impl_downcast};
-    use dyn_context::Stop;
+    use dyn_context::{StateRefMut, Stop};
+    use panicking::set_panicking_callback;
     use crate::*;
 
     enum Obj1Key { }
 
     enum Obj2Key { }
 
-    trait Obj1: Downcast + DepType<Id=Item, DepObjKey=Obj1Key> { }
+    trait Obj1: Downcast + DepType<Id=TheId, DepObjKey=Obj1Key> { }
 
     impl_downcast!(Obj1);
 
-    trait Obj2: Downcast + DepType<Id=Item, DepObjKey=Obj2Key> { }
+    trait Obj2: Downcast + DepType<Id=TheId, DepObjKey=Obj2Key> { }
 
     impl_downcast!(Obj2);
 
     macro_attr! {
-        #[derive(Debug, Component!(stop=ItemStop))]
-        struct ItemComponent {
+        #[derive(Debug, Component!(stop=TheIdStop))]
+        struct TheIdComponent {
             obj_1: Box<dyn Obj1>,
             obj_2: Box<dyn Obj2>,
         }
     }
 
-    impl ComponentStop for ItemStop {
-        with_arena_in_state_part!(Items);
+    impl ComponentStop for TheIdStop {
+        with_arena_in_state_part!(TheIds);
 
-        fn stop(&self, state: &mut dyn State, id: Id<ItemComponent>) {
-            Item(id).drop_bindings_priv(state);
+        fn stop(&self, state: &mut dyn State, id: Id<TheIdComponent>) {
+            TheId(id).drop_bindings_priv(state);
         }
     }
 
     #[derive(Debug, Stop)]
-    struct Items(Arena<ItemComponent>);
+    struct TheIds(Arena<TheIdComponent>);
 
     macro_attr! {
         #[derive(Debug, Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash, NewtypeComponentId!)]
-        pub struct Item(Id<ItemComponent>);
+        pub struct TheId(Id<TheIdComponent>);
     }
 
-    impl DetachedDepObjId for Item { }
+    impl DetachedDepObjId for TheId { }
 
-    impl_dep_obj!(Item {
-        fn<Obj1Key>() -> dyn(Obj1) { Items | .obj_1 }
-        fn<Obj2Key>() -> dyn(Obj2) { Items | .obj_2 }
+    impl_dep_obj!(TheId {
+        fn<Obj1Key>() -> dyn(Obj1) { TheIds | .obj_1 }
+        fn<Obj2Key>() -> dyn(Obj2) { TheIds | .obj_2 }
     });
+
+    mod items {
+        use alloc::borrow::Cow;
+        use components_arena::{Arena, Component, ComponentStop, NewtypeComponentId, Id, with_arena_in_state_part};
+        use crate::{DetachedDepObjId, dep_type, impl_dep_obj};
+        use crate::binding::Binding3;
+        use dyn_context::{SelfState, State, StateExt, Stop};
+        use macro_attr_2018::macro_attr;
+
+        macro_attr! {
+            #[derive(Debug, Component!(stop=ItemStop))]
+            struct ItemComponent {
+                props: ItemProps,
+            }
+        }
+
+        impl ComponentStop for ItemStop {
+            with_arena_in_state_part!(Items);
+
+            fn stop(&self, state: &mut dyn State, id: Id<ItemComponent>) {
+                Item(id).drop_bindings_priv(state);
+            }
+        }
+
+        macro_attr! {
+            #[derive(Debug, Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash, NewtypeComponentId!)]
+            pub struct Item(Id<ItemComponent>);
+        }
+
+        impl DetachedDepObjId for Item { }
+
+        impl Item {
+            pub fn new(state: &mut dyn State) -> Item {
+                let items: &mut Items = state.get_mut();
+                let item = items.0.insert(|id| (ItemComponent { props: ItemProps::new_priv() }, Item(id)));
+                item.bind_weight(state);
+                item
+            }
+
+            #[allow(dead_code)]
+            pub fn drop_self(self, state: &mut dyn State) {
+                self.drop_bindings_priv(state);
+                let items: &mut Items = state.get_mut();
+                items.0.remove(self.0);
+            }
+
+            fn bind_weight(self, state: &mut dyn State) {
+                let weight = Binding3::new(state, (), |(), base_weight, cursed, equipped| Some(
+                    if equipped && cursed { base_weight + 100.0 } else { base_weight }
+                ));
+                ItemProps::WEIGHT.bind(state, self, weight);
+                weight.set_source_1(state, &mut ItemProps::BASE_WEIGHT.value_source(self));
+                weight.set_source_2(state, &mut ItemProps::CURSED.value_source(self));
+                weight.set_source_3(state, &mut ItemProps::EQUIPPED.value_source(self));
+            }
+        }
+
+        impl_dep_obj!(Item {
+            fn<ItemProps>() -> (ItemProps) { Items | .props }
+        });
+
+        #[derive(Debug, Stop)]
+        pub struct Items(Arena<ItemComponent>);
+
+        impl SelfState for Items { }
+
+        impl Items {
+            pub fn new() -> Items {
+                Items(Arena::new())
+            }
+        }
+
+        dep_type! {
+            #[derive(Debug)]
+            pub struct ItemProps = Item[ItemProps] {
+                name: Cow<'static, str> = Cow::Borrowed(""),
+                base_weight: f32 = 0.0,
+                weight: f32 = 0.0,
+                equipped: bool = false,
+                cursed: bool = false,
+            }
+        }
+    }
+
+    use items::*;
+
+    fn read_name(state: &mut dyn State, item: Item) -> Cow<'static, str> {
+        let binding = Binding1::new(state, (), |(), value| Some(value));
+        let mut buf: Option<Cow<'static, str>> = None;
+        binding.set_target_fn(state, &raw mut buf, |_state, buf, value| {
+            unsafe { *buf = Some(value) };
+        });
+        binding.set_source_1(state, &mut ItemProps::NAME.value_source(item));
+        binding.drop_self(state);
+        buf.unwrap()
+    }
+
+
+    #[test]
+    fn apply_style() {
+        set_panicking_callback(|| true);
+        (&mut Items::new()).merge_mut_and_then(|state| {
+            let item = Item::new(state);
+            let mut style = Style::new();
+            style.insert(ItemProps::NAME, Cow::Borrowed("name from style"));
+            assert!(item.apply_style(state, Some(style)).is_none());
+            assert_eq!(read_name(state, item).as_ref(), "name from style");
+            Items::stop(state);
+        }, &mut Bindings::new());
+    }
 }
