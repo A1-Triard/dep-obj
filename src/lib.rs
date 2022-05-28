@@ -1552,13 +1552,17 @@ impl<Owner: DepType + 'static, PropType: Convenient> AnySetter<Owner> for Setter
 /// Every dependency object can have an applied style at every moment.
 /// To switch an applied style, use the [`DepObjId::apply_style`] function.
 #[derive(Educe)]
-#[educe(Debug, Clone, Default)]
+#[educe(Debug, Clone)]
 pub struct Style<Owner: DepType> {
     setters: Vec<Box<dyn AnySetter<Owner>>>,
 }
 
+impl<Owner: DepType> const Default for Style<Owner> {
+    fn default() -> Self { Style::new() }
+}
+
 impl<Owner: DepType> Style<Owner> {
-    pub fn new() -> Self { Style { setters: Vec::new() } }
+    pub const fn new() -> Self { Style { setters: Vec::new() } }
 
     pub fn with_capacity(capacity: usize) -> Self { Style { setters: Vec::with_capacity(capacity) } }
 
