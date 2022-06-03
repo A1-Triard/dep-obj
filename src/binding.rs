@@ -526,7 +526,7 @@ impl<T: Convenient> From<BindingBase<T>> for AnyBindingBase {
     }
 }
 
-const BINDING_NODE_SOURCES_MAX_SIZE: usize = 96;
+const BINDING_NODE_SOURCES_MAX_SIZE: usize = 128;
 
 #[cfg_attr(target_pointer_width="64", repr(C, align(8)))]
 #[cfg_attr(target_pointer_width="32", repr(C, align(4)))]
@@ -535,7 +535,10 @@ struct BindingNodeSourcesBuf([MaybeUninit<u8>; BINDING_NODE_SOURCES_MAX_SIZE]);
 
 impl BindingNodeSourcesBuf {
     fn new<T>(sources: T) -> BindingNodeSourcesBuf {
-        assert!(size_of::<T>() <= BINDING_NODE_SOURCES_MAX_SIZE);
+        assert!(
+            size_of::<T>() <= BINDING_NODE_SOURCES_MAX_SIZE,
+            "{} > BINDING_NODE_SOURCES_MAX_SIZE", size_of::<T>()
+        );
         assert!(align_of::<T>() <= align_of::<BindingNodeSourcesBuf>());
         let mut buf = BindingNodeSourcesBuf(unsafe { MaybeUninit::uninit().assume_init() });
         unsafe { ptr::write(buf.as_mut_ptr(), sources); }
