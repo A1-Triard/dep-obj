@@ -267,8 +267,8 @@ impl<T: Convenient> From<BindingNode<T>> for AnyBindingNode {
         // there is no real sence in concrete value
         // I just want to know how much memory bindings cost
         assert!(
-            ArenaItems::<AnyBindingNode>::item_size() <= 192,
-            "binding node size = {} > 192",
+            ArenaItems::<AnyBindingNode>::item_size() <= 256,
+            "binding node size = {} > 256",
             ArenaItems::<AnyBindingNode>::item_size()
         );
         AnyBindingNode {
@@ -530,7 +530,7 @@ impl<T: Convenient> From<BindingBase<T>> for AnyBindingBase {
     }
 }
 
-const BINDING_NODE_SOURCES_MAX_SIZE: usize = 128;
+const BINDING_NODE_SOURCES_MAX_SIZE: usize = 192;
 
 #[cfg_attr(target_pointer_width="64", repr(C, align(8)))]
 #[cfg_attr(target_pointer_width="32", repr(C, align(4)))]
