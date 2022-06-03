@@ -266,7 +266,11 @@ impl<T: Convenient> From<BindingNode<T>> for AnyBindingNode {
     fn from(node: BindingNode<T>) -> Self {
         // there is no real sence in concrete value
         // I just want to know how much memory bindings cost
-        assert!(ArenaItems::<AnyBindingNode>::item_size() <= 160);
+        assert!(
+            ArenaItems::<AnyBindingNode>::item_size() <= 192,
+            "binding node size = {} > 192",
+            ArenaItems::<AnyBindingNode>::item_size()
+        );
         AnyBindingNode {
             buf: BindingNodeBuf::new(node),
             vtable: &BindingNode::<T>::VTABLE
