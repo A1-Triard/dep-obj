@@ -1,7 +1,7 @@
 [package]
 edition = "2021"
 name = "dep-obj"
-version = "0.38.3"
+version = "0.38.4"
 #rust-version = "nightly"
 authors = ["warlock <internalmike@gmail.com>"]
 description = "Dependency object: effective reactive heterogeneous container."
@@ -36,4 +36,4 @@ phantom-type = { version = "0.4.1", default-features = false }
 downcast-rs = { version = "1.2.0", default-features = false }
 
 [badges]
-maintenance = { status = "experimental" }
+maintenance = { status = "deprecated" }
